@@ -187,8 +187,7 @@ public class GrpcProxyService {
          return new BackendResponse(Status.Code.OK.value(),
                contentResponse.getBytes(StandardCharsets.UTF_8), Map.of());
       } catch (StatusRuntimeException sre) {
-         sre.printStackTrace();
-         logger.errorf("Proxy raised: '%s'", sre.getMessage());
+         logger.errorf(sre, "Proxy raised: '%s'", sre.getMessage());
          return new BackendResponse(500, sre.getMessage().getBytes(StandardCharsets.UTF_8), Map.of());
       } finally {
          // Shutdown the channel to release resources.
