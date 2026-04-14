@@ -28,10 +28,12 @@ import jakarta.ws.rs.core.HttpHeaders;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
@@ -109,9 +111,23 @@ public class ProxyService {
 
          // Return the response as is.
          return new BackendResponse(response.statusCode(), response.body(), response.headers().map());
+      } catch (HttpTimeoutException e) {
+         logger.errorf("Proxy timeout calling backend '%s': %s", externalUrl, e.getMessage());
+         return new BackendResponse(504, "Gateway Timeout: backend did not respond in time".getBytes(StandardCharsets.UTF_8), Map.of());
+      } catch (ConnectException e) {
+         logger.errorf("Proxy connection refused by backend '%s': %s", externalUrl, e.getMessage());
+         return new BackendResponse(503, "Service Unavailable: backend refused the connection".getBytes(StandardCharsets.UTF_8), Map.of());
+      } catch (IOException e) {
+         logger.errorf("Proxy I/O error calling backend '%s': %s", externalUrl, e.getMessage());
+         return new BackendResponse(502, "Bad Gateway: unexpected network error".getBytes(StandardCharsets.UTF_8), Map.of());
+      } catch (InterruptedException e) {
+         Thread.currentThread().interrupt();
+         logger.errorf("Proxy call to backend '%s' was interrupted", externalUrl);
+         return new BackendResponse(500, "Internal Server Error: request was interrupted".getBytes(StandardCharsets.UTF_8), Map.of());
       } catch (Exception e) {
-         logger.errorf("Proxy raised: '%s'", e.getMessage());
-         return new BackendResponse(500, e.getMessage().getBytes(StandardCharsets.UTF_8), Map.of());
+         String message = e.getMessage() != null ? e.getMessage() : "Unknown error";
+         logger.errorf("Proxy raised unexpected error calling backend '%s': %s", externalUrl, message);
+         return new BackendResponse(500, ("Internal Server Error: " + message).getBytes(StandardCharsets.UTF_8), Map.of());
       }
    }
 
