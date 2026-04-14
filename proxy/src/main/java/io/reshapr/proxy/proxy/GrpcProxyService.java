@@ -127,8 +127,9 @@ public class GrpcProxyService {
       try {
          parser.merge(body, reqBuilder);
       } catch (InvalidProtocolBufferException e) {
-         logger.errorf("Exception while parsing JSON to Protobuf: '%s'", e.getMessage());
-         return new BackendResponse(400, e.getMessage().getBytes(StandardCharsets.UTF_8), Map.of());
+         String message = e.getMessage() != null ? e.getMessage() : "Invalid JSON to Protobuf conversion";
+         logger.errorf("Exception while parsing JSON to Protobuf: '%s'", message);
+         return new BackendResponse(400, message.getBytes(StandardCharsets.UTF_8), Map.of());
       }
       byte[] requestBytes = reqBuilder.build().toByteArray();
 
@@ -165,15 +166,19 @@ public class GrpcProxyService {
             JsonFormat.Printer printer = JsonFormat.printer();
             contentResponse = printer.print(respMsg);
          } catch (InvalidProtocolBufferException ipbe) {
-            logger.errorf("Exception while converting Protobuf to JSON: '%s'", ipbe.getMessage());
-            return new BackendResponse(400, ipbe.getMessage().getBytes(StandardCharsets.UTF_8), Map.of());
+            String message = ipbe.getMessage() != null ? ipbe.getMessage() : "Invalid Protobuf to JSON conversion";
+            logger.errorf("Exception while converting Protobuf to JSON: '%s'", message);
+            return new BackendResponse(400, message.getBytes(StandardCharsets.UTF_8), Map.of());
          }
 
          return new BackendResponse(Status.Code.OK.value(),
                contentResponse.getBytes(StandardCharsets.UTF_8), Map.of());
       } catch (StatusRuntimeException sre) {
-         logger.errorf(sre, "Proxy raised: '%s'", sre.getMessage());
-         return new BackendResponse(500, sre.getMessage().getBytes(StandardCharsets.UTF_8), Map.of());
+         int httpStatus = mapGrpcStatusToHttp(sre.getStatus().getCode());
+         String message = sre.getMessage() != null ? sre.getMessage() : sre.getStatus().getCode().name();
+         logger.errorf("gRPC proxy error calling backend '%s' [%s -> HTTP %d]: %s",
+               configuration.backendEndpoint(), sre.getStatus().getCode(), httpStatus, message);
+         return new BackendResponse(httpStatus, message.getBytes(StandardCharsets.UTF_8), Map.of());
       } finally {
          // Shutdown the channel to release resources.
          originChannel.shutdown();
@@ -185,6 +190,20 @@ public class GrpcProxyService {
                                   CallOptions callOptions, byte[] requestBytes,
                                   @SpanAttribute("backendEndpoint") String backendEndpoint) throws StatusRuntimeException {
       return ClientCalls.blockingUnaryCall(channel, unaryMethodDescriptor, callOptions, requestBytes);
+   }
+
+   private static int mapGrpcStatusToHttp(Status.Code code) {
+      return switch (code) {
+         case DEADLINE_EXCEEDED -> 504;
+         case UNAVAILABLE -> 503;
+         case UNAUTHENTICATED -> 401;
+         case PERMISSION_DENIED -> 403;
+         case NOT_FOUND -> 404;
+         case INVALID_ARGUMENT -> 400;
+         case UNIMPLEMENTED -> 501;
+         case RESOURCE_EXHAUSTED -> 429;
+         default -> 502;
+      };
    }
 
    private CallOptions manageSecurityHeaders(SecretEntry secret, CallOptions callOptions, Map<String, List<String>> headers) {
