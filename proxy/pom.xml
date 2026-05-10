@@ -99,7 +99,7 @@
     <dependency>
       <groupId>com.google.crypto.tink</groupId>
       <artifactId>tink</artifactId>
-      <version>1.16.0</version>
+      <version>1.21.0</version>
       <optional>true</optional>
       <exclusions>
         <exclusion>
