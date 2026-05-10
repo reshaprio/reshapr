@@ -14,7 +14,7 @@
   <name>Reshapr Commons</name>
 
   <properties>
-    <graphql-java.version>24.1</graphql-java.version>
+    <graphql-java.version>26.0</graphql-java.version>
     <snake-yaml.version>2.6</snake-yaml.version>
     <owasp-encoder.version>1.4.0</owasp-encoder.version>
   </properties>
