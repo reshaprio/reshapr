@@ -18,7 +18,7 @@
     <nimbus-jose-jwt.version>10.9</nimbus-jose-jwt.version>
     <quarkus-web-bundler.version>1.9.3</quarkus-web-bundler.version>
     <zjsonpatch.version>0.6.2</zjsonpatch.version>
-    <jtoon.version>1.0.9</jtoon.version>
+    <jtoon.version>2.0.0</jtoon.version>
   </properties>
 
   <dependencies>
