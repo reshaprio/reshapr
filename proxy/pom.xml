@@ -13,7 +13,7 @@
   <name>Reshapr Proxy</name>
 
   <properties>
-    <microcks.version>1.13.2</microcks.version>
+    <microcks.version>1.14.0</microcks.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <nimbus-jose-jwt.version>10.9</nimbus-jose-jwt.version>
     <quarkus-web-bundler.version>1.9.3</quarkus-web-bundler.version>
