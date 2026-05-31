@@ -41,7 +41,7 @@
     "@types/node": "24.0.13",
     "execa": "9.6.1",
     "typescript": "5.8.3",
-    "vitest": "4.1.6"
+    "vitest": "4.1.7"
   },
   "files": [
     "dist"
