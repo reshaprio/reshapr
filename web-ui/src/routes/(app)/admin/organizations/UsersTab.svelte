@@ -16,7 +16,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Badge } from '$lib/components/ui/badge';
+  import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';

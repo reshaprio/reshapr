@@ -27,6 +27,10 @@ export interface User {
   username: string;
   email: string;
   org: string;
+  groups?: string[];
+  roles?: string[];
+  expiresAt?: string | null;
+  expired?: boolean;
 }
 
 /** User profile returned by /api/v1/user/profile. */

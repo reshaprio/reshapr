@@ -15,7 +15,7 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { getSessionToken, extractUserProfile, decodeJwtPayload } from '$lib/server/auth.js';
+import { getSessionToken, extractUserProfile, extractSessionClaims, decodeJwtPayload } from '$lib/server/auth.js';
 import type { RequestHandler } from './$types.js';
 
 /**
@@ -52,7 +52,8 @@ export const GET: RequestHandler = async ({ cookies }) => {
     username: profile.username,
     email: profile.email,
     org: profile.org,
-    isAdmin: profile.org === 'reshapr'
+    isAdmin: profile.org === 'reshapr',
+    ...extractSessionClaims(token)
   });
 };
 

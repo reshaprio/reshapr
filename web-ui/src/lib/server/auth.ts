@@ -78,10 +78,7 @@ export function getSessionToken(cookies: Cookies): string | null {
   return cookies.get(SESSION_COOKIE) ?? null;
 }
 
-/**
- * Extract user profile from a JWT token string.
- * Returns { username, email, org } or null if decoding fails.
- */
+/** Extract user profile from a JWT token string. */
 export function extractUserProfile(token: string): { username: string; email: string; org: string } | null {
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
@@ -93,5 +90,44 @@ export function extractUserProfile(token: string): { username: string; email: st
   if (!username || !org) return null;
 
   return { username, email: email ?? '', org };
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((g): g is string => typeof g === 'string');
+}
+
+function readRealmAccessRoles(payload: Record<string, unknown>): string[] {
+  const realmAccess = payload.realm_access;
+  if (!realmAccess || typeof realmAccess !== 'object') return [];
+  return readStringArray((realmAccess as Record<string, unknown>).roles);
+}
+
+/** Extended session fields for the Account page (display only; no signature verification). */
+export function extractSessionClaims(token: string): {
+  groups: string[];
+  roles: string[];
+  expiresAt: string | null;
+  expired: boolean;
+} {
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    return { groups: [], roles: [], expiresAt: null, expired: false };
+  }
+
+  const groups = readStringArray(payload.groups);
+  const roles = [
+    ...readStringArray(payload.roles),
+    ...readRealmAccessRoles(payload)
+  ];
+
+  let expiresAt: string | null = null;
+  let expired = false;
+  if (typeof payload.exp === 'number' && Number.isFinite(payload.exp)) {
+    expiresAt = new Date(payload.exp * 1000).toISOString();
+    expired = payload.exp * 1000 <= Date.now();
+  }
+
+  return { groups, roles, expiresAt, expired };
 }
 
