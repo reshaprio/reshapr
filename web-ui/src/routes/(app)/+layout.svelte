@@ -21,6 +21,8 @@
   import { auth } from '$lib/stores/auth.svelte.js';
   import { sidebar } from '$lib/stores/sidebar.svelte.js';
   import { getBootstrapConfig } from '$lib/api/config.js';
+  import { cn } from '$lib/utils.js';
+  import * as Collapsible from '$lib/components/ui/collapsible/index.js';
   import { HugeiconsIcon } from '@hugeicons/svelte';
   import {
     DashboardSquare01Icon,
@@ -29,7 +31,9 @@
     SidebarLeft01Icon,
     SidebarRight01Icon,
     ChevronDownIcon,
-    Building01Icon
+    Building01Icon,
+    UserIcon,
+    FlaskConicalIcon
   } from '@hugeicons/core-free-icons';
 
   let { children } = $props();
@@ -37,6 +41,19 @@
   let version = $state('');
   let userMenuOpen = $state(false);
   let orgSelectorOpen = $state(false);
+  let experimentalOpen = $state(false);
+
+  const experimentalNav = [
+    { href: '/artifacts', label: 'Artifacts' },
+    { href: '/plans', label: 'Plans' },
+    { href: '/expositions', label: 'Expositions' },
+    { href: '/mcp-custom-tools', label: 'MCP custom tools' },
+    { href: '/mcp-prompts', label: 'MCP prompts' },
+    { href: '/secrets', label: 'Secrets' },
+    { href: '/gateway-groups', label: 'Gateway groups' },
+    { href: '/quotas', label: 'Quotas' },
+    { href: '/api-tokens', label: 'API tokens' },
+  ] as const;
 
   onMount(async () => {
     const hasSession = await auth.initSession();
@@ -71,6 +88,7 @@
       items: [
         { href: '/', label: 'Dashboard', icon: DashboardSquare01Icon },
         { href: '/services', label: 'Services', icon: ApiIcon },
+        { href: '/account', label: 'Account', icon: UserIcon },
       ]
     },
     {
@@ -85,7 +103,32 @@
   function isActive(href: string): boolean {
     const path = page.url.pathname;
     if (href === '/') return path === '/';
-    return path.startsWith(href);
+    if (href === '/services') {
+      return path === '/services' || path.startsWith('/services/');
+    }
+    if (href === '/plans') {
+      return path === '/plans' || path.startsWith('/plans/');
+    }
+    return path === href || path.startsWith(href + '/');
+  }
+
+  function isExperimentalActive(): boolean {
+    return experimentalNav.some((item) => isActive(item.href));
+  }
+
+  $effect(() => {
+    if (isExperimentalActive()) {
+      experimentalOpen = true;
+    }
+  });
+
+  function experimentalNavClass(href: string): string {
+    return cn(
+      'block rounded-md px-2 py-1.5 text-sm transition-colors',
+      isActive(href)
+        ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+    );
   }
 
   function handleSignOut() {
@@ -241,6 +284,32 @@
             {/each}
           {/if}
         {/each}
+
+        {#if !sidebar.collapsed}
+          <Collapsible.Root bind:open={experimentalOpen} class="mt-4">
+            <Collapsible.Trigger
+              class={cn(
+                'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                isExperimentalActive()
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+              )}
+            >
+              <span class="flex h-5 w-5 shrink-0 items-center justify-center">
+                <HugeiconsIcon icon={FlaskConicalIcon} size={18} />
+              </span>
+              <span class="flex-1 text-left">Experimental</span>
+              <span class={cn('inline-flex shrink-0 transition-transform duration-200', experimentalOpen && 'rotate-180')}>
+                <HugeiconsIcon icon={ChevronDownIcon} size={14} />
+              </span>
+            </Collapsible.Trigger>
+            <Collapsible.Content class="mt-1 space-y-0.5 pl-2">
+              {#each experimentalNav as item (item.href)}
+                <a href={item.href} class={experimentalNavClass(item.href)}>{item.label}</a>
+              {/each}
+            </Collapsible.Content>
+          </Collapsible.Root>
+        {/if}
       </nav>
 
       <!-- User profile at bottom -->
@@ -293,7 +362,7 @@
 
     <!-- Main content -->
     <main class="flex flex-1 flex-col overflow-y-auto">
-      <div class="flex-1">
+      <div class="flex-1 p-6">
         {@render children()}
       </div>
 

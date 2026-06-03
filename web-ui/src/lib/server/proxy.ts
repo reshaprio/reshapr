@@ -67,13 +67,10 @@ export async function proxyRequest(
 
   const init: RequestInit = {
     method: request.method,
-    headers
+    headers,
+    // Preserve the original body stream (required for multipart FormData uploads).
+    ...(request.method !== 'GET' && request.method !== 'HEAD' ? { body: request.body, duplex: 'half' as const } : {})
   };
-
-  // Forward body for methods that have one.
-  if (!['GET', 'HEAD'].includes(request.method)) {
-    init.body = await request.text();
-  }
 
   const res = await fetch(targetUrl, init);
 
