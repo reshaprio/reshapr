@@ -122,9 +122,7 @@ public class OnboardingService {
          user.organizations = new ArrayList<>();
       }
       user.organizations.add(organization);
-      if (user.defaultOrganization == null) {
-         user.defaultOrganization = organization;
-      }
+      user.ensureDefaultOrganization();
       userRepository.persistAndFlush(user);
       return organization;
    }

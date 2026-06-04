@@ -126,8 +126,9 @@ public class OrganizationResource {
       // Assign organization to user.
       if (!user.organizations.contains(organization)) {
          user.organizations.add(organization);
-         userRepository.persistAndFlush(user);
       }
+      user.ensureDefaultOrganization();
+      userRepository.persistAndFlush(user);
       // Change owner on organization side.
       organization.owner = user;
       organizationRepository.persistAndFlush(organization);

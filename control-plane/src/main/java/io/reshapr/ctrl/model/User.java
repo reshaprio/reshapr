@@ -67,4 +67,17 @@ public class User extends BaseEntity {
    public boolean verifyPassword(String challenged) {
       return password != null && BcryptUtil.matches(challenged, password);
    }
+
+   /**
+    * Ensure the user has a default organization when they belong to at least one.
+    * Called whenever a membership is added or reassigned.
+    */
+   public void ensureDefaultOrganization() {
+      if (defaultOrganization != null) {
+         return;
+      }
+      if (organizations != null && !organizations.isEmpty()) {
+         defaultOrganization = organizations.getFirst();
+      }
+   }
 }

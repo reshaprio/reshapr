@@ -167,9 +167,7 @@ public class UserResource {
       if (user.organizations.stream().noneMatch(o -> o.name.equals(organizationName))) {
          user.organizations.add(organization);
       }
-      if (user.defaultOrganization == null) {
-         user.defaultOrganization = organization;
-      }
+      user.ensureDefaultOrganization();
       userRepository.persistAndFlush(user);
 
       return Response.ok(new OrganizationDTO(organizationName, organization.description, organization.icon)).build();
@@ -191,6 +189,7 @@ public class UserResource {
       // Clear existing organizations and assign new ones.
       user.organizations.clear();
       user.organizations = organizationRepository.findByNames(organisationIds);
+      user.ensureDefaultOrganization();
       userRepository.persistAndFlush(user);
 
       return Response.ok(organisationIds).build();
