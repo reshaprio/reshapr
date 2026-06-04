@@ -238,7 +238,12 @@ public class AuthenticationController {
       }
 
       // Generate a token for the authenticated user
-      String token = generateTokenForUser(RESHAPR_IDENTITY_PROVIDER, user, user.defaultOrganization.name);
+      Organization loginOrganization = resolveLoginOrganization(user);
+      if (loginOrganization == null) {
+         logger.warnf("User '%s' has no organization assigned", user.username);
+         return Response.status(Response.Status.FORBIDDEN).entity("User has no organization").build();
+      }
+      String token = generateTokenForUser(RESHAPR_IDENTITY_PROVIDER, user, loginOrganization.name);
       logger.infof("Authentication successful for user: %s", user.username);
 
       return Response.seeOther(URI.create(redirectUri + "?token=" + token)).build();
@@ -433,6 +438,16 @@ public class AuthenticationController {
    public record LoginRequest(String username, String password) {}
 
    public record DelegatedLoginRequest(String username) {}
+
+   private Organization resolveLoginOrganization(User user) {
+      if (user.defaultOrganization != null) {
+         return user.defaultOrganization;
+      }
+      if (user.organizations != null && !user.organizations.isEmpty()) {
+         return user.organizations.getFirst();
+      }
+      return null;
+   }
 
    private String generateTokenForUser(String authorityId, User user, String organizationId) {
       // Generate a Jwt with user information.
