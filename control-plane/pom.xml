@@ -20,7 +20,7 @@
     <hypersistence-utils.version>3.14.1</hypersistence-utils.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <hazelcast.version>5.6.0</hazelcast.version>
-    <quarkus-web-bundler.version>1.9.3</quarkus-web-bundler.version>
+    <quarkus-web-bundler.version>2.3.2</quarkus-web-bundler.version>
   </properties>
 
   <dependencies>
