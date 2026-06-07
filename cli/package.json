@@ -30,7 +30,7 @@
     "cli-highlight": "2.1.11",
     "commander": "14.0.3",
     "get-port": "7.2.0",
-    "inquirer": "13.4.3",
+    "inquirer": "14.0.2",
     "js-yaml": "4.1.1",
     "open": "11.0.0",
     "yocto-spinner": "1.2.0"
