@@ -20,7 +20,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
     "@types/node": "22.19.5",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
