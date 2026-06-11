@@ -543,23 +543,22 @@ public class McpController {
       Span currentSpan = Span.current();
       String traceId = currentSpan.getSpanContext().isValid() ? currentSpan.getSpanContext().getTraceId() : null;
 
+      // Capture all request-scoped values synchronously before async handoff.
+      // serverRequest is backed by a Vert.x connection context that is recycled after the HTTP
+      // response completes — accessing remoteAddress() or getHeader() on a virtual thread
+      // scheduled after that point causes intermittent IllegalStateException and silent audit loss.
+      String method = request.method();
+      Object requestId = request.id();
+      Object requestParams = request.params();
+      String serviceName = service.name();
+      String serviceVersion = service.version();
+      String organizationId = service.organizationId();
+      String sourceIp = serverRequest.remoteAddress() != null ? serverRequest.remoteAddress().host() : null;
+      SessionInfo sessionInfo = getSessionInfo(serverRequest);
+      String sessionId = sessionInfo != null ? sessionInfo.getId() : null;
+
       // Execute audit event sending asynchronously.
       Thread.startVirtualThread(() -> {
-         // Capture all values needed for the audit event before going async,
-         // since request/serverRequest objects may not be safe to access later.
-         String method = request.method();
-         Object requestId = request.id();
-         Object requestParams = request.params();
-         String serviceName = service.name();
-         String serviceVersion = service.version();
-         String organizationId = service.organizationId();
-         String sourceIp = serverRequest.remoteAddress() != null ? serverRequest.remoteAddress().host() : null;
-         String sessionId = null;
-         SessionInfo sessionInfo = getSessionInfo(serverRequest);
-         if (sessionInfo != null) {
-            sessionId = sessionInfo.getId();
-         }
-
          // Determine outcome and error code from the result.
          String outcome = AuditEvent.OUTCOME_SUCCESS;
          Integer errorCode = null;
