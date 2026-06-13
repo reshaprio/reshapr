@@ -213,7 +213,7 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
       }
    }
 
-   /** Returns true if the provided name matches a tool name within the `customTooles` node. */
+   /** Returns true if the provided name matches a tool name within the `customTools` node. */
    private boolean isCustomTool(JsonNode customToolsNode, String name) {
       return customToolsNode != null && customToolsNode.has(name);
    }
