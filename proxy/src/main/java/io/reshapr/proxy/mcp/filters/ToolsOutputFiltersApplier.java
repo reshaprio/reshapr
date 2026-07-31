@@ -33,6 +33,7 @@ import org.jboss.logging.Logger;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -95,6 +96,12 @@ public class ToolsOutputFiltersApplier {
          JsonNode patchesNode = filterNode.get("jsonPatches");
          if (patchesNode != null && patchesNode.isArray()) {
             responseNode = JsonPatch.apply(patchesNode, responseNode);
+         }
+
+         // Then apply compact if present.
+         JsonNode compactNode = filterNode.get("compact");
+         if (isCompactEnabled(compactNode)) {
+            responseNode = applyCompaction(responseNode);
          }
 
          String result = JSON_MAPPER.writeValueAsString(responseNode);
@@ -291,5 +298,84 @@ public class ToolsOutputFiltersApplier {
             }
          }
       }
+   }
+
+   /**
+    * Checks whether the compact filter option is enabled for a tool.
+    */
+   private boolean isCompactEnabled(@Nullable JsonNode compactNode) {
+      if (compactNode == null) {
+         return false;
+      }
+      if (compactNode.isBoolean()) {
+         return compactNode.asBoolean();
+      }
+      return compactNode.isObject();
+   }
+
+   /**
+    * Compacts a JSON node by recursively removing sparse values (null, empty strings, empty arrays, empty objects).
+    * @param responseNode the root JSON node to compact
+    * @return the compacted JSON node
+    */
+   private JsonNode applyCompaction(JsonNode responseNode) {
+      return pruneNode(responseNode);
+   }
+
+   /**
+    * Recursively prunes sparse values (null, empty strings, empty arrays, empty objects) from a JSON node.
+    * @param node the current JSON node
+    * @return the pruned JSON node
+    */
+   private JsonNode pruneNode(JsonNode node) {
+      if (node.isObject()) {
+         ObjectNode objectNode = (ObjectNode) node;
+         Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+         while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            JsonNode child = entry.getValue();
+
+            if (child.isContainerNode()) {
+               pruneNode(child);
+            }
+
+            if (isSparseValue(child)) {
+               fields.remove();
+            }
+         }
+      } else if (node.isArray()) {
+         ArrayNode arrayNode = (ArrayNode) node;
+         Iterator<JsonNode> elements = arrayNode.elements();
+         while (elements.hasNext()) {
+            JsonNode element = elements.next();
+            if (element.isContainerNode()) {
+               pruneNode(element);
+            }
+
+            if (isSparseValue(element)) {
+               elements.remove();
+            }
+         }
+      }
+      return node;
+   }
+
+   /**
+    * Checks if a JSON node represents a sparse value (null, empty string, empty array, or empty object).
+    */
+   private boolean isSparseValue(JsonNode node) {
+      if (node.isNull()) {
+         return true;
+      }
+      if (node.isTextual() && node.asText().isEmpty()) {
+         return true;
+      }
+      if (node.isArray() && node.isEmpty()) {
+         return true;
+      }
+      if (node.isObject() && node.isEmpty()) {
+         return true;
+      }
+      return false;
    }
 }

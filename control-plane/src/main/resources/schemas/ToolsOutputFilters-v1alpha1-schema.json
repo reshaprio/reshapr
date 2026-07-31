@@ -75,6 +75,9 @@
           "required": ["jsonPatches"]
         },
         {
+          "required": ["compact"]
+        },
+        {
           "required": ["convertToToon"]
         }
       ],
@@ -95,6 +98,10 @@
             "$ref": "#/definitions/patchOperation"
           },
           "minItems": 1
+        },
+        "compact": {
+          "type": ["boolean", "object"],
+          "title": "Whether to compact the output by recursively removing sparse values (null, empty strings, empty arrays, empty objects)."
         },
         "convertToToon": {
           "type": "boolean",
