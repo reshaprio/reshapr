@@ -40,7 +40,7 @@
     "@types/js-yaml": "4.0.9",
     "@types/node": "24.0.13",
     "execa": "9.6.1",
-    "typescript": "5.8.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.9"
   },
   "files": [
