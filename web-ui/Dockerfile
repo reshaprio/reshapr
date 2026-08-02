@@ -20,7 +20,7 @@ RUN npm prune --omit=dev \
 # -----------------------------------------------------------
 # Production stage: Red Hat UBI9 minimal
 # -----------------------------------------------------------
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1785214301
+FROM registry.access.redhat.com/ubi9/ubi-minimal:1784705645
 
 # Install Node.js 22 via microdnf
 RUN echo -e "[nodejs]\nname=nodejs\nstream=22\nprofiles=\nstate=enabled" > /etc/dnf/modules.d/nodejs.module \
