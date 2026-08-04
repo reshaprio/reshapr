@@ -22,7 +22,7 @@ docker run -d --rm --name "${CONTAINER_NAME}" \
   -e KC_HOSTNAME_STRICT=false \
   -e KC_HTTP_ENABLED=true \
   "${KEYCLOAK_IMAGE}" \
-  start-dev --hostname "https://unvibrating-uncondoned-jessia.ngrok-free.dev" --import-realm --hostname-backchannel-dynamic true --features cimd
+  start-dev --hostname "https://unvibrating-uncondoned-jessia.ngrok-free.dev" --proxy-headers xforwarded --import-realm --hostname-backchannel-dynamic true --features cimd
 # start-dev --hostname "http://localhost:${HOST_PORT}" --import-realm --hostname-backchannel-dynamic true
 
 echo "Waiting for Keycloak to be ready ..."
