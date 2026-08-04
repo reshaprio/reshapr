@@ -6,6 +6,8 @@ set -euo pipefail
 CONTAINER_NAME="${RESHAPR_KEYCLOAK_CONTAINER:-reshapr-keycloak-dev}"
 KEYCLOAK_IMAGE="${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.6.0}"
 HOST_PORT="${KEYCLOAK_HOST_PORT:-8888}"
+: "${RESHAPR_NGROK_URL:?Set RESHAPR_NGROK_URL to your public ngrok URL}"
+RESHAPR_NGROK_URL="${RESHAPR_NGROK_URL%/}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
@@ -22,7 +24,7 @@ docker run -d --rm --name "${CONTAINER_NAME}" \
   -e KC_HOSTNAME_STRICT=false \
   -e KC_HTTP_ENABLED=true \
   "${KEYCLOAK_IMAGE}" \
-  start-dev --hostname "https://unvibrating-uncondoned-jessia.ngrok-free.dev" --proxy-headers xforwarded --import-realm --hostname-backchannel-dynamic true --features cimd
+  start-dev --hostname "${RESHAPR_NGROK_URL}" --proxy-headers xforwarded --import-realm --hostname-backchannel-dynamic true --features cimd
 # start-dev --hostname "http://localhost:${HOST_PORT}" --import-realm --hostname-backchannel-dynamic true
 
 echo "Waiting for Keycloak to be ready ..."

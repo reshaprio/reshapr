@@ -16,11 +16,19 @@ python3 -m http.server 8000
 
 #### Keycloak Configuration
 
-Use `start-keycloak-docker.sh` to start a local Keycloak instance on http://localhost:8888
-
-Make this Keycloak available in HTTPS by using `ngrok`: 
+First, make Keycloak available in HTTPS by starting `ngrok` with your public domain:
 ```shell
-ngrok http 8888
+ngrok http 8888 --url <your-ngrok-domain>
+```
+
+In another terminal, export the matching public URL:
+```shell
+export RESHAPR_NGROK_URL="https://<your-ngrok-domain>"
+```
+
+Then start the local Keycloak instance on http://localhost:8888:
+```shell
+../start-keycloak-docker.sh
 ```
 
 Now checking the configuration of the different Keycloak realms (connect to the local Keycloak using `admin`/`admin`):
@@ -45,19 +53,20 @@ Check the `cimd-policy` in realm configuration:
 
 You should be able to authent using `laurent`/`laurent`:
 
-https://unvibrating-uncondoned-jessia.ngrok-free.dev/realms/3rdparty/protocol/openid-connect/auth?client_id=http://host.docker.internal:8000/metadata.json&response_type=code&redirect_uri=http://localhost:8000/callback&scope=openid
+https://<your-ngrok-domain>/realms/3rdparty/protocol/openid-connect/auth?client_id=http://host.docker.internal:8000/metadata.json&response_type=code&redirect_uri=http://localhost:8000/callback&scope=openid
 
 ## 2nd step: Run the full demonstration
 
 ### Pre-requisites
 
 * Have the Keycloak instance running (`../dev/start-keycloak-docker.sh`)
-* Have a Ngrok tunnel running (`ngrok http 8888`)
+* Have a Ngrok tunnel running (`ngrok http 8888 --url <your-ngrok-domain>`)
+* Have `RESHAPR_NGROK_URL="https://<your-ngrok-domain>"` exported in the current terminal
 * Have a Reshapr control plane + gateway running
 
 ### Load the Open Meteo with Elicitation example
 
-Check the `elicitation-example.sh` and adapt the `NGROK_ALIAS` value to your local ngrok tunnel.
+Export the same `RESHAPR_NGROK_URL` used to start Keycloak.
 
 Execute `./elicitation-example.sh`:
 ```shell
