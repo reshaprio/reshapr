@@ -1,0 +1,105 @@
+# Fork-only gateway (proxy) image build.
+#
+# Upstream publishes its images from build-containers.yml, which is gated on
+# `github.repository_owner == 'reshaprio'` and pushes to Quay and Docker Hub
+# using organisation secrets. Forks get nothing from it, so this workflow
+# builds the proxy and publishes it to the fork owner's GitHub Container
+# Registry using the built-in GITHUB_TOKEN — no extra secrets required.
+name: build-gateway-ghcr
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+    paths-ignore:
+      - '.gitignore'
+      - 'LICENSE'
+      - '*.md'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  build-gateway:
+    # Never run on upstream: it has its own publishing pipeline.
+    if: github.repository_owner != 'reshaprio'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 25 for x64
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          architecture: x64
+          cache: maven
+
+      # Dockerfile.jvm is a runtime-only image: it COPYs target/quarkus-app,
+      # so the Maven build has to happen here first.
+      - name: Build Java components
+        run: mvn -B -DskipTests clean install
+
+      # GHCR rejects uppercase path segments, so the owner is lowercased.
+      - name: Compute image tags
+        id: tags
+        run: |
+          set -x
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE="ghcr.io/${OWNER}/reshapr-proxy"
+          REF_TAG="$(echo "${GITHUB_REF_NAME}" | tr '/' '-' | tr '[:upper:]' '[:lower:]')"
+          TAGS="${IMAGE}:${REF_TAG},${IMAGE}:sha-${GITHUB_SHA::7}"
+          if [[ "${GITHUB_REF}" == 'refs/heads/main' ]]; then
+            TAGS="${TAGS},${IMAGE}:nightly"
+          fi
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login -u "${{ github.actor }}" --password-stdin ghcr.io
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        with:
+          driver-opts: network=host
+
+      - name: Build and push container image for proxy
+        id: build-and-push-proxy
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{github.workspace}}/proxy
+          sbom: true
+          push: true
+          provenance: mode=max
+          platforms: linux/amd64,linux/arm64
+          file: proxy/src/main/docker/Dockerfile.jvm
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.date.outputs.date }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          tags: ${{ steps.tags.outputs.tags }}
+
+      - name: Summarise published image
+        run: |
+          {
+            echo "### Gateway image published"
+            echo ""
+            echo "| field | value |"
+            echo "| --- | --- |"
+            echo "| tags | \`${{ steps.tags.outputs.tags }}\` |"
+            echo "| digest | \`${{ steps.build-and-push-proxy.outputs.digest }}\` |"
+            echo "| revision | \`${{ github.sha }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
