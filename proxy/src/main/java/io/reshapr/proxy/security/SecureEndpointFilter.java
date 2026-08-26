@@ -24,9 +24,11 @@ import io.reshapr.proxy.registry.OAuth2ConfigurationEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 import com.nimbusds.jose.proc.JWSKeySelector;
 import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -212,6 +214,11 @@ public class SecureEndpointFilter implements ContainerRequestFilter {
             JWS_SUPPORTED_ALGORITHMS,
             JWKSourceBuilder.create(jwksUri).retrying(true).build());
       jwtProcessor.setJWSKeySelector(keySelector);
+
+      // RFC 9068 access tokens carry an "at+jwt" type header; Nimbus only accepts "JWT" or an
+      // absent header by default. The trailing null keeps tokens without a type header valid.
+      jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(
+            JOSEObjectType.JWT, new JOSEObjectType("at+jwt"), null));
 
       // Set the required JWT claims for access tokens
       jwtProcessor.setJWTClaimsSetVerifier(new MultipleIssuerClaimsVerifier(
