@@ -117,6 +117,7 @@ jobs:
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
           tags: quay.io/reshapr/reshapr-ui:${{env.IMAGE_TAG}},docker.io/reshapr/reshapr-ui:${{env.IMAGE_TAG}}
 
+
       - name: Sign the control plane image with GitHub OIDC Token
         env:
           DIGEST: ${{ steps.build-and-push-ctrl.outputs.digest }}
@@ -138,7 +139,6 @@ jobs:
             images+="${tag}@${DIGEST} "
           done
           cosign sign --new-bundle-format=false --use-signing-config=false --yes ${images}
-
       - name: Sign the web-ui image with GitHub OIDC Token
         env:
           DIGEST: ${{ steps.build-and-push-ui.outputs.digest }}
