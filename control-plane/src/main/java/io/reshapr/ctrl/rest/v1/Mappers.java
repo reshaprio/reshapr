@@ -19,6 +19,7 @@ import io.reshapr.ctrl.model.ActiveExposition;
 import io.reshapr.ctrl.model.ApiToken;
 import io.reshapr.ctrl.model.Artifact;
 import io.reshapr.ctrl.model.ConfigurationPlan;
+import io.reshapr.ctrl.model.ConfigurationTemplate;
 import io.reshapr.ctrl.model.Exposition;
 import io.reshapr.ctrl.model.Gateway;
 import io.reshapr.ctrl.model.GatewayGroup;
@@ -138,6 +139,12 @@ public interface Mappers {
    ServiceType fromResource(ServiceTypeEnum serviceTypeEnum);
 
    ServiceViewDTO toResource(Service service);
+
+   ConfigurationTemplate fromResource(ConfigurationTemplateDTO configurationTemplateDTO);
+
+   ConfigurationTemplateDTO toResource(ConfigurationTemplate configurationTemplate);
+
+   List<ConfigurationTemplateDTO> toCTResources(List<ConfigurationTemplate> configurationTemplates);
 
    ConfigurationPlan fromResource(ConfigurationPlanDTO configurationPlanDTO);
 

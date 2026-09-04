@@ -51,12 +51,9 @@ public class SecretResource {
 
    private final SecretRepository secretRepository;
    private final Mappers v1Mappers;
-   private final MappersImpl mappersImpl;
-
-   public SecretResource(SecretRepository secretRepository, Mappers v1Mappers, MappersImpl mappersImpl) {
+   public SecretResource(SecretRepository secretRepository, Mappers v1Mappers) {
       this.secretRepository = secretRepository;
       this.v1Mappers = v1Mappers;
-      this.mappersImpl = mappersImpl;
    }
 
    @GET

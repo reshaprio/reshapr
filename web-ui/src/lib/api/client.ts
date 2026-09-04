@@ -195,6 +195,25 @@ export function apiClient() {
         body: JSON.stringify(body)
       }),
     deleteApiToken: (tokenId: string) =>
-      empty(`/api/v1/tokens/apiTokens/${tokenId}`, { method: 'DELETE' })
+      empty(`/api/v1/tokens/apiTokens/${tokenId}`, { method: 'DELETE' }),
+
+    listConfigurationTemplates: () =>
+      json<unknown[]>('/api/v1/configurationTemplates'),
+    getConfigurationTemplate: (id: string) =>
+      json<unknown>(`/api/v1/configurationTemplates/${id}`),
+    createConfigurationTemplate: (body: unknown) =>
+      json<unknown>('/api/v1/configurationTemplates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }),
+    updateConfigurationTemplate: (id: string, body: unknown) =>
+      json<unknown>(`/api/v1/configurationTemplates/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }),
+    deleteConfigurationTemplate: (id: string) =>
+      empty(`/api/v1/configurationTemplates/${id}`, { method: 'DELETE' })
   };
 }
