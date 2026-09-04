@@ -106,7 +106,9 @@ public class ConfigurationPlan extends TenantAwareEntity {
    public record OAuth2Configuration(
          List<String> authorizationServers,
          String jwksUri,
-         List<String> scopes
+         List<String> scopes,
+         List<String> staticAudiences,
+         boolean disableAudienceValidation
    ) {
    }
 

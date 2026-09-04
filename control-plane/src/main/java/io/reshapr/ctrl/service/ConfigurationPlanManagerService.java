@@ -161,7 +161,9 @@ public class ConfigurationPlanManagerService {
          newPlan.oauth2Configuration = new ConfigurationPlan.OAuth2Configuration(
                sourcePlan.oauth2Configuration.authorizationServers() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.authorizationServers()) : null,
                sourcePlan.oauth2Configuration.jwksUri(),
-               sourcePlan.oauth2Configuration.scopes() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.scopes()) : null
+               sourcePlan.oauth2Configuration.scopes() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.scopes()) : null,
+               sourcePlan.oauth2Configuration.staticAudiences() != null ? new java.util.ArrayList<>(sourcePlan.oauth2Configuration.staticAudiences()) : null,
+               sourcePlan.oauth2Configuration.disableAudienceValidation()
          );
       }
 

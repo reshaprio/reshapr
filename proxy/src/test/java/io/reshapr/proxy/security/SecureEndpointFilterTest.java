@@ -157,7 +157,7 @@ class SecureEndpointFilterTest {
    }
 
    private void registerOAuth2Exposition(String expositionId, List<String> scopes, String jwksSetUri, boolean audit) {
-      OAuth2ConfigurationEntry oauth2 = new OAuth2ConfigurationEntry(List.of(ISSUER), jwksSetUri, scopes);
+      OAuth2ConfigurationEntry oauth2 = new OAuth2ConfigurationEntry(List.of(ISSUER), jwksSetUri, scopes, null, false);
       ConfigurationEntry configuration = new ConfigurationEntry("conf-" + expositionId, "conf", "http://backend",
             30000L, List.of(), List.of(), null, oauth2, null, audit);
       ServiceEntry service = new ServiceEntry("svc1", "org1", "Test Service", "1.0", "REST", List.of());
@@ -194,7 +194,8 @@ class SecureEndpointFilterTest {
             .issuer(ISSUER)
             .issueTime(Date.from(now.minusSeconds(10)))
             .expirationTime(Date.from(now.plusSeconds(300)))
-            .jwtID(UUID.randomUUID().toString());
+            .jwtID(UUID.randomUUID().toString())
+            .audience(CANONICAL_RESOURCE);
       builder = customizer.apply(builder);
 
       SignedJWT jwt = new SignedJWT(
@@ -445,7 +446,7 @@ class SecureEndpointFilterTest {
          filter.filter(ctx1);
          assertNotAborted(ctx1);
 
-         ContainerRequestContext ctx2 = mcpRequest("/mcp/exp2", "Bearer " + validToken());
+         ContainerRequestContext ctx2 = mcpRequest("/mcp/exp2", "Bearer " + token(JOSEObjectType.JWT, b -> b.audience("http://localhost:7777/mcp/exp2")));
          filter.filter(ctx2);
          assertNotAborted(ctx2);
 
@@ -571,8 +572,6 @@ class SecureEndpointFilterTest {
       }
 
       @Test
-      @Disabled("Future MCP MUST: validate the standard aud claim (RFC 8707/9068) against the canonical "
-            + "resource URI — a token minted for another API of the same issuer must be rejected")
       @DisplayName("aud claim bound to another resource -> rejected")
       void mismatchedAudienceIsRejected() throws Exception {
          registerOAuth2Exposition(null);
@@ -587,7 +586,6 @@ class SecureEndpointFilterTest {
       }
 
       @Test
-      @Disabled("Future MCP MUST: aud claim matching the canonical resource URI is accepted")
       @DisplayName("aud claim matching the canonical exposition URI is accepted")
       void matchingAudienceIsAccepted() throws Exception {
          registerOAuth2Exposition(null);

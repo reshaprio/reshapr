@@ -25,6 +25,8 @@ import java.util.List;
 public record OAuth2ConfigurationEntry(
       List<String> authorizationServers,
       String jwksUri,
-      List<String> scopes
+      List<String> scopes,
+      List<String> staticAudiences,
+      boolean disableAudienceValidation
 ) {
 }

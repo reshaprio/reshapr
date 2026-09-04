@@ -57,6 +57,7 @@ public interface Mappers {
 
    @Mapping(target = "authorizationServers", source = "authorizationServersList")
    @Mapping(target = "scopes", source = "scopesList")
+   @Mapping(target = "staticAudiences", source = "staticAudiencesList")
    public OAuth2ConfigurationEntry toOAuth2ConfigurationEntry(OAuth2Configuration oauth2Configuration);
 
    public SecretEntry toSecret(Secret secret);
