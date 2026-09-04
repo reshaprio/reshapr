@@ -113,5 +113,4 @@ If you think reShapr is useful for the AI ecosystem, [**give us a star** on our 
 
 ### Thanks!
 
-[![Stargazers repo roster for @reshaprio/reshapr](http://reporoster.com/stars/reshaprio/reshapr)](http://github.com/reshaprio/reshapr/stargazers)
 [![Forkers repo roster for @reshaprio/reshapr](http://reporoster.com/forks/reshaprio/reshapr)](http://github.com/reshaprio/reshapr/network/members)
