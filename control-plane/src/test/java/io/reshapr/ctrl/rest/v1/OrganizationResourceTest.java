@@ -31,7 +31,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OrganizationResourceTest {
+class OrganizationResourceTest {
 
    private OrganizationResource organizationResource;
    private String currentUsername;
@@ -39,7 +39,7 @@ public class OrganizationResourceTest {
    private Organization foundOrgByName;
 
    @BeforeEach
-   public void setup() {
+   void setup() {
       UserRepository stubUserRepository = new UserRepository() {
          @Override
          public User findByEmail(String email) {
@@ -62,7 +62,7 @@ public class OrganizationResourceTest {
    }
 
    @Test
-   public void testGetMembersAsOwner() {
+   void testGetMembersAsOwner() {
       currentUsername = "owner";
 
       User ownerUser = new User();
@@ -89,7 +89,7 @@ public class OrganizationResourceTest {
    }
 
    @Test
-   public void testGetMembersAsNonOwner() {
+   void testGetMembersAsNonOwner() {
       currentUsername = "not-owner";
 
       User ownerUser = new User();
@@ -107,7 +107,7 @@ public class OrganizationResourceTest {
    }
 
    @Test
-   public void testAddMemberAsOwner() {
+   void testAddMemberAsOwner() {
       currentUsername = "owner";
 
       User ownerUser = new User();
@@ -134,7 +134,7 @@ public class OrganizationResourceTest {
    }
 
    @Test
-   public void testAddMemberNotFound() {
+   void testAddMemberNotFound() {
       currentUsername = "owner";
 
       User ownerUser = new User();
@@ -154,7 +154,7 @@ public class OrganizationResourceTest {
    }
 
    @Test
-   public void testRemoveMemberAsOwner() {
+   void testRemoveMemberAsOwner() {
       currentUsername = "owner";
 
       User ownerUser = new User();
