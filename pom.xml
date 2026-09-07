@@ -12,6 +12,7 @@
     <module>commons</module>
     <module>control-plane</module>
     <module>proxy</module>
+    <module>e2e-tests</module>
   </modules>
 
   <name>Reshapr</name>

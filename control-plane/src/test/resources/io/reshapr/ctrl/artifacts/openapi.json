@@ -1,0 +1,22 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "My API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "getPets"
+      },
+      "post": {
+        "operationId": "createPet"
+      }
+    },
+    "/pets/{petId}": {
+      "get": {
+        "operationId": "getPetById"
+      }
+    }
+  }
+}
