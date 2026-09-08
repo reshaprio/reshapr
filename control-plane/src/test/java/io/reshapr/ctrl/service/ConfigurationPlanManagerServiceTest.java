@@ -184,8 +184,12 @@ class ConfigurationPlanManagerServiceTest {
 
       ConfigurationPlan plan = newPlan("elicitation-with-oauth");
       plan.oauth2Configuration = new ConfigurationPlan.OAuth2Configuration(
-            List.of("https://as.example.com"), "https://as.example.com/jwks", List.of("read"));
-
+                        List.of("http://localhost:8080/auth"),
+                        "http://localhost:8080/jwks",
+                        List.of("read", "write"),
+                        null,
+                        false
+                  );
       ConfigurationPlan created = managerService.createConfigurationPlan(plan, serviceId, secretId, false);
       assertNotNull(created.id);
       assertNotNull(created.backendSecret);

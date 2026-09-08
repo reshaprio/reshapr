@@ -58,6 +58,8 @@ message OAuth2Configuration {
   repeated string authorizationServers = 1;
   string jwksUri = 2;
   repeated string scopes = 3;
+  repeated string staticAudiences = 4;
+  bool disableAudienceValidation = 5;
 }
 
 // Secret represents sensitive information required for accessing the backend service

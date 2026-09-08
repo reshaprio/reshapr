@@ -33,6 +33,8 @@ public record OAuth2ConfigurationDTO(
       List<@HttpUrl(message = "Authorization server must be a valid HTTP(S) URL") String> authorizationServers,
       @HttpUrl(message = "JWKS URI endpoint must be a valid HTTP(S) URL")
       String jwksUri,
-      List<String> scopes
+      List<String> scopes,
+      List<String> staticAudiences,
+      boolean disableAudienceValidation
 ) {
 }

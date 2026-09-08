@@ -48,6 +48,7 @@ public record AuthenticationFailureAuditEvent(
    public static final String REASON_INVALID_TOKEN = "invalid_token";
    public static final String REASON_FORBIDDEN_RESOURCE = "forbidden_resource";
    public static final String REASON_FORBIDDEN_SERVICE = "forbidden_service";
+   public static final String REASON_FORBIDDEN_AUDIENCE = "forbidden_audience";
    public static final String REASON_MISSING_SCOPE = "missing_scope";
 }
 
