@@ -130,7 +130,8 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
 
          // Then get the protocol specific tools excluding those that are already targeted by custom tools.
          protocolToolConverter.getAvailableOperations(service).stream()
-               .filter(operationEntry -> !targetTools.contains(protocolToolConverter.getToolName(operationEntry)))
+               .filter(operationEntry -> !targetTools.contains(operationEntry.name())
+                     && !targetTools.contains(protocolToolConverter.getToolName(operationEntry)))
                .forEach(operationEntries::add);
       } else {
          // Else delegate to protocol specific tool.
