@@ -21,6 +21,7 @@ import { Logger } from "../utils/logger.js";
 import { ConfigUtil } from "../utils/config.js";
 import { formatExpositionEndpoints, buildExpositionSlug } from "../utils/format.js";
 import { Context } from "../utils/context.js";
+import { readHttpErrorMessage } from "../utils/error.js";
 import { CLI_LABEL } from '../constants.js';
 
 // Kept in sync with GatewayGroup.DEFAULT_GATEWAY_GROUP_ID (control-plane) — provisioned by Flyway V1.0.0.
@@ -104,7 +105,8 @@ export const importCommand = new Command('import')
       body: body
     });
     if (!response.ok) {
-      Logger.error('Import failed: ' + response.statusText);
+      spinner.stop();
+      Logger.error('Import failed: ' + await readHttpErrorMessage(response));
       process.exit(1);
     }
 

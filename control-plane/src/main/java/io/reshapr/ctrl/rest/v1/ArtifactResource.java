@@ -15,6 +15,8 @@
  */
 package io.reshapr.ctrl.rest.v1;
 
+import io.reshapr.ctrl.artifacts.ArtifactImportException;
+import io.reshapr.ctrl.artifacts.ReshaprArtifactException;
 import io.reshapr.ctrl.model.Artifact;
 import io.reshapr.ctrl.model.Service;
 import io.reshapr.ctrl.repository.ArtifactRepository;
@@ -142,13 +144,16 @@ public class ArtifactResource {
                   new SpecificationArtifactInfo(file.fileName(), file.uploadedFile().toFile(), mainArtifact),
                   null, new ServiceInfo(serviceName, serviceVersion, includedOperations, excludedOperations));
             return Response.ok(v1Mappers.toResource(service)).build();
+         } catch (ArtifactImportException e) {
+            logger.warnf("Validation error importing artifact from uploaded file: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO(e.getMessage())).build();
          } catch (Exception e) {
             logger.error("Error importing artifact from uploaded file", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error importing artifact").build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorDTO("Error importing artifact")).build();
          }
       }
       logger.warn("No uploaded file provided for artifact import");
-      return Response.status(Response.Status.BAD_REQUEST).entity("No uploaded file provided").build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO("No uploaded file provided")).build();
    }
 
    @POST
@@ -170,13 +175,16 @@ public class ArtifactResource {
             Service service = serviceManagerService.importRemoteSpecification(url, secretName, mainArtifact,
                   new ServiceInfo(serviceName, serviceVersion, includedOperations, excludedOperations));
             return Response.ok(v1Mappers.toResource(service)).build();
+         } catch (ArtifactImportException e) {
+            logger.warnf("Validation error importing artifact from remote URL: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO(e.getMessage())).build();
          } catch (Exception e) {
             logger.error("Error importing artifact from remote URL", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error importing artifact").build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorDTO("Error importing artifact")).build();
          }
       }
       logger.warn("No URL provided for artifact import");
-      return Response.status(Response.Status.BAD_REQUEST).entity("No URL provided").build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO("No URL provided")).build();
    }
 
    @POST
@@ -191,13 +199,16 @@ public class ArtifactResource {
             Artifact artifact = serviceManagerService.attachArtifactFile(
                   new AttachmentArtifactInfo(file.fileName(), file.uploadedFile().toFile()));
             return Response.ok(v1Mappers.toResource(artifact)).build();
+         } catch (ReshaprArtifactException e) {
+            logger.warnf("Validation error attaching artifact from uploaded file: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO(e.getMessage())).build();
          } catch (Exception e) {
             logger.error("Error attaching artifact from uploaded file", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error attaching artifact").build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorDTO("Error attaching artifact")).build();
          }
       }
       logger.warn("No uploaded file provided for artifact attach");
-      return Response.status(Response.Status.BAD_REQUEST).entity("No uploaded file provided").build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO("No uploaded file provided")).build();
    }
 
    @POST
@@ -211,12 +222,15 @@ public class ArtifactResource {
          try {
             Artifact artifact = serviceManagerService.attachRemoteArtifact(url, secretName);
             return Response.ok(v1Mappers.toResource(artifact)).build();
+         } catch (ReshaprArtifactException e) {
+            logger.warnf("Validation error attaching artifact from remote URL: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO(e.getMessage())).build();
          } catch (Exception e) {
             logger.error("Error attaching artifact from remote URL", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error attaching artifact").build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorDTO("Error attaching artifact")).build();
          }
       }
       logger.warn("No URL provided for artifact attach");
-      return Response.status(Response.Status.BAD_REQUEST).entity("No URL provided").build();
+      return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorDTO("No URL provided")).build();
    }
 }

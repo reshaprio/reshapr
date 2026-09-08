@@ -20,7 +20,19 @@ export { ApiError } from './errors.js';
 
 async function parseErrorBody(res: Response): Promise<string> {
   const t = await res.text();
-  return t || res.statusText;
+  if (!t) return res.statusText;
+  // The control-plane returns structured errors as `{ "message": "..." }`; surface that message when
+  // present, falling back to the raw body (e.g. plain-text errors) then to the HTTP status text.
+  try {
+    const parsed = JSON.parse(t);
+    if (parsed && typeof parsed === 'object') {
+      const message = (parsed as Record<string, unknown>).message ?? (parsed as Record<string, unknown>).error;
+      if (typeof message === 'string' && message.trim()) return message;
+    }
+  } catch {
+    // Not JSON — fall through to the raw text body.
+  }
+  return t;
 }
 
 /**

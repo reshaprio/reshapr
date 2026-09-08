@@ -20,6 +20,7 @@ import { Command } from "commander";
 import { Logger } from "../utils/logger.js";
 import { ConfigUtil } from "../utils/config.js";
 import { Context } from "../utils/context.js";
+import { readHttpErrorMessage } from "../utils/error.js";
 import { CLI_LABEL } from '../constants.js';
 
 export const attachCommand = new Command('attach')
@@ -63,7 +64,8 @@ export const attachCommand = new Command('attach')
       body: body
     });
     if (!response.ok) {
-      Logger.error('Attach failed: ' + response.statusText);
+      spinner.stop();
+      Logger.error('Attach failed: ' + await readHttpErrorMessage(response));
       process.exit(1);
     }
 

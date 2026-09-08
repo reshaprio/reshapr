@@ -86,6 +86,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Artifact'
           description: Artifact imported
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: >-
+            The artifact could not be imported. The response body contains a message describing the
+            validation error (e.g. invalid or malformed specification file, unresolvable remote URL).
       security:
       - jwt-bearer: []
       operationId: importArtifact
@@ -103,6 +111,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Artifact'
           description: Artifact attache
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: >-
+            The artifact could not be attached. The response body contains a message describing the
+            validation error (e.g. invalid or malformed artifact file, unresolvable remote URL).
       security:
         - jwt-bearer: [ ]
       operationId: attachArtifact
@@ -841,6 +857,15 @@ paths:
         - jwt-bearer: []
 components:
   schemas:
+    Error:
+      description: A structured error payload returned when a request cannot be fulfilled
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          description: A human-readable description of the error
+          type: string
     Artifact:
       description: An Artifact in reShapr control plane
       required:
