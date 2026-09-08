@@ -60,6 +60,9 @@ public class CustomToolScriptRunner {
    static final String RS_FAIL_MARKER = "__RS_FAIL__";
    static final String RS_END_MARKER = "__RS_END__";
 
+   /** Prefix of the quickjs4j error message raised when the assembled script fails to compile. */
+   static final String COMPILE_ERROR_PREFIX = "Failed to compile JS code:";
+
    /** The {@code rs} façade exposed to scripts, built on top of the {@code __rs} builtins. */
    private static final String RS_PRELUDE = """
          const rs = {
@@ -145,8 +148,7 @@ public class CustomToolScriptRunner {
       } catch (CustomToolScriptException e) {
          throw e;
       } catch (Exception e) {
-         logger.error("Exception while executing custom tool script", e);
-         throw new CustomToolScriptException("Custom tool script execution failed", toErrorContent(e.getMessage()), e);
+         throw toScriptException(e);
       }
    }
 
@@ -175,13 +177,66 @@ public class CustomToolScriptRunner {
                "Custom tool script timed out after " + timeoutMillis + " ms", e);
       } catch (ExecutionException e) {
          Throwable cause = e.getCause() != null ? e.getCause() : e;
-         throw new CustomToolScriptException("Custom tool script execution failed",
-               toErrorContent(cause.getMessage()), cause);
+         throw toScriptException(cause);
       } catch (InterruptedException e) {
          Thread.currentThread().interrupt();
          throw new CustomToolScriptException("Interrupted while running custom tool script",
                "Interrupted while running custom tool script", e);
       }
+   }
+
+   /**
+    * Build a {@link CustomToolScriptException} from a raw failure cause, distinguishing script
+    * compilation failures (whose quickjs4j message otherwise dumps the whole assembled script) from
+    * runtime failures so that the former surface a concise, meaningful error.
+    */
+   private CustomToolScriptException toScriptException(Throwable cause) {
+      String compileMessage = compilationMessage(cause);
+      if (compileMessage != null) {
+         String detail = extractCompilationDetail(compileMessage);
+         logger.errorf("Custom tool script failed to compile: %s", detail);
+         return new CustomToolScriptException("Custom tool script failed to compile", detail, cause, true);
+      }
+      logger.error("Exception while executing custom tool script", cause);
+      return new CustomToolScriptException("Custom tool script execution failed",
+            toErrorContent(cause.getMessage()), cause);
+   }
+
+   /** Walk the cause chain looking for the quickjs4j compilation error message, or {@code null}. */
+   @Nullable
+   private static String compilationMessage(Throwable cause) {
+      for (Throwable current = cause; current != null; current = current.getCause()) {
+         String message = current.getMessage();
+         if (message != null && message.startsWith(COMPILE_ERROR_PREFIX)) {
+            return message;
+         }
+      }
+      return null;
+   }
+
+   /**
+    * Extract the concise, user-meaningful part of a quickjs4j compilation error. The raw message
+    * dumps the entire assembled script between the {@value #COMPILE_ERROR_PREFIX} prefix and a
+    * trailing {@code "stderr: <syntax error>"} / {@code "stdout: ..."}; only the {@code stderr}
+    * portion (the actual QuickJS syntax error) is retained — the full code dump is stripped.
+    */
+   String extractCompilationDetail(@Nullable String rawMessage) {
+      if (rawMessage == null || rawMessage.isBlank()) {
+         return "script compilation failed";
+      }
+      int stderrIdx = rawMessage.indexOf("\nstderr: ");
+      if (stderrIdx >= 0) {
+         String detail = rawMessage.substring(stderrIdx + "\nstderr: ".length());
+         int stdoutIdx = detail.indexOf("\nstdout: ");
+         if (stdoutIdx >= 0) {
+            detail = detail.substring(0, stdoutIdx);
+         }
+         detail = detail.strip();
+         if (!detail.isBlank()) {
+            return sanitize(detail);
+         }
+      }
+      return "script compilation failed";
    }
 
    /**
@@ -242,6 +297,9 @@ public class CustomToolScriptRunner {
       /** The MCP-facing error content (sanitized text, or canonical JSON for {@code rs.fail}). */
       private final transient String errorContent;
 
+      /** Whether this failure originates from the script failing to compile (vs. a runtime error). */
+      private final boolean compilationError;
+
       /**
        * Build the exception with a distinct internal message and MCP-facing error content.
        * @param message The internal/log message.
@@ -249,17 +307,34 @@ public class CustomToolScriptRunner {
        * @param cause The underlying cause.
        */
       public CustomToolScriptException(String message, String errorContent, Throwable cause) {
+         this(message, errorContent, cause, false);
+      }
+
+      /**
+       * Build the exception with a distinct internal message and MCP-facing error content.
+       * @param message The internal/log message.
+       * @param errorContent The content surfaced to the MCP client (with {@code isError = true}).
+       * @param cause The underlying cause.
+       * @param compilationError Whether the failure is a script compilation error.
+       */
+      public CustomToolScriptException(String message, String errorContent, Throwable cause, boolean compilationError) {
          super(message, cause);
          this.errorContent = errorContent;
+         this.compilationError = compilationError;
       }
 
       public CustomToolScriptException(String message, Throwable cause) {
-         this(message, message, cause);
+         this(message, message, cause, false);
       }
 
       /** The content to surface to the MCP client as an error result. */
       public String errorContent() {
          return errorContent;
+      }
+
+      /** Whether this failure is a script compilation error (vs. a runtime error). */
+      public boolean isCompilationError() {
+         return compilationError;
       }
    }
 }

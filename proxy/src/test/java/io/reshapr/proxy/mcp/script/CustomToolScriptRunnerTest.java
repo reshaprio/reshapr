@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -413,6 +414,40 @@ class CustomToolScriptRunnerTest {
    // ---------------------------------------------------------------------------------------------
    // Failure signaling: throw and rs.fail.
    // ---------------------------------------------------------------------------------------------
+
+   @Test
+   void testCompilationErrorIsConciseAndFlagged() {
+      GatewayRegistry registry = new GatewayRegistry();
+      ExpositionEntry exposition = exposition();
+      ReshaprToolsBuiltins builtins = new ReshaprToolsBuiltins(exposition, registry,
+            gitHubUserExecutor(registry), Map.of(), List.of());
+
+      CustomToolScriptRunner runner = new CustomToolScriptRunner(MAPPER);
+      // A syntax error (empty expression) makes the assembled script fail to compile.
+      CustomToolScriptRunner.CustomToolScriptException ex = assertThrows(
+            CustomToolScriptRunner.CustomToolScriptException.class,
+            () -> runner.run("const x = ; return { oops: true };", Map.of(), builtins));
+
+      assertTrue(ex.isCompilationError(), "Should be flagged as a compilation error");
+      // The surfaced content must not dump the whole assembled script (prelude/builtins bridge).
+      assertFalse(ex.errorContent().contains("globalThis.__rs"),
+            "Compilation error content should not include the assembled script: " + ex.errorContent());
+      assertFalse(ex.errorContent().contains("Failed to compile JS code:"),
+            "Compilation error content should be trimmed: " + ex.errorContent());
+      assertTrue(ex.errorContent().length() < 500,
+            "Compilation error content should be concise: " + ex.errorContent());
+   }
+
+   @Test
+   void testExtractCompilationDetailKeepsOnlyStderr() {
+      CustomToolScriptRunner runner = new CustomToolScriptRunner(MAPPER);
+      String raw = "Failed to compile JS code:\nglobalThis.__rs = {};\nfunction process() {}\n"
+            + "stderr: SyntaxError: unexpected token in expression: ';'\nstdout: ";
+
+      String detail = runner.extractCompilationDetail(raw);
+
+      assertEquals("SyntaxError: unexpected token in expression: ';'", detail);
+   }
 
    @Test
    void testScriptThrowIsSurfacedAsErrorContent() {

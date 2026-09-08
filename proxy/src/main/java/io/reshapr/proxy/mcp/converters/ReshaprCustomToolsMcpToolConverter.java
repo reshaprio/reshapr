@@ -264,7 +264,12 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
       } catch (CustomToolScriptRunner.CustomToolScriptException e) {
          // A thrown error (or rs.fail) becomes an MCP tool error, surfacing the script-provided content.
          logger.warnf("Script custom tool '%s' failed: %s", operation.name(), e.getMessage());
-         return new Response(e.errorContent(), true, builtins.accumulatedAttrs());
+         // For a compilation error, prepend the failing tool name so the caller knows which custom
+         // tool's script did not compile (the concise syntax detail comes from the runner).
+         String errorContent = e.isCompilationError()
+               ? "Custom tool '" + operation.name() + "' failed to compile: " + e.errorContent()
+               : e.errorContent();
+         return new Response(errorContent, true, builtins.accumulatedAttrs());
       } catch (Exception e) {
          logger.errorf(e, "Exception while running script custom tool '%s'", operation.name());
          return new Response("Script execution failed", true, builtins.accumulatedAttrs());
