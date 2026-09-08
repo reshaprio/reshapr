@@ -116,6 +116,21 @@ class ReshaprArtifactBuilderTest {
    }
 
    @Test
+   void testNonConformantCustomToolsMissingArguments() {
+      URL customToolsURL = getClass().getResource("/io/reshapr/ctrl/artifacts/custom-tools-no-arguments-invalid.yaml");
+      File customToolsFile = new File(customToolsURL.getFile());
+
+      try {
+         ReshaprArtifactBuilder.parseArtifact("custom-tools-no-arguments-invalid.yaml", customToolsFile);
+      } catch (ReshaprArtifactException mae) {
+         assertEquals("Artifact content is not valid against schema for kind 'CustomTools' and version 'reshapr.io/v1alpha1'",
+               mae.getMessage());
+         return;
+      }
+      fail("An exception should have been thrown for a declarative custom tool missing 'arguments'.");
+   }
+
+   @Test
    void testValidParsingCustomTools() {
       URL customToolsURL = getClass().getResource("/io/reshapr/ctrl/artifacts/custom-tools-valid.yaml");
       File customToolsFile = new File(customToolsURL.getFile());

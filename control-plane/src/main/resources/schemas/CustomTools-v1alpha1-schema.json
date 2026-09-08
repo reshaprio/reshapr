@@ -74,7 +74,8 @@
         {
           "title": "Declarative mapping form",
           "required": [
-            "tool"
+            "tool",
+            "arguments"
           ],
           "not": {
             "required": [
