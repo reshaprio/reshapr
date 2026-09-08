@@ -22,7 +22,7 @@ import io.reshapr.proxy.registry.ExpositionEntry;
 import io.reshapr.proxy.registry.GatewayRegistry;
 import io.reshapr.proxy.registry.OAuth2ConfigurationEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
-import io.reshapr.proxy.security.SecureEndpointFilter.MultipleIssuerClaimsVerifier;
+import io.reshapr.proxy.util.WebUtils;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
@@ -41,7 +41,6 @@ import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import io.opentelemetry.api.trace.Span;
-import io.reshapr.proxy.util.WebUtils;
 import io.vertx.core.http.HttpServerRequest;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
@@ -63,22 +62,29 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * SecureEndpointFilter is a JAX-RS filter that applies security checks to incoming requests.
  * The filter can be used to enforce security policies, such as authentication and authorization.
+ *
  * @author laurent
  */
 @Provider
 @SecureEndpoint
 public class SecureEndpointFilter implements ContainerRequestFilter {
 
-   /** Get a JBoss logging logger. */
+   /**
+    * Get a JBoss logging logger.
+    */
    private final Logger logger = Logger.getLogger(getClass());
 
    private static final String MCP_PATH_PREFIX = "/mcp/";
    private static final String API_KEY_HEADER = "x-reshapr-key";
 
-   /** Request context property key for the authenticated user ID. */
+   /**
+    * Request context property key for the authenticated user ID.
+    */
    public static final String USER_ID_PROPERTY = "reshapr.auth.userId";
 
-   /** Request context property key for the authenticated token issuer (JWT {@code iss} claim). */
+   /**
+    * Request context property key for the authenticated token issuer (JWT {@code iss} claim).
+    */
    public static final String ISSUER_PROPERTY = "reshapr.auth.issuer";
 
    private static final Set<JWSAlgorithm> JWS_SUPPORTED_ALGORITHMS = Set.of(
@@ -200,16 +206,10 @@ public class SecureEndpointFilter implements ContainerRequestFilter {
          return;
       }
 
-      if (!validateResourceClaim(service, configuration, ctx, claimsSet, fqdnScheme)) {
-         return;
-      }
-      if (!validateServiceIdClaim(service, configuration, ctx, claimsSet)) {
+      if (!validateAudience(service, configuration, ctx, claimsSet)) {
          return;
       }
       if (!validateScopes(service, configuration, ctx, claimsSet)) {
-         return;
-      }
-      if (!validateAudience(service, configuration, ctx, claimsSet)) {
          return;
       }
 
@@ -293,45 +293,6 @@ public class SecureEndpointFilter implements ContainerRequestFilter {
       }
    }
 
-   private boolean validateResourceClaim(ServiceEntry service, ConfigurationEntry configuration, ContainerRequestContext ctx, JWTClaimsSet claimsSet, String fqdnScheme) {
-      // Now check the claimsSet for resource as per
-      // https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization#token-handling
-      try {
-         String resource = claimsSet.getClaimAsString("resource");
-         if (resource != null && !resource.equalsIgnoreCase(fqdnScheme + fqdns.getFirst() + ctx.getUriInfo().getPath())) {
-            logger.warnf("Invalid OAuth2 token received, resource claim does not match '%s'", fqdnScheme + fqdns.getFirst() + ctx.getUriInfo().getPath());
-            emitAuthenticationFailureAuditEvent(service, configuration, AuthenticationFailureAuditEvent.REASON_FORBIDDEN_RESOURCE, Response.Status.FORBIDDEN.getStatusCode(), ctx);
-            ctx.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-            return false;
-         }
-      } catch (ParseException pe) {
-         logger.warnf("Bad OAuth2 token received, resource claim cannot be parsed as String", pe);
-         emitAuthenticationFailureAuditEvent(service, configuration, AuthenticationFailureAuditEvent.REASON_MALFORMED_TOKEN, Response.Status.UNAUTHORIZED.getStatusCode(), ctx);
-         ctx.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
-         return false;
-      }
-      return true;
-   }
-
-   private boolean validateServiceIdClaim(ServiceEntry service, ConfigurationEntry configuration, ContainerRequestContext ctx, JWTClaimsSet claimsSet) {
-      // If issued by the Reshapr internal IDP, we can also check the serviceID claim.
-      try {
-         String serviceID = claimsSet.getClaimAsString("serviceId");
-         if (serviceID != null && !serviceID.equals(service.id())) {
-            logger.warnf("Invalid OAuth2 token received, serviceId claim does not match service ID '%s'", service.id());
-            emitAuthenticationFailureAuditEvent(service, configuration, AuthenticationFailureAuditEvent.REASON_FORBIDDEN_SERVICE, Response.Status.FORBIDDEN.getStatusCode(), ctx);
-            ctx.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-            return false;
-         }
-      } catch (ParseException pe) {
-         logger.warnf("Bad OAuth2 token received, serviceId claim cannot be parsed as String", pe);
-         emitAuthenticationFailureAuditEvent(service, configuration, AuthenticationFailureAuditEvent.REASON_MALFORMED_TOKEN, Response.Status.UNAUTHORIZED.getStatusCode(), ctx);
-         ctx.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
-         return false;
-      }
-      return true;
-   }
-
    private boolean validateScopes(ServiceEntry service, ConfigurationEntry configuration, ContainerRequestContext ctx, JWTClaimsSet claimsSet) {
       final OAuth2ConfigurationEntry oauth2Config = configuration.oauth2Configuration();
       if (oauth2Config.scopes() == null || oauth2Config.scopes().isEmpty()) {
@@ -393,7 +354,7 @@ public class SecureEndpointFilter implements ContainerRequestFilter {
       boolean audienceMatched = false;
       String requestPath = ctx.getUriInfo().getPath();
 
-         // 1. Check against dynamic FQDN paths
+      // 1. Check against dynamic FQDN paths
       for (String fqdn : fqdns) {
          String expectedAudience = WebUtils.getHTTPScheme(fqdn) + fqdn + requestPath;
          if (tokenAudiences.contains(expectedAudience)) {
@@ -402,7 +363,7 @@ public class SecureEndpointFilter implements ContainerRequestFilter {
          }
       }
 
-         // 2. Check against static audiences if configured
+      // 2. Check against static audiences if configured
       if (!audienceMatched && oauth2Config.staticAudiences() != null) {
          for (String staticAudience : oauth2Config.staticAudiences()) {
             if (tokenAudiences.contains(staticAudience)) {

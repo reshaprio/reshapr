@@ -544,32 +544,8 @@ class SecureEndpointFilterTest {
    // === Audience / resource binding (MCP MUST, RFC 8707) =======================================
 
    @Nested
-   @DisplayName("Audience and resource binding (MCP MUST)")
+   @DisplayName("Audience and resource binding (MCP MUST, RFC 8707)")
    class AudienceBinding {
-
-      @Test
-      @DisplayName("resource claim matching the canonical exposition URI is accepted")
-      void matchingResourceClaimIsAccepted() throws Exception {
-         registerOAuth2Exposition(null);
-         ContainerRequestContext ctx = bearerRequest(
-               token(JOSEObjectType.JWT, b -> b.claim("resource", CANONICAL_RESOURCE)));
-
-         filter.filter(ctx);
-
-         assertNotAborted(ctx);
-      }
-
-      @Test
-      @DisplayName("resource claim bound to another resource -> 403 (confused deputy prevention)")
-      void mismatchedResourceClaimReturns403() throws Exception {
-         registerOAuth2Exposition(null);
-         ContainerRequestContext ctx = bearerRequest(
-               token(JOSEObjectType.JWT, b -> b.claim("resource", "http://other.example.com/mcp/other")));
-
-         filter.filter(ctx);
-
-         assertEquals(403, abortedResponse(ctx).getStatus());
-      }
 
       @Test
       @DisplayName("aud claim bound to another resource -> rejected")
@@ -595,18 +571,6 @@ class SecureEndpointFilterTest {
          filter.filter(ctx);
 
          assertNotAborted(ctx);
-      }
-
-      @Test
-      @DisplayName("serviceId claim not matching the exposed service -> 403")
-      void mismatchedServiceIdReturns403() throws Exception {
-         registerOAuth2Exposition(null);
-         ContainerRequestContext ctx = bearerRequest(
-               token(JOSEObjectType.JWT, b -> b.claim("serviceId", "some-other-service")));
-
-         filter.filter(ctx);
-
-         assertEquals(403, abortedResponse(ctx).getStatus());
       }
    }
 
