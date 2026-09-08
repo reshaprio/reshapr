@@ -25,6 +25,7 @@
 
 	type EditorWarning = {
 		message: string;
+		severity?: 'error' | 'warning';
 		startLineNumber: number;
 		startColumn: number;
 		endLineNumber: number;
@@ -73,6 +74,8 @@
 		schemaUri !== undefined && yamlMarkers.length > 0
 	);
 	const showWarningsSummary = $derived(warnings.length > 0);
+	const warningItems = $derived(warnings.filter((warning) => warning.severity !== 'error'));
+	const errorItems = $derived(warnings.filter((warning) => warning.severity === 'error'));
 	const showBottomSummary = $derived(showValidationSummary || showWarningsSummary);
 
 	function emitValidation(monaco: typeof Monaco) {
@@ -198,9 +201,10 @@
 	const VALIDATOR_MARKER_OWNER = 'reshapr-validators';
 
 	/**
-	 * Imperatively set the custom-validator warnings as Monaco markers (yellow, non-blocking). They
-	 * use a dedicated owner so they never collide with — nor leak into — the `yaml` schema markers
-	 * that gate saving.
+	 * Imperatively set the custom-validator findings as Monaco markers. Warning-severity findings are
+	 * yellow and non-blocking; error-severity findings are red and gate saving (mirroring a control-plane
+	 * import validation). A dedicated owner is used so they never collide with — nor leak into — the
+	 * `yaml` schema markers.
 	 */
 	export function setValidatorMarkers(warnings: EditorWarning[]) {
 		const monaco = monacoRef;
@@ -209,7 +213,10 @@
 			model,
 			VALIDATOR_MARKER_OWNER,
 			warnings.map((warning) => ({
-				severity: monaco.MarkerSeverity.Warning,
+				severity:
+					warning.severity === 'error'
+						? monaco.MarkerSeverity.Error
+						: monaco.MarkerSeverity.Warning,
 				message: warning.message,
 				startLineNumber: warning.startLineNumber,
 				startColumn: warning.startColumn,
@@ -269,27 +276,52 @@
 				</div>
 			{/if}
 			{#if showWarningsSummary}
-				<div
-					class="rounded-md border border-amber-400/60 bg-amber-50 px-3 py-2 text-xs dark:border-amber-500/40 dark:bg-amber-950/40"
-					role="status"
-					aria-label="Content warnings"
-				>
-					<p class="font-medium text-amber-700 dark:text-amber-300">
-						{warnings.length}
-						{warnings.length === 1 ? 'warning' : 'warnings'}
-						<span class="font-normal opacity-80">— non-blocking, you can still save</span>
-					</p>
-					<ul class="mt-1 space-y-0.5 text-amber-900/90 dark:text-amber-200/90">
-						{#each warnings.slice(0, 5) as warning (warning.message + warning.startLineNumber + warning.startColumn)}
-							<li>
-								Line {warning.startLineNumber}: {warning.message}
-							</li>
-						{/each}
-						{#if warnings.length > 5}
-							<li>…and {warnings.length - 5} more</li>
-						{/if}
-					</ul>
-				</div>
+				{#if errorItems.length > 0}
+					<div
+						class="rounded-md border border-red-400/60 bg-red-50 px-3 py-2 text-xs dark:border-red-500/40 dark:bg-red-950/40"
+						role="alert"
+						aria-label="Content errors"
+					>
+						<p class="font-medium text-red-700 dark:text-red-300">
+							{errorItems.length}
+							{errorItems.length === 1 ? 'error' : 'errors'}
+							<span class="font-normal opacity-80">— blocking, must be fixed before saving</span>
+						</p>
+						<ul class="mt-1 space-y-0.5 text-red-900/90 dark:text-red-200/90">
+							{#each errorItems.slice(0, 5) as item (item.message + item.startLineNumber + item.startColumn)}
+								<li>
+									Line {item.startLineNumber}: {item.message}
+								</li>
+							{/each}
+							{#if errorItems.length > 5}
+								<li>…and {errorItems.length - 5} more</li>
+							{/if}
+						</ul>
+					</div>
+				{/if}
+				{#if warningItems.length > 0}
+					<div
+						class="rounded-md border border-amber-400/60 bg-amber-50 px-3 py-2 text-xs dark:border-amber-500/40 dark:bg-amber-950/40"
+						role="status"
+						aria-label="Content warnings"
+					>
+						<p class="font-medium text-amber-700 dark:text-amber-300">
+							{warningItems.length}
+							{warningItems.length === 1 ? 'warning' : 'warnings'}
+							<span class="font-normal opacity-80">— non-blocking, you can still save</span>
+						</p>
+						<ul class="mt-1 space-y-0.5 text-amber-900/90 dark:text-amber-200/90">
+							{#each warningItems.slice(0, 5) as item (item.message + item.startLineNumber + item.startColumn)}
+								<li>
+									Line {item.startLineNumber}: {item.message}
+								</li>
+							{/each}
+							{#if warningItems.length > 5}
+								<li>…and {warningItems.length - 5} more</li>
+							{/if}
+						</ul>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}

@@ -131,6 +131,22 @@ class ReshaprArtifactBuilderTest {
    }
 
    @Test
+   void testNonConformantCustomToolsUnknownPlaceholder() {
+      URL customToolsURL = getClass().getResource("/io/reshapr/ctrl/artifacts/custom-tools-unknown-placeholder-invalid.yaml");
+      File customToolsFile = new File(customToolsURL.getFile());
+
+      try {
+         ReshaprArtifactBuilder.parseArtifact("custom-tools-unknown-placeholder-invalid.yaml", customToolsFile);
+      } catch (ReshaprArtifactException mae) {
+         assertTrue(mae.getMessage().contains("get_user_with_latest_followers"), mae.getMessage());
+         assertTrue(mae.getMessage().contains("${input.user}"), mae.getMessage());
+         assertTrue(mae.getMessage().contains("declared inputs are: user"), mae.getMessage());
+         return;
+      }
+      fail("An exception should have been thrown for a declarative custom tool referencing an undeclared input placeholder.");
+   }
+
+   @Test
    void testValidParsingCustomTools() {
       URL customToolsURL = getClass().getResource("/io/reshapr/ctrl/artifacts/custom-tools-valid.yaml");
       File customToolsFile = new File(customToolsURL.getFile());

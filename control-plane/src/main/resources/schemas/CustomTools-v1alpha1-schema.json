@@ -161,7 +161,8 @@
         },
         "arguments": {
           "type": "object",
-          "title": "The target tool arguments result. Actually a template reusing ${input} notation."
+          "title": "The target tool arguments result. Actually a template reusing ${input} notation.",
+          "description": "A template for the target tool arguments. A value that is exactly '${propertyName}' is substituted by the value of the matching custom tool input; use a dot-path (e.g. '${parent.child}') to reference a property of a nested object input. Every '${...}' placeholder MUST reference a property declared under 'input.properties'; an unknown placeholder is rejected at import time. Non-placeholder values are passed through as-is (embedded substitution such as 'Bearer ${token}' is not supported)."
         }
       }
     }

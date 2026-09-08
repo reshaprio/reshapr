@@ -38,11 +38,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -157,6 +160,11 @@ public class ReshaprArtifactBuilder {
       // Set the type from the kind-version map.
       artifact.type = KIND_VERSIONS_TYPES.get(kind + "-" + apiVersion);
 
+      // Additional semantic validations that JSON Schema alone cannot express.
+      if (artifact.type == ArtifactType.RESHAPR_CUSTOM_TOOLS) {
+         validateCustomToolsPlaceholders(artifactNode);
+      }
+
       // Extract the capabilities (element names) declared by this custom artifact.
       artifact.capabilities = extractCapabilities(artifact.type, artifactNode);
 
@@ -203,6 +211,101 @@ public class ReshaprArtifactBuilder {
    private static void collectFieldNames(JsonNode node, Set<String> target) {
       if (node != null && node.isObject()) {
          node.fieldNames().forEachRemaining(target::add);
+      }
+   }
+
+   /** Matches a scalar that is exactly a single {@code ${var}} placeholder (whitespace tolerant). */
+   private static final Pattern WHOLE_PLACEHOLDER = Pattern.compile("^\\s*\\$\\{([^}]+)\\}\\s*$");
+
+   /**
+    * Validate that every {@code ${var}} placeholder used in the {@code arguments} of a declarative
+    * (non-script) custom tool references a property declared under that tool's {@code input}. The proxy
+    * only substitutes a value when the whole scalar is exactly {@code ${var}} and silently drops any
+    * unresolved variable, which makes typos (e.g. {@code ${input.property}} instead of {@code ${property}})
+    * very hard to diagnose. We therefore reject such artifacts at import time with a precise message. This
+    * mirrors the editor-side {@code custom-tools-placeholders} validator in the web UI.
+    * @param artifactNode the parsed CustomTools artifact content
+    * @throws ReshaprArtifactException when an argument references an input that is not declared
+    */
+   private static void validateCustomToolsPlaceholders(JsonNode artifactNode) throws ReshaprArtifactException {
+      JsonNode customTools = artifactNode.get("customTools");
+      if (customTools == null || !customTools.isObject()) {
+         return;
+      }
+
+      Iterator<Map.Entry<String, JsonNode>> tools = customTools.fields();
+      while (tools.hasNext()) {
+         Map.Entry<String, JsonNode> toolEntry = tools.next();
+         JsonNode tool = toolEntry.getValue();
+         // Only declarative tools carry an `arguments` template; script tools are handled differently.
+         if (tool == null || !tool.isObject() || tool.has("script")) {
+            continue;
+         }
+         JsonNode arguments = tool.get("arguments");
+         if (arguments == null) {
+            continue;
+         }
+
+         Set<String> declared = collectInputVarPaths(tool.get("input"));
+         Set<String> unresolved = new LinkedHashSet<>();
+         collectUnresolvedPlaceholders(arguments, declared, unresolved);
+
+         if (!unresolved.isEmpty()) {
+            String declaredList = declared.isEmpty() ? "none" : String.join(", ", declared);
+            throw new ReshaprArtifactException("Custom tool '" + toolEntry.getKey()
+                  + "' references undeclared input placeholder(s) " + String.join(", ", unresolved)
+                  + " in its 'arguments'; declared inputs are: " + declaredList);
+         }
+      }
+   }
+
+   /**
+    * Collect the dot-joined property paths declared under an {@code input} JSON-schema node, recursing into
+    * nested object properties (e.g. {@code parent}, {@code parent.child}).
+    * @param inputNode the {@code input} node of a custom tool (may be null)
+    * @return the set of declared variable paths (never null)
+    */
+   private static Set<String> collectInputVarPaths(JsonNode inputNode) {
+      Set<String> paths = new LinkedHashSet<>();
+      if (inputNode == null || !inputNode.isObject()) {
+         return paths;
+      }
+      collectInputVarPaths(inputNode.get("properties"), "", paths);
+      return paths;
+   }
+
+   /** Recursive helper collecting declared property paths from a JSON-schema {@code properties} node. */
+   private static void collectInputVarPaths(JsonNode propertiesNode, String prefix, Set<String> paths) {
+      if (propertiesNode == null || !propertiesNode.isObject()) {
+         return;
+      }
+      for (Map.Entry<String, JsonNode> property : propertiesNode.properties()) {
+         String path = prefix.isEmpty() ? property.getKey() : prefix + "." + property.getKey();
+         paths.add(path);
+         JsonNode child = property.getValue();
+         if (child != null && child.isObject()) {
+            collectInputVarPaths(child.get("properties"), path, paths);
+         }
+      }
+   }
+
+   /** Walk every scalar leaf under an {@code arguments} node, collecting unresolved {@code ${var}} names. */
+   private static void collectUnresolvedPlaceholders(JsonNode node, Set<String> declared, Set<String> unresolved) {
+      if (node == null) {
+         return;
+      }
+      if (node.isObject()) {
+         node.forEach(child -> collectUnresolvedPlaceholders(child, declared, unresolved));
+      } else if (node.isArray()) {
+         node.forEach(child -> collectUnresolvedPlaceholders(child, declared, unresolved));
+      } else if (node.isTextual()) {
+         Matcher matcher = WHOLE_PLACEHOLDER.matcher(node.textValue());
+         if (matcher.matches()) {
+            String name = matcher.group(1).trim();
+            if (!declared.contains(name)) {
+               unresolved.add("'${" + name + "}'");
+            }
+         }
       }
    }
 

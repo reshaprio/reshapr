@@ -20,13 +20,17 @@ import type { ServiceApi } from '$lib/serviceHub.js';
 import type { ReshaprArtifactKind, ServiceRef } from './types.js';
 
 /**
- * A non-blocking, editor-side validation finding surfaced as a yellow warning. Positions are
- * 1-based (Monaco convention) so a warning maps directly onto a Monaco marker.
+ * An editor-side validation finding surfaced as a Monaco marker. Positions are 1-based (Monaco
+ * convention) so a finding maps directly onto a Monaco marker. Most findings are non-blocking
+ * warnings (yellow); a finding with severity 'error' is blocking (red) and gates saving, matching a
+ * validation the control plane also enforces at import time.
  */
 export type ValidatorWarning = {
 	/** Stable id of the validator that produced the warning (used for grouping/debugging). */
 	validatorId: string;
 	message: string;
+	/** 'error' is blocking (gates saving); 'warning' (default) is informational only. */
+	severity: 'error' | 'warning';
 	startLineNumber: number;
 	startColumn: number;
 	endLineNumber: number;
@@ -59,8 +63,19 @@ export type ValidatorContext = {
 /** Position helpers injected into each validator so it can map YAML nodes to marker positions. */
 type ValidatorHelpers = {
 	positionAt: (offset: number) => { lineNumber: number; column: number };
-	warnNode: (validatorId: string, node: Node | null | undefined, message: string) => ValidatorWarning;
-	warnRange: (validatorId: string, start: number, end: number, message: string) => ValidatorWarning;
+	warnNode: (
+		validatorId: string,
+		node: Node | null | undefined,
+		message: string,
+		severity?: 'error' | 'warning'
+	) => ValidatorWarning;
+	warnRange: (
+		validatorId: string,
+		start: number,
+		end: number,
+		message: string,
+		severity?: 'error' | 'warning'
+	) => ValidatorWarning;
 };
 
 /** The full context passed to a validator implementation. */
@@ -409,10 +424,11 @@ const customToolsPlaceholdersValidator: Validator = {
 				if (declared.has(name)) return;
 				const placeholder = findPlaceholders(scalar, ctx.content)[0];
 				const message = `Placeholder "\${${name}}" is not declared in this tool's input.`;
+				// Blocking: the control plane rejects this at import time, so gate saving here too.
 				warnings.push(
 					placeholder
-						? ctx.warnRange(this.id, placeholder.start, placeholder.end, message)
-						: ctx.warnNode(this.id, scalar as Node, message)
+						? ctx.warnRange(this.id, placeholder.start, placeholder.end, message, 'error')
+						: ctx.warnNode(this.id, scalar as Node, message, 'error')
 				);
 			});
 		}
@@ -721,21 +737,22 @@ export async function runValidators(ctx: ValidatorContext): Promise<ValidatorWar
 	const positionAt = makePositionAt(lineStarts, ctx.content.length);
 	const helpers: ValidatorHelpers = {
 		positionAt,
-		warnRange(validatorId, start, end, message) {
+		warnRange(validatorId, start, end, message, severity = 'warning') {
 			const startPos = positionAt(start);
 			const endPos = positionAt(end);
 			return {
 				validatorId,
 				message,
+				severity,
 				startLineNumber: startPos.lineNumber,
 				startColumn: startPos.column,
 				endLineNumber: endPos.lineNumber,
 				endColumn: endPos.column
 			};
 		},
-		warnNode(validatorId, node, message) {
+		warnNode(validatorId, node, message, severity = 'warning') {
 			const offsets = nodeOffsets(node) ?? [0, 1];
-			return helpers.warnRange(validatorId, offsets[0], offsets[1], message);
+			return helpers.warnRange(validatorId, offsets[0], offsets[1], message, severity);
 		}
 	};
 

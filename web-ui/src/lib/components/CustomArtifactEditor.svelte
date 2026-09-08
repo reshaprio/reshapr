@@ -79,6 +79,11 @@
 	let saving = $state(false);
 	let editorRef = $state<YamlMonacoEditor | null>(null);
 
+	// Custom (reShapr) validator findings. Warning-severity ones are non-blocking (yellow); error-severity
+	// ones (e.g. undeclared `${var}` placeholders, also rejected by the control plane at import) are
+	// blocking and gate saving — alongside schema errors.
+	let validatorWarnings = $state<ValidatorWarning[]>([]);
+
 	let title = $state('');
 	let titleDirty = $state(false);
 	let editingTitle = $state(false);
@@ -92,13 +97,18 @@
 	const schemaErrors = $derived(
 		validationMarkers.filter((marker) => marker.severity >= MONACO_WARNING_SEVERITY)
 	);
+	const blockingValidatorErrors = $derived(
+		validatorWarnings.filter((warning) => warning.severity === 'error')
+	);
 	const canSave = $derived(
-		editable && !saving && content.trim().length > 0 && schemaErrors.length === 0
+		editable &&
+			!saving &&
+			content.trim().length > 0 &&
+			schemaErrors.length === 0 &&
+			blockingValidatorErrors.length === 0
 	);
 
 	// ── Custom (reShapr) validators ──────────────────────────────────────────────────────────────
-	// These produce non-blocking warnings (yellow) and never gate saving — only schema errors do.
-	let validatorWarnings = $state<ValidatorWarning[]>([]);
 	let referenceIndexPromise: Promise<ReshaprReferenceIndex> | null = null;
 	let validationRunId = 0;
 
