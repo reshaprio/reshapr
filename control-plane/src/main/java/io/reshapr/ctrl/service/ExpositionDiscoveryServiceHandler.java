@@ -473,8 +473,13 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
          builder.setCertPem(secret.certPem);
       }
       builder.setUseElicitation(secret.useElicitation);
-      // Take care of third party OAuth2 configuration is elicitation is used.
-      if (secret.useElicitation && secret.oauth2ClientConfiguration != null) {
+      if (secret.authMethod != null) {
+         builder.setAuthMethod(secret.authMethod.name());
+      }
+      // Emit the OAuth2 client configuration whenever present: it is used both for the
+      // interactive Authorization Code flow (elicitation) and for the machine-to-machine
+      // Client Credentials flow (no elicitation).
+      if (secret.oauth2ClientConfiguration != null) {
          io.reshapr.discovery.exposition.v1.OAuth2ClientConfiguration.Builder tpOauth2Builder =
                io.reshapr.discovery.exposition.v1.OAuth2ClientConfiguration.newBuilder();
          var oauth2ClientConfiguration = secret.oauth2ClientConfiguration;
@@ -489,6 +494,9 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
          }
          if (oauth2ClientConfiguration.tokenEndpoint() != null) {
             tpOauth2Builder.setTokenEndpoint(oauth2ClientConfiguration.tokenEndpoint());
+         }
+         if (oauth2ClientConfiguration.scopes() != null) {
+            tpOauth2Builder.addAllScopes(oauth2ClientConfiguration.scopes());
          }
          builder.setOauth2ClientConfiguration(tpOauth2Builder.build());
       }

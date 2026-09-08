@@ -41,6 +41,8 @@ public class CacheProducer {
    public static final String ELICITATION_CACHE = "elicitation-store";
    /** Name of the replicated cache holding per-user elicited secrets (stateless mode). */
    public static final String USER_SECRET_CACHE = "user-secret-store";
+   /** Name of the replicated cache holding tokens the gateway acquires to authenticate to backends. */
+   public static final String BACKEND_TOKEN_CACHE = "backend-token-store";
 
    private final EmbeddedCacheManager cacheManager;
 
@@ -81,6 +83,19 @@ public class CacheProducer {
    @ApplicationScoped
    public BasicCache<String, String> userSecretCache() {
       return cacheManager.getCache(USER_SECRET_CACHE);
+   }
+
+   /**
+    * Produce the typed backend-token cache. Keyed by the {@code namespace + '/' + reference} string
+    * built by {@link BackendTokenStore}. Qualified with {@link BackendTokenCache} to disambiguate it
+    * from {@link #userSecretCache()} (both are {@code BasicCache<String, String>}).
+    * @return The {@code backend-token-store} cache.
+    */
+   @Produces
+   @ApplicationScoped
+   @BackendTokenCache
+   public BasicCache<String, String> backendTokenCache() {
+      return cacheManager.getCache(BACKEND_TOKEN_CACHE);
    }
 }
 

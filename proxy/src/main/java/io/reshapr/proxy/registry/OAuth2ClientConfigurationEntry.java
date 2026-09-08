@@ -17,17 +17,22 @@ package io.reshapr.proxy.registry;
 
 import org.infinispan.protostream.annotations.ProtoField;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Represents a third-party OAuth2 configuration entry in the registry.
  * @param clientId The OAuth2 client ID
  * @param clientSecret The OAuth2 client secret if any
  * @param authorizationEndpoint The OAuth2 authorization endpoint URL
  * @param tokenEndpoint The OAuth2 token endpoint URL
+ * @param scopes The OAuth2 scopes to request (optional, mainly for Client Credentials)
  * @author laurent
  */
 public record OAuth2ClientConfigurationEntry(
       @ProtoField(1) String clientId,
       @ProtoField(2) String clientSecret,
       @ProtoField(3) String authorizationEndpoint,
-      @ProtoField(4) String tokenEndpoint) {
+      @ProtoField(4) String tokenEndpoint,
+      @ProtoField(value = 5, collectionImplementation = ArrayList.class) List<String> scopes) {
 }

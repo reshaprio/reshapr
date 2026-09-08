@@ -842,7 +842,7 @@ paths:
 components:
   schemas:
     Artifact:
-      description: An Artifact in Micepe control plane
+      description: An Artifact in reShapr control plane
       required:
       - id
       - organizationId
@@ -997,10 +997,20 @@ components:
       description: A reference to a Secret of reShapr control plane
       type: object
     SecretType:
-      description: The types of Secret available in Micepe
+      description: The types of Secret available in reShapr
       enum:
       - ARTIFACT
       - ENDPOINT
+      type: string
+    SecretAuthMethod:
+      description: >-
+        The explicit authentication method a Secret carries when used to authenticate against a backend endpoint.
+        Used as the dispatch discriminator by the proxy. The list is extensible: new methods may be added over time.
+      enum:
+      - BASIC
+      - BEARER_TOKEN
+      - OAUTH2_AUTHORIZATION_CODE
+      - OAUTH2_CLIENT_CREDENTIALS
       type: string
     ServiceView:
       description: An aggregated view no Service and related elements in reShapr
@@ -1066,8 +1076,7 @@ components:
       - GRPC
       type: string
     ValidityPeriod:
-      description: 'The available duration that representation a validity period in
-        Micepe '
+      description: 'The available duration that representation a validity period in reShapr'
       enum:
       - "1"
       - "7"
@@ -1152,7 +1161,7 @@ components:
           description: Name of output message type
           type: string
     Service:
-      description: A Service in Micepe control plane
+      description: A Service in reShapr control plane
       required:
       - id
       - organizationId
@@ -1182,7 +1191,7 @@ components:
           description: Creation date in control plance
           type: string
     ConfigurationPlan:
-      description: A ConfigurationPlan in Micepe control plane
+      description: A ConfigurationPlan in reShapr control plane
       required:
       - id
       - organizationId
@@ -1353,7 +1362,13 @@ components:
           description: The remanining intance of metric within this quota
           type: integer
     Secret:
-      description: A Secret in the control plane
+      description: >-
+        A Secret in the control plane. Holds the credentials used to authenticate
+        against a backend endpoint (type ENDPOINT) or an artifact source (type ARTIFACT).
+        The authentication mechanism is described by the optional authMethod discriminator
+        (e.g. OAUTH2_CLIENT_CREDENTIALS for machine-to-machine backend authentication).
+        When authMethod is absent, the mechanism is inferred from the populated fields
+        (token, username/password, oauth2ClientConfiguration) for backward compatibility.
       required:
       - organizationId
       - name
@@ -1374,6 +1389,11 @@ components:
         type:
           $ref: '#/components/schemas/SecretType'
           description: The type of this secret
+        authMethod:
+          $ref: '#/components/schemas/SecretAuthMethod'
+          description: >-
+            The explicit authentication method this secret carries. When set to OAUTH2_CLIENT_CREDENTIALS, the proxy
+            obtains an access token on its own behalf from the oauth2ClientConfiguration token endpoint (no elicitation).
         username:
           description: Username for this secret
           type: string
@@ -1390,16 +1410,21 @@ components:
           description: A X509 certification in PEM format for this secret
           type: string
         useElicitation:
-          description: Whether this is an elicitation based secret
-          type: string
+          description: >-
+            Whether this is an elicitation based secret, i.e. the credentials are requested from the end user at 
+            runtime. False for static and machine-to-machine (Client Credentials) secrets.
+          type: boolean
         oauth2ClientConfiguration:
           $ref: '#/components/schemas/OAuth2ClientConfiguration'
-          description: 'Third-party OAuth2 client configuration for elicitation '
+          description: >-
+            OAuth2 client configuration, used both for interactive Authorization Code (with elicitation) and 
+            for machine-to-machine Client Credentials (authMethod OAUTH2_CLIENT_CREDENTIALS, without elicitation).
     OAuth2ClientConfiguration:
-      description: The configuration of an OAuth2 client
+      description: >-
+        The configuration of an OAuth2 client, used either for the Authorization Code
+        flow (with elicitation) or the Client Credentials flow (machine-to-machine).
       required:
       - clientId
-      - authorizationEndpoint
       - tokenEndpoint
       type: object
       properties:
@@ -1407,14 +1432,24 @@ components:
           description: The OAuth2 client identifier
           type: string
         authorizationEndpoint:
-          description: The authorization endpoint of OAuth2 auth server
+          description: >-
+            The authorization endpoint of the OAuth2 auth server. Required for the
+            Authorization Code flow only; not used for Client Credentials.
           type: string
         tokenEndpoint:
           description: The token exchange endpoint of the OAuth2 authorization server
           type: string
         clientSecret:
-          description: The OAuth2 client secret if needed
+          description: >-
+            The OAuth2 client secret if needed. May reference a secret store entry
+            (e.g. ${env:MY_CLIENT_SECRET}) resolved on the gateway.
           type: string
+        scopes:
+          description: >-
+            The OAuth2 scopes to request, mainly for the Client Credentials flow.
+          type: array
+          items:
+            type: string
     GatewayGroup:
       description: A GatewayGroup in Reshapr control plane
       required:

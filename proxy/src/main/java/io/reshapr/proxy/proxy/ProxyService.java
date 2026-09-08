@@ -20,12 +20,14 @@ import io.reshapr.proxy.context.SessionInfo;
 import io.reshapr.proxy.mcp.state.UserSecretStore;
 import io.reshapr.proxy.registry.ConfigurationEntry;
 import io.reshapr.proxy.registry.SecretEntry;
+import io.reshapr.proxy.secret.ClientCredentialsTokenProvider;
 import io.reshapr.proxy.secret.SecretReferenceResolver;
 
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.HttpHeaders;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -43,8 +45,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
-import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,6 +72,7 @@ public class ProxyService {
 
    private final SecretReferenceResolver secretResolver;
    private final UserSecretStore userSecretStore;
+   private final ClientCredentialsTokenProvider clientCredentialsTokenProvider;
 
    @ConfigProperty(name = "reshapr.gateway.backend.http.default-timeout")
    Long defaultBackendTimeout;
@@ -80,10 +81,19 @@ public class ProxyService {
     * Build a ProxyService with required dependencies.
     * @param secretResolver The resolver used to resolve secret references locally on the gateway.
     * @param userSecretStore The per-user elicited secret store (stateless mode).
+    * @param clientCredentialsTokenProvider Provides and caches OAuth2 client-credentials access tokens.
     */
-   public ProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore) {
+   @Inject
+   public ProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore,
+                       ClientCredentialsTokenProvider clientCredentialsTokenProvider) {
       this.secretResolver = secretResolver;
       this.userSecretStore = userSecretStore;
+      this.clientCredentialsTokenProvider = clientCredentialsTokenProvider;
+   }
+
+   /** Convenience constructor without a client-credentials token provider (used by tests/benchmarks). */
+   public ProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore) {
+      this(secretResolver, userSecretStore, null);
    }
 
    private static HttpClient[] buildClients() {
@@ -203,6 +213,21 @@ public class ProxyService {
    }
 
    private void manageSecurityHeaders(SecretEntry secret, Map<String, List<String>> headers) {
+      if (clientCredentialsTokenProvider != null && ClientCredentialsTokenProvider.AUTH_METHOD.equals(secret.authMethod())) {
+         // OAuth2 Client Credentials: obtain (and cache) a machine-to-machine access token on the gateway.
+         String cacheKey = MethodHandlingContext.getOrganizationId() + '/' + secret.name();
+         String token = clientCredentialsTokenProvider.getAccessToken(cacheKey, secret.oauth2ClientConfiguration());
+         if (token != null) {
+            if (secret.tokenHeader() != null && !secret.tokenHeader().isBlank()) {
+               headers.put(secret.tokenHeader(), List.of(token));
+            } else {
+               headers.put(HttpHeaders.AUTHORIZATION, List.of("Bearer " + token));
+            }
+         } else {
+            logger.warnf("Client credentials token not available for secret '%s'", secret.name());
+         }
+         return;
+      }
       if (!secret.useElicitation()) {
          // Add security headers based on the secret.
          if (secret.token() != null) {

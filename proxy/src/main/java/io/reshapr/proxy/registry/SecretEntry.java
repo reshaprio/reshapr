@@ -28,6 +28,7 @@ import org.infinispan.protostream.annotations.ProtoField;
  * @param certPem An optional PEM-encoded certificate associated with the secret.
  * @param useElicitation A flag indicating whether elicitation is used for this secret.
  * @param oauth2ClientConfiguration An optional OAuth2 client configuration entry.
+ * @param authMethod The explicit authentication method the secret carries (SecretAuthMethod name), or null.
  * @author laurent
  */
 public record SecretEntry(
@@ -38,5 +39,12 @@ public record SecretEntry(
       @ProtoField(5) String tokenHeader,
       @ProtoField(6) String certPem,
       @ProtoField(value = 7, defaultValue = "false") boolean useElicitation,
-      @ProtoField(8) OAuth2ClientConfigurationEntry oauth2ClientConfiguration) {
+      @ProtoField(8) OAuth2ClientConfigurationEntry oauth2ClientConfiguration,
+      @ProtoField(9) String authMethod) {
+
+   /** Backward-compatible constructor without an explicit authentication method. */
+   public SecretEntry(String name, String username, String password, String token, String tokenHeader,
+         String certPem, boolean useElicitation, OAuth2ClientConfigurationEntry oauth2ClientConfiguration) {
+      this(name, username, password, token, tokenHeader, certPem, useElicitation, oauth2ClientConfiguration, null);
+   }
 }

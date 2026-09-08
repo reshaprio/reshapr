@@ -70,6 +70,7 @@ message Secret {
   optional string certPem = 6;
   bool useElicitation = 7;
   optional OAuth2ClientConfiguration oauth2ClientConfiguration = 8;
+  optional string authMethod = 9; // Explicit authentication method discriminator (SecretAuthMethod name)
 }
 
 message OAuth2ClientConfiguration {
@@ -77,6 +78,7 @@ message OAuth2ClientConfiguration {
   string authorizationEndpoint = 2;
   string tokenEndpoint = 3;
   optional string clientSecret = 4;
+  repeated string scopes = 5; // OAuth2 scopes to request (mainly for Client Credentials)
 }
 
 // ExpositionDiscoveryRequest is used to request exposition discovery information

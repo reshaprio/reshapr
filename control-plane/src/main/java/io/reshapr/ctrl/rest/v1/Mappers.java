@@ -26,6 +26,7 @@ import io.reshapr.ctrl.model.Organization;
 import io.reshapr.ctrl.model.Quota;
 import io.reshapr.ctrl.model.Secret;
 import io.reshapr.ctrl.model.Secret.OAuth2ClientConfiguration;
+import io.reshapr.ctrl.model.SecretAuthMethod;
 import io.reshapr.ctrl.model.SecretType;
 import io.reshapr.ctrl.model.Service;
 import io.reshapr.ctrl.model.ServiceType;
@@ -98,6 +99,7 @@ public interface Mappers {
       String name = secret.name;
       String description = secret.description;
       SecretType type = secret.type;
+      SecretAuthMethod authMethod = secret.authMethod;
       String username = secret.username;
 
       String tokenHeader = secret.tokenHeader;
@@ -105,7 +107,7 @@ public interface Mappers {
       String password = secret.getPassword() != null ? "*******" : null;
       String token = secret.getToken() != null ? "*******" : null;
 
-      return new SecretDTO(id, organizationId, name, description, type, username, password, token, tokenHeader, certPem,
+      return new SecretDTO(id, organizationId, name, description, type, authMethod, username, password, token, tokenHeader, certPem,
             secret.useElicitation, toResource(secret.oauth2ClientConfiguration));
    }
 

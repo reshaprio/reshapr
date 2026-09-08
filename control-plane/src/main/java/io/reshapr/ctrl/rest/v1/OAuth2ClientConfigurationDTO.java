@@ -21,12 +21,15 @@ import io.reshapr.json.HtmlEncodedStringDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
+import java.util.List;
+
 /**
  * Data Transfer Object (DTO) for third-party OAuth2 configuration in the Reshapr control plane.
  * @param clientId The OAuth2 client ID
  * @param clientSecret The OAuth2 client secret if any
  * @param authorizationEndpoint The OAuth2 authorization endpoint URL
  * @param tokenEndpoint The OAuth2 token endpoint URL
+ * @param scopes The OAuth2 scopes to request (optional, mainly for Client Credentials)
  * @author laurent
  */
 @RegisterForReflection
@@ -38,5 +41,6 @@ public record OAuth2ClientConfigurationDTO(
       @HttpUrl(message = "Authorization endpoint must be a valid HTTP(S) URL")
       String authorizationEndpoint,
       @HttpUrl(message = "Token endpoint must be a valid HTTP(S) URL")
-      String tokenEndpoint) {
+      String tokenEndpoint,
+      List<String> scopes) {
 }

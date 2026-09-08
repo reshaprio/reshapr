@@ -15,6 +15,7 @@
  */
 package io.reshapr.ctrl.rest.v1;
 
+import io.reshapr.ctrl.model.SecretAuthMethod;
 import io.reshapr.ctrl.model.SecretType;
 import io.reshapr.json.HtmlEncodedStringDeserializer;
 
@@ -34,6 +35,7 @@ import jakarta.validation.constraints.Size;
  * @param token An optional token associated with the secret.
  * @param tokenHeader An optional header for the token.
  * @param certPem An optional PEM-encoded certificate associated with the secret.
+ * @param authMethod The explicit authentication method the secret carries (dispatch discriminator).
  * @param useElicitation A flag indicating whether elicitation is used for this secret.
  */
 @RegisterForReflection
@@ -47,6 +49,7 @@ public record SecretDTO(
       @JsonDeserialize(using = HtmlEncodedStringDeserializer.class)
       String description,
       SecretType type,
+      SecretAuthMethod authMethod,
       @Size(max = 255, message = "Username must not exceed 255 characters")
       @JsonDeserialize(using = HtmlEncodedStringDeserializer.class)
       String username,

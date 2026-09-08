@@ -2,11 +2,13 @@
 <!--
   Embedded Infinispan configuration for the reShapr gateway (proxy) replicated MCP state stores.
 
-  Three replicated caches shared across gateway replicas (see plan Steps 4/6/7):
+  Four replicated caches shared across gateway replicas (see plan Steps 4/6/7):
     - session-store      : legacy MCP sessions (SessionInfo), max-idle 300s
     - elicitation-store  : in-flight elicitations (ElicitationInfo), max-idle 120s
     - user-secret-store  : per-user elicited secrets (stateless mode), lifespan aligned on the
                            OAuth2 token expires_in at write time (this XML value is only a fallback)
+    - backend-token-store: tokens the gateway acquires to authenticate to backends (e.g. OAuth2
+                           Client Credentials), lifespan aligned on the token expires_in at write time
 
   Replication is ASYNC (low-latency same-subnet cluster, regenerable data — see plan decision #10)
   with ALLOW_READ_WRITES + PREFERRED_NON_NULL partition handling (see plan Point 7).
@@ -75,6 +77,15 @@
     <replicated-cache name="user-secret-store" mode="ASYNC">
       <!-- Fallback lifespan (~1h); the effective per-entry lifespan is set at write time,
            aligned on the OAuth2 token expires_in or equivalent. -->
+      <expiration lifespan="3600000"/>
+      <partition-handling when-split="ALLOW_READ_WRITES" merge-policy="PREFERRED_NON_NULL"/>
+    </replicated-cache>
+
+    <replicated-cache name="backend-token-store" mode="ASYNC">
+      <!-- Tokens the gateway acquires to authenticate to backends (e.g. OAuth2 Client Credentials).
+           Fallback lifespan (~1h); the effective per-entry lifespan is set at write time, aligned on
+           the token expires_in minus a safety margin. Shared cluster-wide so a token fetched once
+           serves all replicas and limits calls to the authorization server. -->
       <expiration lifespan="3600000"/>
       <partition-handling when-split="ALLOW_READ_WRITES" merge-policy="PREFERRED_NON_NULL"/>
     </replicated-cache>

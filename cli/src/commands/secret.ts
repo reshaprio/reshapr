@@ -24,6 +24,9 @@ import { CLI_LABEL } from '../constants.js';
 export const secretCommand = program.command('secret')
   .description(`Manage secrets in ${CLI_LABEL}`);
 
+/** The authMethod discriminator value for OAuth2 Client Credentials backend authentication. */
+const OAUTH2_CLIENT_CREDENTIALS = 'OAUTH2_CLIENT_CREDENTIALS';
+
 /* List all secrets */
 secretCommand.command('list')
   .description('List all secrets')
@@ -90,6 +93,9 @@ secretCommand.command('get <id>')
     Logger.log(`Name        : ${data.name}`);
     Logger.log(`Organization: ${data.organizationId}`);
     Logger.log(`Type        : ${data.type}`);
+    if (data.authMethod) {
+      Logger.log(`Auth Method : ${data.authMethod}`);
+    }
     if (data.username) {
       Logger.log(`Username    : ${data.username}`);
     }
@@ -107,13 +113,21 @@ secretCommand.command('get <id>')
       Logger.log(data.certPem);
     }
     Logger.log(`Description : ${data.description || ''}`);
+    if (data.authMethod === OAUTH2_CLIENT_CREDENTIALS && data.oauth2ClientConfiguration) {
+      Logger.bold(`OAuth2 Client Credentials:`);
+      Logger.log(`  OAuth2 Client ID      : ${data.oauth2ClientConfiguration.clientId}`);
+      Logger.log(`  OAuth2 Token Endpoint : ${data.oauth2ClientConfiguration.tokenEndpoint}`);
+      if (data.oauth2ClientConfiguration.scopes && data.oauth2ClientConfiguration.scopes.length > 0) {
+        Logger.log(`  OAuth2 Scopes         : ${data.oauth2ClientConfiguration.scopes.join(', ')}`);
+      }
+    }
     if (data.useElicitation) {
       if (data.tokenHeader) {
-        Logger.bold(`3rd Party Token:`);
+        Logger.bold(`Elicited Token:`);
         Logger.log(`  Sensitive Header: ${data.tokenHeader}`);
       }
-      if (data.thirdPartyOauth2Configuration) {
-        Logger.bold(`3rd Party OAuth2:`);
+      if (data.oauth2ClientConfiguration) {
+        Logger.bold(`Elicited OAuth2:`);
         Logger.log(`  OAuth2 Client ID             : ${data.oauth2ClientConfiguration.clientId}`);
         Logger.log(`  OAuth2 Authorization Endpoint: ${data.oauth2ClientConfiguration.authorizationEndpoint}`);
         Logger.log(`  OAuth2 Token Endpoint        : ${data.oauth2ClientConfiguration.tokenEndpoint}`);
@@ -240,6 +254,65 @@ secretCommand.command('create-elicitation <name>')
     const data = await response.json();
     Context.put('secret', data);
     Logger.success(`Elicitation secret ${data.name} created successfully with ID: ${data.id}`);
+  });
+
+/* Create an OAuth2 Client Credentials secret with name */
+secretCommand.command('create-client-credentials <name>')
+  .description('Create a new OAuth2 Client Credentials secret (machine-to-machine backend authentication)')
+  .option('-d, --description <description>', 'Description for the Client Credentials secret')
+  .option('--oc, --oauth2ClientID <oauth2ClientID>', 'The ClientID for the backend Authorization service')
+  .option('--ocs, --oauth2ClientSecret <oauth2ClientSecret>', 'The ClientSecret for the backend Authorization service (may reference an environment variable, e.g. ${env:MY_SECRET})')
+  .option('--ote, --oauth2TokenEndpoint <tokenEndpoint>', 'Token exchange Endpoint for backend authentication')
+  .option('--os, --oauth2Scopes <scopes>', 'Comma or space separated list of OAuth2 scopes to request (optional)')
+  .option('-o, --output <format>', 'Output format (json, yaml)')
+  .action(async (name, options) => {
+    if (!options.oauth2ClientID || !options.oauth2TokenEndpoint) {
+      Logger.error('OAuth2 Client Credentials requires oauth2ClientID and oauth2TokenEndpoint to be provided.');
+      process.exit(1);
+    }
+
+    // Parse the optional scopes into an array (comma or whitespace separated).
+    const scopes = (options.oauth2Scopes || '')
+      .split(/[\s,]+/)
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0);
+
+    // Initialize the secret object.
+    const secret: any = {
+      name: name,
+      description: options.description || '',
+      type: 'ENDPOINT',
+      authMethod: OAUTH2_CLIENT_CREDENTIALS,
+      useElicitation: false,
+      oauth2ClientConfiguration: {
+        clientId: options.oauth2ClientID,
+        clientSecret: options.oauth2ClientSecret,
+        tokenEndpoint: options.oauth2TokenEndpoint,
+        scopes: scopes.length > 0 ? scopes : undefined,
+      },
+    };
+
+    const response = await fetch(`${ConfigUtil.config.server}/api/v1/secrets`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ConfigUtil.config.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(secret)
+    });
+
+    if (!response.ok) {
+      if (response.status === 409) {
+        Logger.error(`A secret with the name "${name}" already exists. Please choose a different name.`);
+      } else {
+        Logger.error('Creating secret failed: ' + response.statusText);
+      }
+      process.exit(1);
+    }
+
+    const data = await response.json();
+    Context.put('secret', data);
+    Logger.success(`Client Credentials secret ${data.name} created successfully with ID: ${data.id}`);
   });
 
 /** Update secret by ID */

@@ -19,6 +19,7 @@ import io.reshapr.discovery.exposition.v1.Artifact;
 import io.reshapr.discovery.exposition.v1.ArtifactType;
 import io.reshapr.discovery.exposition.v1.CachePolicy;
 import io.reshapr.discovery.exposition.v1.Configuration;
+import io.reshapr.discovery.exposition.v1.OAuth2ClientConfiguration;
 import io.reshapr.discovery.exposition.v1.Secret;
 import io.reshapr.discovery.exposition.v1.Service;
 import io.reshapr.discovery.exposition.v1.OAuth2Configuration;
@@ -59,9 +60,11 @@ public interface Mappers {
    @Mapping(target = "scopes", source = "scopesList")
    public OAuth2ConfigurationEntry toOAuth2ConfigurationEntry(OAuth2Configuration oauth2Configuration);
 
+   @Mapping(target = "authMethod", expression = "java(secret.hasAuthMethod() ? secret.getAuthMethod() : null)")
    public SecretEntry toSecret(Secret secret);
 
-   public OAuth2ClientConfigurationEntry toThirdPartyOAuth2ConfigurationEntry(OAuth2ClientConfigurationEntry tpOAuth2ConfigurationEntry);
+   @Mapping(target = "scopes", source = "scopesList")
+   public OAuth2ClientConfigurationEntry toOAuth2ClientConfigurationEntry(OAuth2ClientConfiguration oauth2ClientConfiguration);
 
    public ArtifactEntry toArtifactEntry(Artifact artifact);
 

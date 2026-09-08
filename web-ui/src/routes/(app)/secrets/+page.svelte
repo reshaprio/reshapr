@@ -60,6 +60,7 @@
 		name?: string;
 		description?: string;
 		type?: string;
+		authMethod?: string;
 		username?: string;
 		password?: string;
 		token?: string;
@@ -67,10 +68,13 @@
 		useElicitation?: boolean | string;
 	};
 
-	type SecretKind = 'simple' | 'elicitation';
+	type SecretKind = 'simple' | 'elicitation' | 'clientCredentials';
 	type SecretType = 'ARTIFACT' | 'ENDPOINT';
 	type ElicitMode = 'token' | 'oauth2';
 	type SimpleMode = 'basic' | 'token';
+
+	// The authMethod discriminator value handled by the OAuth2 Client Credentials kind.
+	const CLIENT_CREDENTIALS_METHOD = 'OAUTH2_CLIENT_CREDENTIALS';
 
 	// ── List state ────────────────────────────────────────────
 	let rows = $state<SecretRefRow[]>([]);
@@ -89,9 +93,10 @@
 	}
 
 	// Distinctive classification of a secret's credential kind for the table.
-	type CredKind = 'basic' | 'token' | 'elicitation' | 'unknown';
+	type CredKind = 'basic' | 'token' | 'clientCredentials' | 'elicitation' | 'unknown';
 
 	function credentialKind(row: SecretRefRow): CredKind {
+		if (row.authMethod === CLIENT_CREDENTIALS_METHOD) return 'clientCredentials';
 		if (isElicitation(row.useElicitation)) return 'elicitation';
 		if ((row.username ?? '').trim() || (row.password ?? '').trim()) return 'basic';
 		if ((row.token ?? '').trim() || (row.tokenHeader ?? '').trim()) return 'token';
@@ -108,6 +113,11 @@
 			label: 'Token',
 			icon: KeyRoundIcon,
 			classes: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
+		},
+		clientCredentials: {
+			label: 'OAuth2 client credentials',
+			icon: KeyRoundIcon,
+			classes: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400'
 		},
 		elicitation: {
 			label: 'Elicitation',
@@ -145,7 +155,8 @@
 	// ── Create / Edit drawer state ────────────────────────────
 	const KIND_LABELS: Record<SecretKind, string> = {
 		simple: 'Simple secret',
-		elicitation: 'Elicitation secret'
+		elicitation: 'Elicitation secret',
+		clientCredentials: 'OAuth2 Client Credentials'
 	};
 	const TYPE_LABELS: Record<SecretType, string> = {
 		ENDPOINT: 'Backend endpoint (ENDPOINT)',
@@ -205,6 +216,12 @@
 	let fOauthAuthEndpoint = $state('');
 	let fOauthTokenEndpoint = $state('');
 
+	// OAuth2 Client Credentials fields (machine-to-machine, no elicitation)
+	let fCcClientId = $state('');
+	let fCcClientSecret = $state('');
+	let fCcTokenEndpoint = $state('');
+	let fCcScopes = $state('');
+
 	function resetForm() {
 		editingId = null;
 		editingOrgId = undefined;
@@ -223,6 +240,10 @@
 		fOauthClientSecret = '';
 		fOauthAuthEndpoint = '';
 		fOauthTokenEndpoint = '';
+		fCcClientId = '';
+		fCcClientSecret = '';
+		fCcTokenEndpoint = '';
+		fCcScopes = '';
 		formError = '';
 		formSuccess = '';
 	}
@@ -250,7 +271,16 @@
 			fName = String(data.name ?? '');
 			fDescription = String(data.description ?? '');
 			editingOrgId = typeof data.organizationId === 'string' ? data.organizationId : undefined;
-			if (isElicitation(data.useElicitation)) {
+			if (data.authMethod === CLIENT_CREDENTIALS_METHOD) {
+				kind = 'clientCredentials';
+				const oauth = data.oauth2ClientConfiguration as Record<string, unknown> | undefined;
+				if (oauth && typeof oauth === 'object') {
+					fCcClientId = String(oauth.clientId ?? '');
+					fCcClientSecret = String(oauth.clientSecret ?? '');
+					fCcTokenEndpoint = String(oauth.tokenEndpoint ?? '');
+					fCcScopes = Array.isArray(oauth.scopes) ? (oauth.scopes as unknown[]).join(', ') : '';
+				}
+			} else if (isElicitation(data.useElicitation)) {
 				kind = 'elicitation';
 				const oauth = data.oauth2ClientConfiguration as Record<string, unknown> | undefined;
 				if (oauth && typeof oauth === 'object') {
@@ -282,7 +312,21 @@
 		const desc = fDescription.trim();
 		if (desc) body.description = desc;
 
-		if (kind === 'elicitation') {
+		if (kind === 'clientCredentials') {
+			body.type = 'ENDPOINT';
+			body.authMethod = CLIENT_CREDENTIALS_METHOD;
+			body.useElicitation = false;
+			const scopes = fCcScopes
+				.split(/[\s,]+/)
+				.map((s) => s.trim())
+				.filter(Boolean);
+			body.oauth2ClientConfiguration = {
+				clientId: fCcClientId.trim(),
+				clientSecret: fCcClientSecret.trim() || undefined,
+				tokenEndpoint: fCcTokenEndpoint.trim(),
+				scopes: scopes.length ? scopes : undefined
+			};
+		} else if (kind === 'elicitation') {
 			body.type = 'ENDPOINT';
 			body.useElicitation = true;
 			if (elicitMode === 'oauth2') {
@@ -518,13 +562,19 @@
 					<Select.Trigger id="secretKind" class="w-full">{KIND_LABELS[kind]}</Select.Trigger>
 					<Select.Content>
 						<Select.Item value="simple">{KIND_LABELS.simple}</Select.Item>
+						<Select.Item value="clientCredentials">{KIND_LABELS.clientCredentials}</Select.Item>
 						<Select.Item value="elicitation">{KIND_LABELS.elicitation}</Select.Item>
 					</Select.Content>
 				</Select.Root>
 				<p class="text-muted-foreground text-xs">
-					{kind === 'elicitation'
-						? 'Elicitation secrets defer credentials to the end user at runtime (sensitive header or OAuth2).'
-						: 'Simple secrets store credentials (username/password, token or certificate).'}
+					{#if kind === 'elicitation'}
+						Elicitation secrets defer credentials to the end user at runtime (sensitive header or OAuth2).
+					{:else if kind === 'clientCredentials'}
+						Client Credentials secrets let the gateway obtain an OAuth2 token on its own behalf
+						(machine-to-machine) to authenticate against the backend — no end-user interaction.
+					{:else}
+						Simple secrets store credentials (username/password, token or certificate).
+					{/if}
 				</p>
 			</div>
 
@@ -587,6 +637,35 @@
 						/>
 					</div>
 				{/if}
+			{:else if kind === 'clientCredentials'}
+				<div class="space-y-2">
+					<Label for="ccClientId">Client ID <span class="text-destructive">*</span></Label>
+					<Input id="ccClientId" autocomplete="off" bind:value={fCcClientId} />
+				</div>
+				<div class="space-y-2">
+					<Label for="ccClientSecret">Client secret</Label>
+					<PasswordInput id="ccClientSecret" autocomplete="new-password" bind:value={fCcClientSecret} />
+					<p class="text-muted-foreground text-xs">
+						You may reference an environment variable, e.g. <code>{'${env:MY_CLIENT_SECRET}'}</code>.
+					</p>
+				</div>
+				<div class="space-y-2">
+					<Label for="ccTokenEndpoint">
+						Token endpoint <span class="text-destructive">*</span>
+					</Label>
+					<Input
+						id="ccTokenEndpoint"
+						placeholder="https://auth.example.com/token"
+						bind:value={fCcTokenEndpoint}
+					/>
+				</div>
+				<div class="space-y-2">
+					<Label for="ccScopes">Scopes</Label>
+					<Input id="ccScopes" placeholder="read write (space or comma separated)" bind:value={fCcScopes} />
+					<p class="text-muted-foreground text-xs">
+						Optional OAuth2 scopes requested during the client_credentials exchange.
+					</p>
+				</div>
 			{:else}
 				<div class="space-y-2">
 					<Label for="elicitMode">Elicitation method</Label>

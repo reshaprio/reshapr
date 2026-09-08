@@ -44,6 +44,10 @@ public class Secret extends TenantAwareEntity {
    @Enumerated(EnumType.STRING)
    public SecretType type;
 
+   @Enumerated(EnumType.STRING)
+   @Column(name = "auth_method")
+   public SecretAuthMethod authMethod;
+
    public String username;
 
    @Convert(converter = CipheredAttributeConverter.class)
@@ -84,6 +88,7 @@ public class Secret extends TenantAwareEntity {
          String clientId,
          String clientSecret,
          String authorizationEndpoint,
-         String tokenEndpoint) {
+         String tokenEndpoint,
+         java.util.List<String> scopes) {
    }
 }

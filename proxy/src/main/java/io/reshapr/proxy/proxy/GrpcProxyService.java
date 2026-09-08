@@ -22,6 +22,7 @@ import io.reshapr.proxy.context.SessionInfo;
 import io.reshapr.proxy.mcp.state.UserSecretStore;
 import io.reshapr.proxy.registry.ConfigurationEntry;
 import io.reshapr.proxy.registry.SecretEntry;
+import io.reshapr.proxy.secret.ClientCredentialsTokenProvider;
 import io.reshapr.proxy.secret.SecretReferenceResolver;
 import io.reshapr.proxy.security.TokenCallCredentials;
 
@@ -50,6 +51,7 @@ import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.reshapr.proxy.util.GrpcUtil;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -96,6 +98,7 @@ public class GrpcProxyService {
 
    private final SecretReferenceResolver secretResolver;
    private final UserSecretStore userSecretStore;
+   private final ClientCredentialsTokenProvider clientCredentialsTokenProvider;
 
    /** Per-endpoint {@code ManagedChannel} pool: bounded (LRU + idle TTL), evictions shut down gracefully. */
    private final Cache<String, ManagedChannel> channelCache;
@@ -107,10 +110,14 @@ public class GrpcProxyService {
     * Build a GrpcProxyService with required dependencies.
     * @param secretResolver The resolver used to resolve secret references locally on the gateway.
     * @param userSecretStore The per-user elicited secret store (stateless mode).
+    * @param clientCredentialsTokenProvider Provides and caches OAuth2 client-credentials access tokens.
     */
-   public GrpcProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore) {
+   @Inject
+   public GrpcProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore,
+                          ClientCredentialsTokenProvider clientCredentialsTokenProvider) {
       this.secretResolver = secretResolver;
       this.userSecretStore = userSecretStore;
+      this.clientCredentialsTokenProvider = clientCredentialsTokenProvider;
       this.channelCache = Caffeine.newBuilder()
             .maximumSize(DEFAULT_MAX_CHANNELS)
             .expireAfterAccess(DEFAULT_IDLE_TTL)
@@ -121,6 +128,11 @@ public class GrpcProxyService {
                }
             })
             .build();
+   }
+
+   /** Convenience constructor without a client-credentials token provider (used by tests/benchmarks). */
+   public GrpcProxyService(SecretReferenceResolver secretResolver, UserSecretStore userSecretStore) {
+      this(secretResolver, userSecretStore, null);
    }
 
    /**
@@ -288,6 +300,22 @@ public class GrpcProxyService {
    }
 
    private CallOptions manageSecurityHeaders(SecretEntry secret, CallOptions callOptions, Map<String, List<String>> headers) {
+      if (clientCredentialsTokenProvider != null && ClientCredentialsTokenProvider.AUTH_METHOD.equals(secret.authMethod())) {
+         // OAuth2 Client Credentials: obtain (and cache) a machine-to-machine access token on the gateway.
+         // Clean any conflicting incoming auth headers so they don't override the call credentials.
+         String headerToRemove = secret.tokenHeader() != null ? secret.tokenHeader() : TokenCallCredentials.AUTHORIZATION_METADATA_KEY.name();
+         headers.remove(headerToRemove);
+         removeIgnoreCase(headers, TokenCallCredentials.AUTHORIZATION_METADATA_KEY.originalName());
+
+         String cacheKey = MethodHandlingContext.getOrganizationId() + '/' + secret.name();
+         String token = clientCredentialsTokenProvider.getAccessToken(cacheKey, secret.oauth2ClientConfiguration());
+         if (token != null) {
+            callOptions = callOptions.withCallCredentials(new TokenCallCredentials(token, secret.tokenHeader()));
+         } else {
+            logger.warnf("Client credentials token not available for secret '%s'", secret.name());
+         }
+         return callOptions;
+      }
       if (!secret.useElicitation()) {
          // Add security headers based on the secret.
          // Set the authentication token as call credentials if provided in the configuration.

@@ -125,10 +125,12 @@ public class SecretResource {
       // We need to preserve id and organizationId.
       secret.name = secretDTO.name();
       secret.type = secretDTO.type();
+      secret.authMethod = secretDTO.authMethod();
       secret.description = secretDTO.description();
       secret.username = secretDTO.username();
       secret.tokenHeader = secretDTO.tokenHeader();
       secret.certPem = secretDTO.certPem();
+      secret.useElicitation = secretDTO.useElicitation();
       // Only update password and token if they are not masked (starting with *****).
       if (secretDTO.password() != null && !secretDTO.password().startsWith("*****")) {
          secret.setPassword(secretDTO.password());
@@ -136,13 +138,16 @@ public class SecretResource {
       if (secretDTO.token() != null && !secretDTO.token().startsWith("*****")) {
          secret.setToken(secretDTO.token());
       }
-      if (secretDTO.useElicitation() && secretDTO.oauth2ClientConfiguration() != null) {
+      // OAuth2 client configuration is used both for interactive Authorization Code (with
+      // elicitation) and for machine-to-machine Client Credentials (without elicitation),
+      // so it is persisted whenever present, independently of the elicitation flag.
+      if (secretDTO.oauth2ClientConfiguration() != null) {
          OAuth2ClientConfigurationDTO oauth2ClientConfig = secretDTO.oauth2ClientConfiguration();
          secret.oauth2ClientConfiguration = new Secret.OAuth2ClientConfiguration(oauth2ClientConfig.clientId(),
                oauth2ClientConfig.clientSecret(),
                oauth2ClientConfig.authorizationEndpoint(),
-               oauth2ClientConfig.tokenEndpoint());
-         secret.useElicitation = true;
+               oauth2ClientConfig.tokenEndpoint(),
+               oauth2ClientConfig.scopes());
       }
 
       secretRepository.persist(secret);
