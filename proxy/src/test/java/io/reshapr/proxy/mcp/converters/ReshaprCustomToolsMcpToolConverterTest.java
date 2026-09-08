@@ -151,4 +151,65 @@ class ReshaprCustomToolsMcpToolConverterTest {
       assertEquals("{size=32}", targetArguments.get("__relation_avatarUrl").toString());
       assertEquals("{last=10}", targetArguments.get("__relation_followers").toString());
    }
+
+   @Test
+   void testDeclarativeCustomToolWithUnknownTargetThrows() throws Exception {
+      String specification = FileUtils.readFileToString(
+            new File("target/test-classes/io/reshapr/proxy/mcp/github-api.graphql"),
+            StandardCharsets.UTF_8);
+      ArtifactEntry artifactEntry = new ArtifactEntry("1", "github-api.graphql",
+            "GRAPHQL", ArtifactEntryType.GRAPHQL_SCHEMA, true, specification);
+
+      List<OperationEntry> operations = List.of(
+            new OperationEntry("user", "QUERY", null, "NonNullType{type=TypeName{name='String'}}", "User"),
+            new OperationEntry("repository", "QUERY", null, "NonNullType{type=TypeName{name='String'}}", "Repository")
+      );
+      ServiceEntry serviceEntry = new ServiceEntry("1", "reshapr", "GitHub GraphQL",
+            "20250917", "GRAPHQL", operations);
+
+      // A declarative custom tool referencing a target tool that does not exist on the service.
+      String customTools = """
+            apiVersion: reshapr.io/v1alpha1
+            kind: CustomTools
+            customTools:
+              broken_tool:
+                tool: doesNotExist
+                description: References a missing tool
+                input:
+                  type: object
+                  properties:
+                    user:
+                      type: string
+                  required:
+                    - user
+                arguments:
+                  login: ${user}
+            """;
+      ArtifactEntry attachedArtifactEntry = new ArtifactEntry("2", "broken-custom-tools.yaml",
+            "CUSTOM_TOOLS", ArtifactEntryType.RESHAPR_CUSTOM_TOOLS, false, customTools);
+
+      ConfigurationEntry configuration = new ConfigurationEntry("1", "github-default",
+            null, null, null, null, null, null, null);
+      ExpositionEntry exposition = new ExpositionEntry("1", "github-default", serviceEntry, configuration,
+            artifactEntry, List.of(attachedArtifactEntry));
+
+      ParserOptions.setDefaultParserOptions(
+            ParserOptions.getDefaultParserOptions().transform(
+                  opts -> opts.maxCharacters(100000000).maxTokens(100000)));
+      ObjectMapper objectMapper = new ObjectMapper();
+
+      WorkCache workCache = new WorkCache(1000);
+      GraphQLMcpToolConverter converter = new GraphQLMcpToolConverter(exposition, workCache, objectMapper,
+            new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)));
+      ReshaprCustomToolsMcpToolConverter customConverter = new ReshaprCustomToolsMcpToolConverter(exposition,
+            workCache, converter);
+
+      OperationEntry brokenOperation = new OperationEntry("broken_tool", "QUERY", null, null, null);
+      McpSchema.SimpleRequest request = new McpSchema.SimpleRequest("broken_tool", Map.of("user", "lbroudoux"));
+
+      CustomToolResolutionException exception = assertThrows(CustomToolResolutionException.class,
+            () -> customConverter.getCallResponse(brokenOperation, configuration, request, new HashMap<>()));
+      assertTrue(exception.getMessage().contains("broken_tool"));
+      assertTrue(exception.getMessage().contains("doesNotExist"));
+   }
 }

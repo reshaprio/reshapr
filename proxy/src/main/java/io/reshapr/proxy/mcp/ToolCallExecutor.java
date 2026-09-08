@@ -17,6 +17,7 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.context.MethodHandlingContext;
 import io.reshapr.proxy.context.SessionInfo;
+import io.reshapr.proxy.mcp.converters.CustomToolResolutionException;
 import io.reshapr.proxy.mcp.converters.GraphQLMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.GrpcMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.McpToolConverter;
@@ -203,8 +204,15 @@ public class ToolCallExecutor {
 
       // We copy headers before calling because the original map may be immutable.
       McpSchema.SimpleRequest toolRequest = new McpSchema.SimpleRequest(toolName, arguments);
-      McpToolConverter.Response response = converter.getCallResponse(callOperation, configuration, toolRequest,
-            new HashMap<>(headers));
+      McpToolConverter.Response response;
+      try {
+         response = converter.getCallResponse(callOperation, configuration, toolRequest, new HashMap<>(headers));
+      } catch (CustomToolResolutionException e) {
+         // A declarative custom tool referenced a non-existent target tool: surface a clean MCP error
+         // instead of letting the underlying NullPointerException escape as a non-JSON-RPC 500 response.
+         logger.warnf("Cannot resolve custom tool '%s' on service '%s': %s", toolName, service.name(), e.getMessage());
+         return new Failure(McpSchema.ErrorCodes.INTERNAL_ERROR, e.getMessage(), null);
+      }
 
       String content = response.content();
 

@@ -198,6 +198,13 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
                .filter(entry -> entry.name().equals(target))
                .findFirst().orElse(null);
 
+         // The custom tool may reference a tool that does not exist on the current service (e.g. a typo or a
+         // renamed/removed operation). Fail fast with a clear, MCP-mappable error instead of letting a null
+         // target operation reach the delegate converter and surface as an opaque NullPointerException.
+         if (targetOperation == null) {
+            throw new CustomToolResolutionException(operation.name(), target);
+         }
+
          // First, create a map of arguments from incoming request.
          Map<String, Object> customArgumentsValues = new HashMap<>();
          completeCustomArgumentsMap(customArgumentsValues, request.arguments(), "");
