@@ -221,14 +221,14 @@ public final class ReshaprToolsBuiltins {
       // artifacts, even for a non-elected plan); cross-service resolves the target service's elected exposition.
       ToolCallExecutor.ToolCallOutcome outcome;
       if (isSameService(serviceCoordinate)) {
-         outcome = toolCallExecutor.execute(currentExposition, tool, args, headers);
+         outcome = toolCallExecutor.executeInternal(currentExposition, tool, args, headers);
       } else {
          ServiceEntry targetService = resolveService(serviceCoordinate);
          if (targetService == null) {
             return errorJson(McpSchema.ErrorCodes.INVALID_PARAMS,
                   "Unknown or unauthorized service '" + serviceCoordinate + "'");
          }
-         outcome = toolCallExecutor.execute(targetService, tool, args, headers);
+         outcome = toolCallExecutor.executeInternal(targetService, tool, args, headers);
       }
       return switch (outcome) {
          case ToolCallExecutor.Success success -> {

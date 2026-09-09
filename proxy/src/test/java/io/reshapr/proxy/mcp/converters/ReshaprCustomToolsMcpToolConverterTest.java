@@ -212,4 +212,125 @@ class ReshaprCustomToolsMcpToolConverterTest {
       assertTrue(exception.getMessage().contains("broken_tool"));
       assertTrue(exception.getMessage().contains("doesNotExist"));
    }
+
+   // ---------------------------------------------------------------------------------------------
+   // getExposedOperations - composition of the config plan restriction with custom tools reshaping
+   // ---------------------------------------------------------------------------------------------
+
+   @Test
+   void testExposedOperationsWithNoRestrictionExposesCustomToolAndHidesTarget() throws Exception {
+      // No include/exclude: the declarative custom tool replaces its target 'user'; 'repository' stays.
+      ServiceEntry service = githubService();
+      ConfigurationEntry config = new ConfigurationEntry("1", "github-default",
+            null, null, List.of(), List.of(), null, null, null);
+      ReshaprCustomToolsMcpToolConverter converter = buildGithubConverter(config, service);
+
+      List<String> exposed = names(converter.getExposedOperations(service, config));
+      assertEquals(2, exposed.size());
+      assertTrue(exposed.contains("get_user_with_latest_followers")); // custom tool replaces 'user'
+      assertTrue(exposed.contains("repository"));
+      assertFalse(exposed.contains("user"));                          // target hidden
+   }
+
+   @Test
+   void testExposedOperationsIncludeTargetKeepsCustomTool() throws Exception {
+      // includedOperations restricts to 'user' (the custom tool target): the custom tool must remain
+      // exposed even though its own name is not a service operation. This is the regression this fix targets.
+      ServiceEntry service = githubService();
+      ConfigurationEntry config = new ConfigurationEntry("1", "github-default",
+            null, null, List.of(), List.of("user"), null, null, null);
+      ReshaprCustomToolsMcpToolConverter converter = buildGithubConverter(config, service);
+
+      List<String> exposed = names(converter.getExposedOperations(service, config));
+      assertEquals(List.of("get_user_with_latest_followers"), exposed);
+   }
+
+   @Test
+   void testExposedOperationsIncludeWithoutTargetHidesCustomTool() throws Exception {
+      // includedOperations restricts to 'repository' only: the custom tool target 'user' is not exposed,
+      // so the custom tool that reshapes it is hidden as well; only 'repository' remains.
+      ServiceEntry service = githubService();
+      ConfigurationEntry config = new ConfigurationEntry("1", "github-default",
+            null, null, List.of(), List.of("repository"), null, null, null);
+      ReshaprCustomToolsMcpToolConverter converter = buildGithubConverter(config, service);
+
+      List<String> exposed = names(converter.getExposedOperations(service, config));
+      assertEquals(List.of("repository"), exposed);
+   }
+
+   @Test
+   void testExposedOperationsExcludeTargetHidesCustomTool() throws Exception {
+      // excludedOperations hides 'user': the declarative custom tool built on it must not leak it back.
+      ServiceEntry service = githubService();
+      ConfigurationEntry config = new ConfigurationEntry("1", "github-default",
+            null, null, List.of("user"), List.of(), null, null, null);
+      ReshaprCustomToolsMcpToolConverter converter = buildGithubConverter(config, service);
+
+      List<String> exposed = names(converter.getExposedOperations(service, config));
+      assertEquals(List.of("repository"), exposed);
+      assertFalse(exposed.contains("get_user_with_latest_followers"));
+   }
+
+   // ---------------------------------------------------------------------------------------------
+   // getResolvableOperations - internal (script) call resolution ignores the exposure/reshaping
+   // ---------------------------------------------------------------------------------------------
+
+   @Test
+   void testResolvableOperationsAlwaysIncludeRawTargetAndCustomTools() throws Exception {
+      // A declarative custom tool hides its target 'user' from the exposed surface, but a script must
+      // still be able to resolve the raw 'user' operation directly (gated by its allow-list, not exposure).
+      ServiceEntry service = githubService();
+      ConfigurationEntry config = new ConfigurationEntry("1", "github-default",
+            null, null, List.of(), List.of(), null, null, null);
+      ReshaprCustomToolsMcpToolConverter converter = buildGithubConverter(config, service);
+
+      // Sanity check: 'user' is indeed hidden from the exposed surface (replaced by the custom tool).
+      assertFalse(names(converter.getExposedOperations(service, config)).contains("user"));
+
+      List<String> resolvable = names(converter.getResolvableOperations(service));
+      assertTrue(resolvable.contains("user"));                            // raw target still resolvable
+      assertTrue(resolvable.contains("repository"));
+      assertTrue(resolvable.contains("get_user_with_latest_followers")); // custom tool also resolvable
+   }
+
+   // ── Helpers ──────────────────────────────────────────────────────────────────────────────────
+
+   /** The GitHub GraphQL service exposing two operations: 'user' and 'repository'. */
+   private static ServiceEntry githubService() {
+      List<OperationEntry> operations = List.of(
+            new OperationEntry("user", "QUERY", null, "NonNullType{type=TypeName{name='String'}}", "User"),
+            new OperationEntry("repository", "QUERY", null, "NonNullType{type=TypeName{name='String'}}", "Repository"));
+      return new ServiceEntry("1", "reshapr", "GitHub GraphQL", "20250917", "GRAPHQL", operations);
+   }
+
+   /**
+    * Build a custom-tools converter over the GitHub GraphQL service with one declarative custom tool
+    * 'get_user_with_latest_followers' targeting 'user', for the given configuration plan.
+    */
+   private static ReshaprCustomToolsMcpToolConverter buildGithubConverter(ConfigurationEntry configuration,
+         ServiceEntry serviceEntry) throws Exception {
+      String specification = FileUtils.readFileToString(
+            new File("target/test-classes/io/reshapr/proxy/mcp/github-api.graphql"), StandardCharsets.UTF_8);
+      ArtifactEntry artifactEntry = new ArtifactEntry("1", "github-api.graphql",
+            "GRAPHQL", ArtifactEntryType.GRAPHQL_SCHEMA, true, specification);
+      String customTools = FileUtils.readFileToString(
+            new File("target/test-classes/io/reshapr/proxy/mcp/converters/github-api-custom-tools.yaml"),
+            StandardCharsets.UTF_8);
+      ArtifactEntry attachedArtifactEntry = new ArtifactEntry("2", "github-api-custom-tools.yaml",
+            "CUSTOM_TOOLS", ArtifactEntryType.RESHAPR_CUSTOM_TOOLS, false, customTools);
+      ExpositionEntry exposition = new ExpositionEntry("1", "github-default", serviceEntry, configuration,
+            artifactEntry, List.of(attachedArtifactEntry));
+
+      ParserOptions.setDefaultParserOptions(
+            ParserOptions.getDefaultParserOptions().transform(
+                  opts -> opts.maxCharacters(100000000).maxTokens(100000)));
+      WorkCache workCache = new WorkCache(1000);
+      GraphQLMcpToolConverter converter = new GraphQLMcpToolConverter(exposition, workCache, new ObjectMapper(),
+            new ProxyService(new SecretReferenceResolver(List.of()), new UserSecretStore(null)));
+      return new ReshaprCustomToolsMcpToolConverter(exposition, workCache, converter);
+   }
+
+   private static List<String> names(List<OperationEntry> operations) {
+      return operations.stream().map(OperationEntry::name).toList();
+   }
 }

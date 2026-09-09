@@ -52,6 +52,33 @@ public abstract class McpToolConverter {
    }
 
    /**
+    * Get the list of operations effectively exposed for the given service under the provided
+    * configuration plan. The default implementation restricts the available operations with the
+    * plan's included/excluded lists. Converters that reshape the API surface (e.g. custom tools)
+    * override this to compose the plan restriction with their own reshaping.
+    * @param service       The service to extract operations from.
+    * @param configuration The configuration plan holding the include/exclude lists.
+    * @return The list of exposed operations.
+    */
+   public List<OperationEntry> getExposedOperations(ServiceEntry service, ConfigurationEntry configuration) {
+      return getAvailableOperations(service).stream()
+            .filter(operation -> configuration.exposesOperation(operation.name()))
+            .toList();
+   }
+
+   /**
+    * Get the list of operations that can be resolved for an internal (custom-tool script) tool call on the
+    * given service, independently of the configuration plan exposure. The default implementation returns all
+    * available operations; converters that reshape the API surface (e.g. custom tools) override this to also
+    * surface the raw operations they hide from the exposed surface, so a script may call them directly.
+    * @param service The service to extract operations from.
+    * @return The list of resolvable operations.
+    */
+   public List<OperationEntry> getResolvableOperations(ServiceEntry service) {
+      return getAvailableOperations(service);
+   }
+
+   /**
     * Extract the name of the tool from the operation.
     * @param operation The operation to extract the name from.
     * @return The tool name

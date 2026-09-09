@@ -156,9 +156,23 @@ public class ToolCallExecutor {
    public record Failure(int code, String message, @Nullable Object data) implements ToolCallOutcome {
    }
 
+   /** Distinguishes a top-level client (LLM) tool call from a proxy-internal (e.g. script) call. */
+   private enum CallOrigin {
+      /** A tool call issued by the MCP client (LLM). Only operations exposed by the config plan are callable. */
+      CLIENT,
+      /**
+       * A tool call issued internally by the proxy rather than by the MCP client (today: from within a
+       * custom-tool script). Resolution spans every callable operation (custom tools and raw service
+       * operations, whether exposed to the client or reshaped away); the caller is responsible for the
+       * authorization (e.g. a script's declared {@code tools} allow-list).
+       */
+      INTERNAL
+   }
+
    /**
-    * Execute a tool call on the given exposition (deterministic path: the exposition carries its own
-    * configuration and artifacts, so two configuration plans of the same service never collide).
+    * Execute a top-level (MCP client) tool call on the given exposition (deterministic path: the exposition
+    * carries its own configuration and artifacts, so two configuration plans of the same service never
+    * collide). Only operations exposed by the configuration plan are callable.
     * @param exposition The exposition exposing the tool.
     * @param toolName The name of the tool to call.
     * @param arguments The tool arguments.
@@ -168,6 +182,30 @@ public class ToolCallExecutor {
    @WithSpan
    public ToolCallOutcome execute(ExpositionEntry exposition, @SpanAttribute("mcp.target.name") String toolName,
                                   Map<String, Object> arguments, Map<String, List<String>> headers) {
+      return doExecute(exposition, toolName, arguments, headers, CallOrigin.CLIENT);
+   }
+
+   /**
+    * Execute an internal tool call issued from within a custom-tool script on the given exposition. Unlike
+    * {@link #execute(ExpositionEntry, String, Map, Map)}, resolution is not limited to the operations exposed
+    * by the configuration plan: a script may invoke any callable operation (a custom tool or a raw service
+    * operation reshaped away from the exposed surface). The script's declared {@code tools} allow-list is the
+    * authorization boundary and must be enforced by the caller before invoking this method.
+    * @param exposition The exposition exposing the tool.
+    * @param toolName The name of the tool to call.
+    * @param arguments The tool arguments.
+    * @param headers The protocol-level headers to propagate (a mutable copy is recommended).
+    * @return The {@link ToolCallOutcome} of the execution.
+    */
+   @WithSpan
+   public ToolCallOutcome executeInternal(ExpositionEntry exposition, @SpanAttribute("mcp.target.name") String toolName,
+                                            Map<String, Object> arguments, Map<String, List<String>> headers) {
+      return doExecute(exposition, toolName, arguments, headers, CallOrigin.INTERNAL);
+   }
+
+   private ToolCallOutcome doExecute(ExpositionEntry exposition, String toolName,
+                                     Map<String, Object> arguments, Map<String, List<String>> headers,
+                                     CallOrigin origin) {
       ServiceEntry service = exposition.service();
       // Selectively complete span attributes because we don't want to have the full ServiceEntry added.
       Span.current().setAttribute("service.name", service.name());
@@ -184,8 +222,13 @@ public class ToolCallExecutor {
       // Build converter based on service type and resolve the target operation.
       McpToolConverter converter = buildMcpToolConverter(exposition);
 
-      OperationEntry callOperation = converter.getAvailableOperations(service).stream()
-            .filter(operation -> isExposedOperation(configuration, operation))
+      // Top-level client calls resolve against the operations exposed by the config plan; internal script
+      // calls resolve against every callable operation (their declared allow-list is the authorization).
+      List<OperationEntry> candidateOperations = origin == CallOrigin.INTERNAL
+            ? converter.getResolvableOperations(service)
+            : converter.getExposedOperations(service, configuration);
+
+      OperationEntry callOperation = candidateOperations.stream()
             .filter(operation -> toolName.equals(converter.getToolName(operation)))
             .findFirst().orElse(null);
       if (callOperation == null) {
@@ -226,8 +269,8 @@ public class ToolCallExecutor {
    }
 
    /**
-    * Execute a tool call on the given service, resolving its elected exposition (last configuration plan).
-    * This convenience overload is used by cross-service script calls and legacy callers that only hold a
+    * Execute a top-level (MCP client) tool call on the given service, resolving its elected exposition (last
+    * configuration plan). This convenience overload is used by legacy callers that only hold a
     * {@link ServiceEntry}; the deterministic path is {@link #execute(ExpositionEntry, String, Map, Map)}.
     * @param service The service exposing the tool.
     * @param toolName The name of the tool to call.
@@ -241,7 +284,27 @@ public class ToolCallExecutor {
       if (exposition == null) {
          return new Failure(McpSchema.ErrorCodes.INVALID_PARAMS, "Unknown service: " + service.id(), null);
       }
-      return execute(exposition, toolName, arguments, headers);
+      return doExecute(exposition, toolName, arguments, headers, CallOrigin.CLIENT);
+   }
+
+   /**
+    * Execute an internal (custom-tool script) tool call on the given service, resolving its elected
+    * exposition. Used for cross-service script calls; resolution spans every callable operation and the
+    * caller must have enforced the script's declared {@code tools} allow-list.
+    * @param service The service exposing the tool.
+    * @param toolName The name of the tool to call.
+    * @param arguments The tool arguments.
+    * @param headers The protocol-level headers to propagate (a mutable copy is recommended).
+    * @return The {@link ToolCallOutcome} of the execution.
+    */
+   @WithSpan
+   public ToolCallOutcome executeInternal(ServiceEntry service, @SpanAttribute("mcp.target.name") String toolName,
+                                            Map<String, Object> arguments, Map<String, List<String>> headers) {
+      ExpositionEntry exposition = gatewayRegistry.getElectedExpositionByServiceId(service.id());
+      if (exposition == null) {
+         return new Failure(McpSchema.ErrorCodes.INVALID_PARAMS, "Unknown service: " + service.id(), null);
+      }
+      return doExecute(exposition, toolName, arguments, headers, CallOrigin.INTERNAL);
    }
 
    /**
@@ -458,13 +521,7 @@ public class ToolCallExecutor {
     * @return true if the operation is exposed, false otherwise.
     */
    public static boolean isExposedOperation(ConfigurationEntry configuration, OperationEntry operation) {
-      if (!configuration.includedOperations().isEmpty()) {
-         return configuration.includedOperations().contains(operation.name());
-      }
-      if (!configuration.excludedOperations().isEmpty()) {
-         return !configuration.excludedOperations().contains(operation.name());
-      }
-      return true; // No exclusions or inclusions, so all operations are exposed by default.
+      return configuration.exposesOperation(operation.name());
    }
 }
 

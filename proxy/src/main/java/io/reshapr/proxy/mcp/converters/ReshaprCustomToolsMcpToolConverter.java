@@ -141,6 +141,94 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
    }
 
    @Override
+   public List<OperationEntry> getExposedOperations(ServiceEntry service, ConfigurationEntry configuration) {
+      JsonNode customToolsNode = getCustomToolsNode();
+      if (customToolsNode == null) {
+         // No custom tools: delegate the config-plan filtering to the protocol converter.
+         return protocolToolConverter.getExposedOperations(service, configuration);
+      }
+
+      // 1. Resolve the base operations actually exposed by the config plan (service operations
+      //    restricted by the plan's included/excluded lists). Custom tools reshape this base surface.
+      List<OperationEntry> exposedBaseOperations = protocolToolConverter.getExposedOperations(service, configuration);
+      Set<String> exposedBaseIdentifiers = new HashSet<>();
+      for (OperationEntry operation : exposedBaseOperations) {
+         exposedBaseIdentifiers.add(operation.name());
+         exposedBaseIdentifiers.add(protocolToolConverter.getToolName(operation));
+      }
+
+      List<OperationEntry> operationEntries = new ArrayList<>();
+      // Layer the custom tools on top of the exposed base surface, collecting the base operation targets
+      // they replace (hide). Targets replaced by an exposed declarative custom tool are then filtered out.
+      Set<String> replacedTargets = appendExposedCustomTools(customToolsNode, exposedBaseIdentifiers,
+            service, operationEntries);
+
+      logger.debugf("Replaced target tools for service '%s': %s", service.id(), replacedTargets);
+
+      // 2. Append the exposed base operations that are not replaced by a declarative custom tool.
+      exposedBaseOperations.stream()
+            .filter(operation -> !replacedTargets.contains(operation.name())
+                  && !replacedTargets.contains(protocolToolConverter.getToolName(operation)))
+            .forEach(operationEntries::add);
+
+      logger.debugf("Exposed operations for service '%s': %d", service.id(), operationEntries.size());
+      return operationEntries;
+   }
+
+   /**
+    * Append the exposed custom tools to {@code operationEntries} and return the set of base operation
+    * targets they replace (hide). Script custom tools are always exposed and replace nothing; a declarative
+    * custom tool is exposed only when its target operation is itself exposed (present in
+    * {@code exposedBaseIdentifiers}), in which case that target is returned as replaced.
+    */
+   private Set<String> appendExposedCustomTools(JsonNode customToolsNode, Set<String> exposedBaseIdentifiers,
+         ServiceEntry service, List<OperationEntry> operationEntries) {
+      Set<String> replacedTargets = new HashSet<>();
+      for (Map.Entry<String, JsonNode> entry : customToolsNode.properties()) {
+         JsonNode customToolNode = entry.getValue();
+         // Script-based custom tools are new capabilities that don't reshape a single target operation:
+         // they are always exposed and hide nothing.
+         if (customToolNode.has(SCRIPT_NODE)) {
+            operationEntries.add(new OperationEntry(entry.getKey(), null, null, null, null));
+            continue;
+         }
+         // Declarative (template) custom tool: it reshapes a single target operation. It is exposed only
+         // when that target operation is itself exposed by the config plan; the target is then hidden
+         // (replaced by the custom tool). A missing/empty target is left exposed so the call surfaces a
+         // clear CustomToolResolutionException instead of being silently dropped here.
+         String target = declarativeTarget(customToolNode);
+         if (target == null || exposedBaseIdentifiers.contains(target)) {
+            operationEntries.add(new OperationEntry(entry.getKey(), null, null, null, null));
+            if (target != null) {
+               replacedTargets.add(target);
+            }
+         } else {
+            logger.debugf("Custom tool '%s' hidden: its target '%s' is not exposed by the config plan for service '%s'",
+                  entry.getKey(), target, service.id());
+         }
+      }
+      return replacedTargets;
+   }
+
+   @Override
+   public List<OperationEntry> getResolvableOperations(ServiceEntry service) {
+      JsonNode customToolsNode = getCustomToolsNode();
+      if (customToolsNode == null) {
+         return protocolToolConverter.getResolvableOperations(service);
+      }
+
+      List<OperationEntry> operationEntries = new ArrayList<>();
+      // Custom tools (declarative and script) are callable by name.
+      for (Map.Entry<String, JsonNode> entry : customToolsNode.properties()) {
+         operationEntries.add(new OperationEntry(entry.getKey(), null, null, null, null));
+      }
+      // Plus every raw service operation, including those reshaped away from the exposed surface: a script
+      // may call the underlying operation directly (its declared 'tools' allow-list is the authorization).
+      operationEntries.addAll(protocolToolConverter.getResolvableOperations(service));
+      return operationEntries;
+   }
+
+   @Override
    public String getToolName(OperationEntry operation) {
       // First, check cache to see if we deal with a custom tool.
       JsonNode customToolsNode = getCustomToolsNode();
@@ -351,6 +439,16 @@ public class ReshaprCustomToolsMcpToolConverter extends McpToolConverter {
    /** Returns true if the provided name matches a tool name within the `customTools` node. */
    private boolean isCustomTool(JsonNode customToolsNode, String name) {
       return customToolsNode != null && customToolsNode.has(name);
+   }
+
+   /**
+    * Return the non-empty target operation name reshaped by a declarative custom tool, or {@code null}
+    * when the node declares no (or an empty) {@code tool} target.
+    */
+   private static @Nullable String declarativeTarget(JsonNode customToolNode) {
+      JsonNode targetToolNode = customToolNode.path(TOOL_NODE);
+      String target = targetToolNode.isMissingNode() ? null : targetToolNode.asText(null);
+      return (target == null || target.isEmpty()) ? null : target;
    }
 
    /** Within a CustomTools attachment, retrieve the `arguments` node within a tool. */

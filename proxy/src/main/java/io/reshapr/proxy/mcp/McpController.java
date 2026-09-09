@@ -773,8 +773,7 @@ public class McpController {
       // Build converter based on service type.
       McpToolConverter converter = toolCallExecutor.buildMcpToolConverter(exposition);
 
-      List<McpSchema.Tool> tools = converter.getAvailableOperations(service).stream()
-            .filter(operation -> ToolCallExecutor.isExposedOperation(configuration, operation))
+      List<McpSchema.Tool> tools = converter.getExposedOperations(service, configuration).stream()
             .map(operation -> new McpSchema.Tool(converter.getToolName(operation),
                   converter.getToolDescription(operation), converter.getInputSchema(operation),
                   converter.getToolMetadata(gatewayRegistry, service, operation)))

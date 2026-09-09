@@ -64,7 +64,7 @@ class CustomToolScriptRunnerTest {
       return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000),
             new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
          @Override
-         public ToolCallOutcome execute(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
+         public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
             try {
                Map<String, Object> body = new LinkedHashMap<>();
@@ -264,7 +264,7 @@ class CustomToolScriptRunnerTest {
    private static ToolCallExecutor gitHubUserExecutor(GatewayRegistry registry) {
       return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
          @Override
-         public ToolCallOutcome execute(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
+         public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
             if (!"user".equals(toolName)) {
                return new Failure(-32602, "Unknown tool: " + toolName, null);
@@ -327,7 +327,7 @@ class CustomToolScriptRunnerTest {
    private static ToolCallExecutor depthProbeExecutor(GatewayRegistry registry) {
       return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
          @Override
-         public ToolCallOutcome execute(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
+         public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
             try {
                return new Success(MAPPER.writeValueAsString(Map.of("depth", ScriptExecutionContext.currentDepth())), false);
@@ -381,7 +381,7 @@ class CustomToolScriptRunnerTest {
       ToolCallExecutor slow = new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000),
             new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
          @Override
-         public ToolCallOutcome execute(ExpositionEntry exp, String toolName, Map<String, Object> arguments,
+         public ToolCallOutcome executeInternal(ExpositionEntry exp, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
             try {
                Thread.sleep(500);

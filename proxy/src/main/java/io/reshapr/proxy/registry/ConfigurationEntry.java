@@ -59,6 +59,23 @@ public record ConfigurationEntry(
    }
 
    /**
+    * Determine whether an operation (referenced by its service operation name) is exposed by this
+    * configuration plan's include/exclude lists. Included operations take precedence over excluded
+    * ones; when neither list is set, all operations are exposed.
+    * @param operationName The service operation name to check.
+    * @return true when the operation is exposed by the plan, false otherwise.
+    */
+   public boolean exposesOperation(String operationName) {
+      if (includedOperations != null && !includedOperations.isEmpty()) {
+         return includedOperations.contains(operationName);
+      }
+      if (excludedOperations != null && !excludedOperations.isEmpty()) {
+         return !excludedOperations.contains(operationName);
+      }
+      return true;
+   }
+
+   /**
     * Caching directives forwarded from the ConfigurationPlan to MCP responses.
     * Both fields are optional; when null the proxy falls back to the defaults.
     *
