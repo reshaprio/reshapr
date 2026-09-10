@@ -1,0 +1,34 @@
+services:
+  otel-lgtm:
+    image: grafana/otel-lgtm:0.32.1
+    container_name: reshapr-otel-lgtm
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      # Grafana UI (dashboards for traces, metrics and logs)
+      - "4444:3000"
+      # OTLP gRPC receiver
+      - "4317:4317"
+      # OTLP HTTP receiver
+      - "4318:4318"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/api/health" ]
+      start_period: 10s
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  # Override only the OTEL-related environment of the gateway defined in
+  # docker-compose-all-in-one.yml. Docker Compose merges the "environment"
+  # mapping by variable name, so values below take precedence without having
+  # to redefine the whole service.
+  gateway-01:
+    depends_on:
+      otel-lgtm:
+        condition: service_healthy
+    environment:
+      # Re-enable the OpenTelemetry SDK (disabled in the all-in-one file)
+      - QUARKUS_OTEL_SDK_DISABLED=false
+      # Point the exporter to the otel-lgtm collector
+      - QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-lgtm:4317
+      - QUARKUS_OTEL_EXPORTER_OTLP_PROTOCOL=grpc
