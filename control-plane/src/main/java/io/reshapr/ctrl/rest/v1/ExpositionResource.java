@@ -19,6 +19,7 @@ import io.reshapr.ctrl.model.ActiveExposition;
 import io.reshapr.ctrl.model.Exposition;
 import io.reshapr.ctrl.repository.ExpositionRepository;
 import io.reshapr.ctrl.service.DependencyNotFoundException;
+import io.reshapr.ctrl.service.EntityAlreadyExistException;
 import io.reshapr.ctrl.service.ExpositionManagerService;
 
 import io.quarkus.security.Authenticated;
@@ -72,6 +73,8 @@ public class ExpositionResource {
                v1Mappers.toResource(exposition)).build();
       } catch (DependencyNotFoundException dnfe) {
          return Response.status(Response.Status.NOT_FOUND).entity(dnfe.getMessage()).build();
+      } catch (EntityAlreadyExistException eaee) {
+         return Response.status(Response.Status.CONFLICT).entity(eaee.getMessage()).build();
       }
    }
 

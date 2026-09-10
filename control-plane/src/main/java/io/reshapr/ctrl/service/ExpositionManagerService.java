@@ -93,11 +93,13 @@ public class ExpositionManagerService {
     *             wired together with the DTO in a later step.
     * @return the created exposition
     * @throws DependencyNotFoundException if the configuration plan or gateway group is not found
+    * @throws EntityAlreadyExistException if the configuration plan is already exposed on the gateway group, or if
+    *                                     the provided name is already used by another exposition in the organization
     */
    @Transactional
    @QuotaRestricted(metric = QuotaMetric.EXPOSITION_COUNT)
    public Exposition exposeConfiguration(String configurationPlanId, String gatewayGroupId, @Nullable String name)
-         throws DependencyNotFoundException {
+         throws DependencyNotFoundException, EntityAlreadyExistException {
       logger.infof("Creating a new exposition for config plan '%s' on gateway group '%s'",
             configurationPlanId, gatewayGroupId);
 
@@ -116,12 +118,31 @@ public class ExpositionManagerService {
          throw new DependencyNotFoundException("Gateway group with id " + gatewayGroupId + " not found");
       }
 
+      // Enforce the unique constraint forbidding to expose the same configuration plan on the same gateway
+      // group twice within the organization.
+      Exposition existing = expositionRepository.findByServiceAndGatewayGroupAndConfigurationPlan(
+            configurationPlan.service.id, gatewayGroupId, configurationPlanId);
+      if (existing != null) {
+         logger.errorf("Configuration plan %s is already exposed on gateway group %s (exposition %s)",
+               configurationPlanId, gatewayGroupId, existing.id);
+         throw new EntityAlreadyExistException("Configuration plan " + configurationPlanId
+               + " is already exposed on gateway group " + gatewayGroupId);
+      }
+
+      // Enforce the organization-unique exposition name.
+      String expositionName = (name != null && !name.isBlank()) ? name.trim() : null;
+      if (expositionName != null && expositionRepository.findByName(expositionName) != null) {
+         logger.errorf("An exposition named '%s' already exists in the organization", expositionName);
+         throw new EntityAlreadyExistException("An exposition named '" + expositionName
+               + "' already exists in the organization");
+      }
+
       // Create a new Exposition and associate it with the configuration plan and gateway group.
       Exposition exposition = new Exposition();
       exposition.configurationPlan = configurationPlan;
       exposition.gatewayGroup = gatewayGroup.get();
       exposition.service = configurationPlan.service;
-      exposition.name = (name != null && !name.isBlank()) ? name.trim() : null;
+      exposition.name = expositionName;
       exposition.createdOn = OffsetDateTime.now();
       expositionRepository.persistAndFlush(exposition);
 

@@ -360,6 +360,8 @@ paths:
                 type: string
           description: One of exposition dependency (Configuration Plan or Gateway
             Group) cannot be found
+        "409":
+          description: Exposition already exists (either with same name or same Configuration Plan and Gateway Group)
       security:
       - jwt-bearer: []
       operationId: createExposition

@@ -57,4 +57,19 @@ public class ExpositionRepository implements PanacheRepositoryBase<Exposition, S
    public Exposition findByName(String name) {
       return find("from Exposition e where e.name = ?1", name).firstResult();
    }
+
+   /**
+    * Finds an exposition matching the given service, gateway group and configuration plan triple within the
+    * current organization (the tenant discriminator is applied automatically). Used to enforce the unique
+    * constraint that forbids exposing the same configuration plan on the same gateway group twice.
+    * @param serviceId The service identifier.
+    * @param gatewayGroupId The gateway group identifier.
+    * @param configurationPlanId The configuration plan identifier.
+    * @return The matching exposition, or null if none.
+    */
+   public Exposition findByServiceAndGatewayGroupAndConfigurationPlan(String serviceId, String gatewayGroupId,
+                                                                      String configurationPlanId) {
+      return find("from Exposition e where e.service.id = ?1 and e.gatewayGroup.id = ?2 " +
+            "and e.configurationPlan.id = ?3", serviceId, gatewayGroupId, configurationPlanId).firstResult();
+   }
 }
