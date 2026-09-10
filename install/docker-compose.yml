@@ -35,6 +35,9 @@ services:
       - RESHAPR_ADMIN_PASSWORD=password
       - RESHAPR_ADMIN_EMAIL=reshapr@example.com
       - RESHAPR_DEFAULT_GATEWAY_TOKENS=my-super-secret-token-xyz
+      # Change the encryption key to a secure 32-character string for production use.
+      # This key is used to encrypt sensitive data in the control plane.
+      - RESHAPR_ENCRYPTION_KEY=my-super-secret-key-32-char-long
       # Enable external OIDC ID provider authentication
       #- RESHAPR_AUTHENTICATION_IDP_ENABLED=true
       #- RESHAPR_AUTHENTICATION_IDP_URL=http://localhost:8888/realms/3rdparty/protocol/openid-connect/auth

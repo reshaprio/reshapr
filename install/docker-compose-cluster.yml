@@ -51,6 +51,9 @@ services:
       - RESHAPR_ADMIN_PASSWORD=password
       - RESHAPR_ADMIN_EMAIL=reshapr@example.com
       - RESHAPR_DEFAULT_GATEWAY_TOKENS=my-super-secret-token-xyz
+      # Change the encryption key to a secure 32-character string for production use.
+      # This key is used to encrypt sensitive data in the control plane.
+      - RESHAPR_ENCRYPTION_KEY=my-super-secret-key-32-char-long
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5555/q/health/ready" ]
       start_period: 5s
