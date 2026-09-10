@@ -387,6 +387,12 @@ public class AuthenticationController {
          kubernetesTokenVerifier = KubernetesTokenVerifier.create();
       }
 
+      // 0. Validate the Authorization header.
+      if (authorizationHeader == null) {
+         logger.warn("Missing Authorization header");
+         return Response.status(Response.Status.UNAUTHORIZED).build();
+      }
+
       // 1. Extract the service account name from the Authorization header.
       String k8sToken = authorizationHeader.substring("Bearer ".length());
       var k8sIdentity = kubernetesTokenVerifier.verify(k8sToken)
