@@ -1,0 +1,51 @@
+# Isolated sandbox for the MCP "Enterprise-Managed Authorization" extension (ID-JAG).
+#
+# This stack is completely independent from install/ and from the local dev stack:
+# - Keycloak plays the "MCP Resource Authorization Server" (ID-JAG *Receiver*), on port 8090.
+# - idp-mock plays the "Enterprise IdP" (ID-JAG *Issuer*): it only serves a static JWKS; the
+#   ID-JAG itself is forged by scripts/01-generate-idjag.sh with the matching private key.
+#
+# Reshapr control-plane (5555) and proxy (7777) are expected to run separately (dev mode or the
+# existing install/ compose) and are reached via host.docker.internal from Keycloak if needed.
+
+name: ema
+
+services:
+  ema-keycloak:
+    image: quay.io/keycloak/keycloak:26.7
+    container_name: ema-keycloak
+    command:
+      - start-dev
+      - --features=identity-assertion-jwt
+      - --import-realm
+      - --http-port=8090
+      - --hostname=http://localhost:8090
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_LOG_LEVEL: info,org.keycloak.protocol.oidc:debug,org.keycloak.broker:debug
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+    depends_on:
+      ema-idp-mock:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8090 && echo -e 'GET /realms/reshapr-ema HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q 'reshapr-ema' <&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  ema-idp-mock:
+    image: nginx:1.27-alpine
+    container_name: ema-idp-mock
+    ports:
+      - "8091:80"
+    volumes:
+      - ./idp-mock/www:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/jwks.json"]
+      interval: 3s
+      timeout: 2s
+      retries: 20

@@ -1,0 +1,125 @@
+{
+  "realm": "reshapr-ema",
+  "enabled": true,
+  "displayName": "Reshapr EMA sandbox (MCP Resource Authorization Server)",
+  "sslRequired": "none",
+  "accessTokenLifespan": 900,
+  "defaultSignatureAlgorithm": "RS256",
+  "roles": {
+    "realm": []
+  },
+  "clientScopes": [
+    {
+      "name": "mcp.read",
+      "description": "Read access to the MCP weather exposition",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp-exposition-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "http://localhost:7777/mcp/reshapr/ema-weather",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "mcp-client",
+      "name": "MCP Client (enterprise-managed)",
+      "description": "Confidential MCP client allowed to present ID-JAG assertions (RFC 7523 jwt-bearer grant)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "mcp-client-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "consentRequired": false,
+      "fullScopeAllowed": true,
+      "attributes": {
+        "oauth2.jwt.authorization.grant.enabled": "true",
+        "oauth2.jwt.authorization.grant.idp": "id-jag",
+        "access.token.lifespan": "900"
+      },
+      "defaultClientScopes": ["mcp.read", "email"],
+      "optionalClientScopes": []
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "id-jag",
+      "displayName": "Enterprise IdP (ID-JAG issuer, mocked)",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "linkOnly": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "issuer": "http://localhost:8091",
+        "authorizationUrl": "http://localhost:8091/authorize",
+        "tokenUrl": "http://localhost:8091/token",
+        "jwksUrl": "http://ema-idp-mock/jwks.json",
+        "useJwksUrl": "true",
+        "validateSignature": "true",
+        "clientId": "reshapr-ema-receiver",
+        "clientSecret": "not-used-for-jwt-bearer",
+        "clientAuthMethod": "client_secret_post",
+        "jwtAuthorizationGrantEnabled": "true",
+        "jwtAuthorizationGrantAssertionReuseAllowed": "false",
+        "jwtAuthorizationGrantMaxAllowedAssertionExpiration": "300",
+        "syncMode": "IMPORT"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alice@acme.example",
+      "firstName": "Alice",
+      "lastName": "Anderson",
+      "federatedIdentities": [
+        {
+          "identityProvider": "id-jag",
+          "userId": "U-alice-001",
+          "userName": "alice"
+        }
+      ]
+    }
+  ]
+}
