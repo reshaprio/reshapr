@@ -24,8 +24,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -44,29 +47,37 @@ class OidcUtilsTest {
    private final ObjectMapper objectMapper = new ObjectMapper();
 
    @Test
-   void testFetchClientCredentialsTokenReturnsAccessTokenAndExpiresIn() throws Exception {
+   void testFetchClientCredentialsTokenSendsBasicAuthAndOmitsCredentialsFromBody() throws Exception {
 
       try (CapturingTokenEndpoint endpoint = new CapturingTokenEndpoint(200,
             "{\"access_token\":\"access-123\",\"expires_in\":3600}")) {
 
          OidcUtils.OidcTokenResponse response = OidcUtils.fetchClientCredentialsToken(
-               new OidcUtils.OidcEndpointConfig(endpoint.url(), "client id", "client secret"),
+               new OidcUtils.OidcEndpointConfig(endpoint.url(), "client id", "client/secret"),
                List.of("read:items", "write:items"),
                objectMapper);
 
          assertEquals("access-123", response.accessToken());
          assertEquals(3600L, response.expiresInSeconds());
 
+         // RFC 6749 §2.3.1: credentials go in the Authorization Basic header, form-urlencoded then base64.
+         String expectedCredentials = URLEncoder.encode("client id", StandardCharsets.UTF_8)
+               + ":" + URLEncoder.encode("client/secret", StandardCharsets.UTF_8);
+         String expectedHeader = "Basic "
+               + Base64.getEncoder().encodeToString(expectedCredentials.getBytes(StandardCharsets.UTF_8));
+         assertEquals(expectedHeader, endpoint.lastAuthorizationHeader());
+
+         // The body carries only grant_type and scope, not the client credentials.
          Map<String, String> form = decodeForm(endpoint.lastRequestBody());
          assertEquals("client_credentials", form.get("grant_type"));
-         assertEquals("client id", form.get("client_id"));
-         assertEquals("client secret", form.get("client_secret"));
          assertEquals("read:items write:items", form.get("scope"));
+         assertFalse(form.containsKey("client_id"));
+         assertFalse(form.containsKey("client_secret"));
       }
    }
 
    @Test
-   void testFetchClientCredentialsTokenOmitsClientSecretWhenAbsent() throws Exception {
+   void testFetchClientCredentialsTokenOmitsBasicAuthWhenSecretAbsent() throws Exception {
 
       try (CapturingTokenEndpoint endpoint = new CapturingTokenEndpoint(200,
             "{\"access_token\":\"access-123\",\"expires_in\":60}")) {
@@ -76,6 +87,8 @@ class OidcUtilsTest {
                List.of(),
                objectMapper);
 
+         // Public client (no secret): no Basic header, client_id falls back to the body.
+         assertNull(endpoint.lastAuthorizationHeader());
          Map<String, String> form = decodeForm(endpoint.lastRequestBody());
          assertEquals("client_credentials", form.get("grant_type"));
          assertEquals("client", form.get("client_id"));
@@ -159,8 +172,16 @@ class OidcUtilsTest {
          return requests.get("body");
       }
 
+      String lastAuthorizationHeader() {
+         return requests.get("authorization");
+      }
+
       private void handle(HttpExchange exchange, int statusCode, String responseBody) throws IOException {
          requests.put("body", new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+         String authorization = exchange.getRequestHeaders().getFirst("Authorization");
+         if (authorization != null) {
+            requests.put("authorization", authorization);
+         }
          byte[] bytes = responseBody.getBytes(StandardCharsets.UTF_8);
          exchange.getResponseHeaders().add("Content-Type", "application/json");
          exchange.sendResponseHeaders(statusCode, bytes.length);

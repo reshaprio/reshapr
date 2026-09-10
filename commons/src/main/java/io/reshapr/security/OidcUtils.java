@@ -26,6 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -95,6 +96,15 @@ public class OidcUtils {
                   HttpRequest.BodyPublishers.ofString(getClientCredentialsQueryString(oidcEndpointConfig, scopes)))
             .header("Content-Type", "application/x-www-form-urlencoded");
 
+      // Authenticate the client with HTTP Basic (client_secret_basic), the method RECOMMENDED by
+      // RFC 6749 §2.3.1 over passing the credentials in the request body (client_secret_post).
+      // When the client has no secret (public client) we fall back to sending the client_id in the
+      // body instead (see getClientCredentialsQueryString).
+      if (oidcEndpointConfig.clientSecret() != null) {
+         requestBuilder.header("Authorization",
+               basicAuthHeader(oidcEndpointConfig.clientId(), oidcEndpointConfig.clientSecret()));
+      }
+
       try (HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
             .version(HttpClient.Version.HTTP_1_1).build()) {
@@ -138,14 +148,32 @@ public class OidcUtils {
 
    private static String getClientCredentialsQueryString(OidcEndpointConfig oidcEndpointConfig, List<String> scopes) {
       StringBuilder queryString = new StringBuilder("grant_type=client_credentials");
-      queryString.append("&client_id=").append(URLEncoder.encode(oidcEndpointConfig.clientId(), StandardCharsets.UTF_8));
-      if (oidcEndpointConfig.clientSecret() != null) {
-         queryString.append("&client_secret=").append(URLEncoder.encode(oidcEndpointConfig.clientSecret(), StandardCharsets.UTF_8));
+      // With a client secret we authenticate via HTTP Basic (see fetchClientCredentialsToken), so the
+      // credentials are NOT duplicated in the body. Without a secret (public client) the client_id is
+      // still required to identify the client, so it goes in the body.
+      if (oidcEndpointConfig.clientSecret() == null) {
+         queryString.append("&client_id=").append(URLEncoder.encode(oidcEndpointConfig.clientId(), StandardCharsets.UTF_8));
       }
       if (scopes != null && !scopes.isEmpty()) {
          queryString.append("&scope=").append(URLEncoder.encode(String.join(" ", scopes), StandardCharsets.UTF_8));
       }
       return queryString.toString();
+   }
+
+   /**
+    * Build an HTTP Basic {@code Authorization} header value for OAuth2 client authentication.
+    * Per RFC 6749 §2.3.1 the client id and secret must be {@code application/x-www-form-urlencoded}
+    * encoded before being concatenated with a colon separator and Base64-encoded, otherwise
+    * credentials containing reserved characters (e.g. {@code :}, {@code +}, {@code /}) would be
+    * mis-parsed by the authorization server.
+    * @param clientId the OAuth2 client identifier.
+    * @param clientSecret the OAuth2 client secret.
+    * @return the {@code Basic <base64>} header value.
+    */
+   private static String basicAuthHeader(String clientId, String clientSecret) {
+      String credentials = URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+            + ":" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8);
+      return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
    }
 
    /**
