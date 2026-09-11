@@ -12,7 +12,7 @@ services:
       # OTLP HTTP receiver
       - "4318:4318"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:4444/api/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
       start_period: 10s
       interval: 5s
       timeout: 2s
