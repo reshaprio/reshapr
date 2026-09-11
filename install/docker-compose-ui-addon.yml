@@ -16,6 +16,11 @@ services:
       # - HOST=0.0.0.0
       # Public origin as perceived by the browser to prevent CSRF protection issues.
       - ORIGIN=http://localhost:3333
+      # Max request body size accepted by the SvelteKit adapter-node server.
+      # Defaults to 512K, which is too small for large API specifications and makes
+      # spec uploads fail with an opaque "fetch failed" error. Keep it >= the control
+      # plane limit (quarkus.http.limits.max-body-size, 10M) plus multipart overhead.
+      - BODY_SIZE_LIMIT=12M
       # If behind a reverse proxy that sets the X-Forwarded-Proto and X-Forwarded-Host headers, uncomment the following lines.
       # - PROTOCOL_HEADER=x-forwarded-proto
       # - HOST_HEADER=x-forwarded-host

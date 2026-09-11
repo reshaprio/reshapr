@@ -72,7 +72,35 @@ export async function proxyRequest(
     ...(request.method !== 'GET' && request.method !== 'HEAD' ? { body: request.body, duplex: 'half' as const } : {})
   };
 
-  const res = await fetch(targetUrl, init);
+  let res: Response;
+  try {
+    res = await fetch(targetUrl, init);
+  } catch (err) {
+    // A streamed request body (large uploads) can fail here for two main reasons:
+    // 1. The incoming body exceeded the adapter-node BODY_SIZE_LIMIT (default 512K),
+    //    which errors the ReadableStream we forward and surfaces as "fetch failed".
+    // 2. The control plane is unreachable.
+    // The underlying reason is hidden in `cause`, so log it and return an explicit
+    // error instead of an opaque 500.
+    const cause = err instanceof Error ? err.cause : undefined;
+    console.error(`Proxy request to ${targetUrl} failed:`, err, cause ? { cause } : '');
+
+    const message = cause instanceof Error ? cause.message : String(cause ?? err);
+    if (/exceed/i.test(message) && /(limit|body[_\s-]?size)/i.test(message)) {
+      return json(
+        {
+          error: 'Payload Too Large',
+          message:
+            'The uploaded content exceeds the web UI body size limit. Increase BODY_SIZE_LIMIT for the web-ui server.'
+        },
+        { status: 413 }
+      );
+    }
+    return json(
+      { error: 'Bad Gateway', message: 'Unable to reach the reshapr control plane.' },
+      { status: 502 }
+    );
+  }
 
   // Stream the response back with original status and content-type.
   const responseHeaders: Record<string, string> = {};
