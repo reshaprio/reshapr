@@ -22,6 +22,7 @@ export { serviceCommand } from './service.js';
 export { secretCommand } from './secret.js';
 export { expoCommand } from './expo.js';
 export { configCommand } from './config.js';
+export { templateCommand } from './template.js';
 export { gatewayGroupCommand } from './gateway-group.js';
 export { tokenCommand } from './api-token.js';
 export { quotasCommand } from './quotas.js';
@@ -31,3 +32,4 @@ export { stopCommand } from './stop.js';
 export { artifactCommand } from './artifact.js';
 export { switchOrgCommand } from './switch-org.js';
 export { adminCommand } from './admin/index.js';
+

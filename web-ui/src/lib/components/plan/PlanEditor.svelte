@@ -71,6 +71,11 @@
 	/** The full plan document loaded in edit mode; preserved on save to keep unknown fields. */
 	let basePlan = $state<Record<string, unknown>>({});
 
+	// ── Template support (create mode only) ────────────────────────────────────
+	type TemplateOption = { id: string; name: string; oauth2Configuration?: any };
+	let templates = $state<TemplateOption[]>([]);
+	let selectedTemplateId = $state<string | undefined>(undefined);
+
 	// ── Form state ──────────────────────────────────────────────────────────────
 	let name = $state('');
 	let description = $state('');
@@ -504,6 +509,43 @@
 		await apiClient().deleteConfigurationPlan(planId);
 		await goto(`/services/${serviceId}/plans`);
 	}
+
+	// ── Load templates (create mode only) ───────────────────────────────────────
+	async function loadTemplates() {
+		try {
+			const raw = await apiClient().listConfigurationTemplates();
+			templates = (raw as any[]).map((t) => ({
+				id: String(t.id),
+				name: String(t.name),
+				oauth2Configuration: t.oauth2Configuration ?? null
+			}));
+		} catch {
+			// Non-critical: if templates cannot be loaded, the selector is simply empty.
+		}
+	}
+
+	/**
+	 * Applies the OAuth2 configuration from the selected template to the current form fields.
+	 * Only pre-fills — the user can freely edit the values afterwards.
+	 */
+	function applyTemplate(templateId: string) {
+		const tpl = templates.find((t) => t.id === templateId);
+		if (!tpl) return;
+		if (tpl.oauth2Configuration) {
+			mcpAuthMode = 'oauth';
+			oauthAuthServersText = formatOperationsList(
+				tpl.oauth2Configuration.authorizationServers ?? []
+			);
+			oauthJwksUri = tpl.oauth2Configuration.jwksUri ?? '';
+			oauthScopesText = formatOperationsList(tpl.oauth2Configuration.scopes ?? []);
+			// Open the MCP section so the user can see the pre-filled values.
+			openMcp = true;
+		}
+	}
+
+	$effect(() => {
+		if (!isEdit) void loadTemplates();
+	});
 </script>
 
 <form class="space-y-6" onsubmit={onSubmit}>
@@ -546,6 +588,26 @@
 			{isEdit ? 'Edit configuration plan' : 'New configuration plan'}
 		</h2>
 		<div class="flex flex-wrap gap-2">
+			{#if !isEdit && templates.length > 0}
+				<Select.Root
+					type="single"
+					value={selectedTemplateId}
+					onValueChange={(v) => {
+						if (!v) return;
+						selectedTemplateId = v;
+						applyTemplate(v);
+					}}
+				>
+					<Select.Trigger class="w-52" aria-label="Start from template">
+						{templates.find((t) => t.id === selectedTemplateId)?.name || 'Start from template…'}
+					</Select.Trigger>
+					<Select.Content>
+						{#each templates as tpl (tpl.id)}
+							<Select.Item value={tpl.id}>{tpl.name}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			{/if}
 			{#if isEdit}
 				{#if mcpAuthMode === 'apikey'}
 					<Button type="button" variant="outline" disabled={loading} onclick={() => void onRenew()}>

@@ -43,6 +43,7 @@
     SquareLock02Icon,
     Sun03Icon,
     TagsIcon,
+    FileCloudIcon,
     UserIcon
   } from '@hugeicons/core-free-icons';
 
@@ -98,6 +99,7 @@
       items: [
         { href: '/secrets', label: 'Secrets', icon: SquareLock02Icon },
         { href: '/services', label: 'Services', icon: ApiIcon },
+        { href: '/templates', label: 'Templates', icon: FileCloudIcon },
         { href: '/gateway-groups', label: 'Gateway Groups', icon: TagsIcon }
       ]
     },
