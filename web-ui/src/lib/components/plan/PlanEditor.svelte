@@ -24,6 +24,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '$lib/artifacts/index.js';
@@ -97,6 +98,8 @@
 	let oauthAuthServersText = $state('');
 	let oauthJwksUri = $state('');
 	let oauthScopesText = $state('');
+	let oauthDisableAudienceVal = $state(false);
+	let oauthStaticAudiencesText = $state('');
 
 	// ── UI state ────────────────────────────────────────────────────────────────
 	let loading = $state(true);
@@ -325,6 +328,8 @@
 			oauthAuthServersText = formatOperationsList(oauth.authorizationServers);
 			oauthJwksUri = typeof oauth.jwksUri === 'string' ? oauth.jwksUri : '';
 			oauthScopesText = formatOperationsList(oauth.scopes);
+			oauthDisableAudienceVal = !!oauth.disableAudienceValidation;
+			oauthStaticAudiencesText = formatOperationsList(oauth.staticAudiences);
 		} else if (typeof plan.apiKey === 'string' && plan.apiKey.trim() !== '') {
 			mcpAuthMode = 'apikey';
 		} else {
@@ -437,7 +442,9 @@
 			body.oauth2Configuration = {
 				authorizationServers: parseOperationsList(oauthAuthServersText),
 				jwksUri: oauthJwksUri.trim() || null,
-				scopes: parseOperationsList(oauthScopesText)
+				scopes: parseOperationsList(oauthScopesText),
+				disableAudienceValidation: oauthDisableAudienceVal,
+				staticAudiences: parseOperationsList(oauthStaticAudiencesText)
 			};
 			delete body.apiKey;
 		} else {
@@ -926,6 +933,30 @@
 					/>
 					<p class="text-muted-foreground text-xs">One scope per line.</p>
 				</div>
+				<div class="flex items-center justify-between gap-4 rounded-lg border p-4">
+					<div class="space-y-0.5">
+						<Label for="oauthDisableAudienceVal" class="text-sm font-medium">
+							Disable audience validation
+						</Label>
+						<p class="text-muted-foreground text-sm">
+							If enabled, bypasses validating the aud claim in OAuth tokens.
+						</p>
+					</div>
+					<Switch id="oauthDisableAudienceVal" checked={oauthDisableAudienceVal} onCheckedChange={(v) => (oauthDisableAudienceVal = v)} disabled={loading} />
+				</div>
+				{#if !oauthDisableAudienceVal}
+					<div class="space-y-2">
+						<Label for="oauthStaticAudiences">Static audiences</Label>
+						<Textarea
+							id="oauthStaticAudiences"
+							bind:value={oauthStaticAudiencesText}
+							rows={3}
+							disabled={loading}
+							placeholder={'https://api.example.com'}
+						/>
+						<p class="text-muted-foreground text-xs">One audience per line.</p>
+					</div>
+				{/if}
 			{/if}
 		</Card.Content>
 		{/if}

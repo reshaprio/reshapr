@@ -98,6 +98,8 @@
 	let oauthAuthServersText = $state('');
 	let oauthJwksUri = $state('');
 	let oauthScopesText = $state('');
+	let oauthDisableAudienceVal = $state(false);
+	let oauthStaticAudiencesText = $state('');
 
 	// Finish step.
 	let planId = $state('');
@@ -139,6 +141,8 @@
 		oauthAuthServersText = '';
 		oauthJwksUri = '';
 		oauthScopesText = '';
+		oauthDisableAudienceVal = false;
+		oauthStaticAudiencesText = '';
 		planId = '';
 		planExisted = false;
 		createdKey = null;
@@ -200,7 +204,9 @@
 			body.oauth2Configuration = {
 				authorizationServers: parseOperationsList(oauthAuthServersText),
 				jwksUri: oauthJwksUri.trim() || null,
-				scopes: parseOperationsList(oauthScopesText)
+				scopes: parseOperationsList(oauthScopesText),
+				disableAudienceValidation: oauthDisableAudienceVal,
+				staticAudiences: parseOperationsList(oauthStaticAudiencesText)
 			};
 			delete body.apiKey;
 			return;
@@ -540,6 +546,29 @@
 											/>
 											<p class="text-muted-foreground text-xs">One scope per line.</p>
 										</div>
+										<div class="flex items-center justify-between gap-4 rounded-lg border p-4">
+											<div class="space-y-0.5">
+												<Label for="qs-oauth-disable-aud" class="text-sm font-medium">
+													Disable audience validation
+												</Label>
+												<p class="text-muted-foreground text-sm">
+													If enabled, bypasses validating the aud claim in OAuth tokens.
+												</p>
+											</div>
+											<Switch id="qs-oauth-disable-aud" checked={oauthDisableAudienceVal} onCheckedChange={(v) => (oauthDisableAudienceVal = v)} />
+										</div>
+										{#if !oauthDisableAudienceVal}
+											<div class="space-y-2">
+												<Label for="qs-oauth-static-aud">Static audiences</Label>
+												<Textarea
+													id="qs-oauth-static-aud"
+													bind:value={oauthStaticAudiencesText}
+													rows={2}
+													placeholder={'https://api.example.com'}
+												/>
+												<p class="text-muted-foreground text-xs">One audience per line.</p>
+											</div>
+										{/if}
 									{/if}
 								</div>
 							{/if}

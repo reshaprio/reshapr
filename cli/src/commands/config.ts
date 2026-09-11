@@ -111,6 +111,13 @@ configCommand.command('get <id>')
       if (config.oauth2Configuration.scopes) {
         Logger.log(`  Scopes               : ${config.oauth2Configuration.scopes.join(', ')}`);
       }
+      if (config.oauth2Configuration.disableAudienceValidation) {
+        Logger.log(`  Disable Audience Val.: Yes`);
+      } else {
+        if (config.oauth2Configuration.staticAudiences) {
+          Logger.log(`  Static Audiences     : ${config.oauth2Configuration.staticAudiences.join(', ')}`);
+        }
+      }
     } else {
       Logger.log(`OAuth2          : No`);
     }
@@ -211,6 +218,8 @@ configCommand.command('create-oauth <name>')
   .requiredOption('--oas, --oauth2AuthorizationServers [<authorizationServer1>, <authorizationServer2>]', 'A list of OAuth2 authorization server URLs to accept tokens from')
   .requiredOption('--oju, --oauth2jwksUri <jwksUri>', 'The JWKS URI to validate OAuth2 tokens')
   .option('--osc, --oauth2Scopes [<scope1>, <scope2>]', 'A list of OAuth2 scopes to enforce presence in the access token')
+  .option('--odav, --oauth2DisableAudienceValidation', 'Disable audience validation for OAuth2 tokens')
+  .option('--osa, --oauth2StaticAudiences [<audience1>, <audience2>]', 'A list of static audiences to validate against (JSON array)')
   .option('--audit', 'Enable audit logging for this configuration plan')
   .option('--ct, --cacheTtl <cacheTtlMs>', 'Cache TTL in milliseconds', '30000')
   .option('--cs, --cacheScope <cacheScope>', 'Cache scope (e.g. public, private)', 'public')
@@ -226,7 +235,9 @@ configCommand.command('create-oauth <name>')
     options.oauth2Configuration = {
       authorizationServers: getArrayOfStrings(options.oauth2AuthorizationServers, 'oauth2AuthorizationServers'),
       jwksUri: options.oauth2jwksUri,
-      scopes: options.oauth2Scopes ? getArrayOfStrings(options.oauth2Scopes, 'oauth2Scopes') : undefined
+      scopes: options.oauth2Scopes ? getArrayOfStrings(options.oauth2Scopes, 'oauth2Scopes') : undefined,
+      disableAudienceValidation: options.oauth2DisableAudienceValidation || false,
+      staticAudiences: options.oauth2StaticAudiences ? getArrayOfStrings(options.oauth2StaticAudiences, 'oauth2StaticAudiences') : undefined
     };
     
     const response = await fetch(`${ConfigUtil.config.server}/api/v1/configurationPlans`, {

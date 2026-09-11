@@ -122,7 +122,7 @@ export function capabilityGroups(
 
 // ── MCP endpoint (client-facing) authentication ─────────────────────────────
 export type McpAuth =
-	| { kind: 'oauth'; servers: string[]; scopes: string[]; jwksUri: string | null }
+	| { kind: 'oauth'; servers: string[]; scopes: string[]; jwksUri: string | null; disableAudienceValidation: boolean; staticAudiences: string[] }
 	| { kind: 'apikey' }
 	| { kind: 'none' };
 
@@ -133,7 +133,9 @@ export function mcpAuthOf(plan: Record<string, unknown> | null): McpAuth {
 			kind: 'oauth',
 			servers: arrOf(oauth.authorizationServers).map(String),
 			scopes: arrOf(oauth.scopes).map(String),
-			jwksUri: strOf(oauth.jwksUri)
+			jwksUri: strOf(oauth.jwksUri),
+			disableAudienceValidation: !!oauth.disableAudienceValidation,
+			staticAudiences: arrOf(oauth.staticAudiences).map(String)
 		};
 	}
 	if (strOf(plan?.apiKey)) return { kind: 'apikey' };
