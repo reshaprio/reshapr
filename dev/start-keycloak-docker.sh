@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Start Keycloak for local Reshapr OIDC dev (realms 3rdparty and backend on port 8888).
 # Single terminal: starts container, fixes sslRequired on master + 3rdparty, then follows logs.
+#
+# Starts local Keycloak only. To enable reShapr OIDC user authentication with this
+# external IDP, set the RESHAPR_AUTHENTICATION_IDP_* vars in install/docker-compose-all-in-one.yml.
+#
+# It also imports the 3rdparty realm, the reshapr-ctrl client and redirect URIs for testing
+# OAuth Elicitations with this Keycloak realm.
+# See demo: https://github.com/reshaprio/reshapr-demos/tree/main/demos/09-open-meteo-openapi-keycloak-elicitation
 set -euo pipefail
 
 CONTAINER_NAME="${RESHAPR_KEYCLOAK_CONTAINER:-reshapr-keycloak-dev}"
@@ -92,6 +99,8 @@ echo "  Admin console: http://localhost:${HOST_PORT}/admin"
 echo "    Login realm: master (default) — user: admin / password: admin"
 echo "    Then switch realm (top-left) to '3rdparty' → Users → Create user"
 echo "  Reshapr OIDC:  http://localhost:5555  (test user laurent / laurent)"
+echo "    Note: this only starts Keycloak. To make reShapr authenticate users through it,"
+echo "    set the RESHAPR_AUTHENTICATION_IDP_* vars in install/docker-compose-all-in-one.yml."
 echo "  Guardrails realm (for reshapr.authentication.idp.guard-access / default-organization tests):"
 echo "    URL:   http://localhost:${HOST_PORT}/realms/guardrails"
 echo "    Users: allowed-user, denied-user, claim-user, org-claim-user, fallback-user (password == username)"
