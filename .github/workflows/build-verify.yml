@@ -74,3 +74,16 @@ jobs:
       image-tag: ${{ needs.build-install.outputs.image-tag }}
     secrets: inherit
 
+  native-container-images-build:
+    needs:
+      - build-install
+    if: github.repository_owner == 'reshaprio' && needs.build-install.outputs.package-image == 'true' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # needed for signing the images with GitHub OIDC Token
+    uses: ./.github/workflows/build-native-containers.yml
+    with:
+      image-tag: ${{ needs.build-install.outputs.image-tag }}
+    secrets: inherit
+
