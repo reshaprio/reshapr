@@ -52,7 +52,9 @@ services:
       - RESHAPR_ADMIN_EMAIL=reshapr@example.com
       - RESHAPR_DEFAULT_GATEWAY_TOKENS=my-super-secret-token-xyz
       # Change the encryption key to a secure 32-character string for production use.
-      # This key is used to encrypt sensitive data in the control plane.
+      # This key is used (AES/GCM) to encrypt sensitive data in the control plane, and also to
+      # decrypt values encrypted by older releases (AES/ECB). See reshapr.encryption.* properties
+      # for key rotation support (adding new key ids alongside this one).
       - RESHAPR_ENCRYPTION_KEY=my-super-secret-key-32-char-long
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5555/q/health/ready" ]
