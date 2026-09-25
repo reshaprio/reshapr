@@ -1,0 +1,67 @@
+# Welcome new users by commenting on the first-time issue/PR.
+# Adding a friendly message in the comment to tip non-stargazers to star our repo.
+#
+# Props to https://github.com/wow-actions/welcome 
+
+name: Welcome New Users with Thanks and Tip non-stargazers ;-)
+on:
+  pull_request_target:
+    types: [opened, closed]
+  issues:
+    types: [opened]
+permissions:
+  contents: read  # Set permissions as read-only by default at the top level
+jobs:
+  run:
+    permissions:
+      contents: read  # job-level permissions replace, not merge with, the top-level block
+      issues: write  # for wow-actions/welcome to comment on issues
+      pull-requests: write  # wow-actions/welcome to comment on PRs
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: wow-actions/welcome@68019c2c271561f63162fea75bb7707ef8a02c85 # To pin v1.3.1
+        with:
+          # GitHub token as default GITHUB_TOKEN
+      
+          FIRST_ISSUE_REACTIONS: '+1, hooray, rocket, heart'
+          
+          FIRST_ISSUE: |
+            👋 @{{ author }}
+            
+            Welcome to the reShapr community! 💖
+            
+            Thanks and congrats 🎉 for opening your first issue here! Be sure to follow the issue template or please update it accordingly.
+            
+            📢 If you're using reShapr in your organization, please [add your company name to this list](https://github.com/reshaprio/.github/blob/main/ADOPTERS.md). 🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+
+            Hope you have a great time there!
+          
+          FIRST_PR_REACTIONS: '+1, hooray, rocket, heart'
+          
+          FIRST_PR: |
+            👋 @{{ author }}
+            
+            Welcome to the reShapr community! 💖
+            
+            Thanks and congrats 🎉 for opening your first pull request here! Be sure to follow the pull request template or please update it accordingly.
+            
+            Hope you have a great time there! 
+          
+          FIRST_PR_MERGED: |
+            🎉 @{{ author }}
+            
+            You are now a reShapr community contributor! 💖
+            
+            Thanks and congrats 🚀 on merging your first pull request! We are delighted and very proud of you! 👏
+
+            📢 If you're using reShapr in your organization, please [add your company name to this list](https://github.com/reshaprio/.github/blob/main/ADOPTERS.md). 🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+
+            Kudos and please keep going, we need you 🙌
+            
+          STAR_MESSAGE: |
+            🌟 ~~~~~~~~~ 🌟
+
+            📢 If you like reShapr, please ⭐ star ⭐ our repo to support it!
+            
+            🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
+            

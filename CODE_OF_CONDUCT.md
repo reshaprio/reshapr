@@ -1,6 +1,6 @@
 # Reshapr Community Code of Conduct
 
-Reshapr project adheres to the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md), aligning with the values of collaboration, transparency, and inclusivity that define open source.
+Reshapr project adheres to the [Agentic AI Foundation (AAIF) Code of Conduct](https://github.com/aaif/foundation/blob/main/CODE_OF_CONDUCT.md), aligning with the values of collaboration, transparency, and inclusivity that define open source.
 
 ## Our Pledge
 

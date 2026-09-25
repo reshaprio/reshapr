@@ -1,0 +1,49 @@
+# This workflow is used to manage stale issues and PRs in the Reshapr project.
+name: Manage stale issues and PRs
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  stale:
+    permissions:
+      issues: write  # for actions/stale to close stale issues
+      pull-requests: write  # for actions/stale to close stale PRs
+    if: startsWith(github.repository, 'reshaprio/')
+    name: Mark issue or PR as stale
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # To pin v10.2.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity :sleeping:
+            
+            It will be closed in 30 days if no further activity occurs. To unstale this issue, add a comment with a detailed explanation. 
+            
+            There can be many reasons why some specific issue has no activity. The most probable cause is lack of time, not lack of interest. Reshapr is an Open Source project not owned by a single for-profit company. It is a community-driven initiative ruled under [open governance model](https://github.com/reshapr/.github/blob/main/CODE_OF_CONDUCT.md). 
+            
+            Let us figure out together how to push this issue forward. Connect with us through [one of many communication channels](https://reshapr.io/community/) we established here.
+            
+            Thank you for your patience :heart:
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had recent activity :sleeping:
+            
+            It will be closed in 30 days if no further activity occurs. To unstale this pull request, add a comment with detailed explanation.
+            
+            There can be many reasons why some specific pull request has no activity. The most probable cause is lack of time, not lack of interest. Reshapr is an Open Source project not owned by a single for-profit company. It is a community-driven initiative ruled under [open governance model](https://github.com/reshapr/.github/blob/main/CODE_OF_CONDUCT.md). 
+            
+            Let us figure out together how to push this pull request forward. Connect with us through [one of many communication channels](https://reshapr.io/community/) we established here.
+            
+            Thank you for your patience :heart:
+          days-before-stale: 30
+          days-before-close: 30
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: keep-open
+          exempt-pr-labels: keep-open
+          close-issue-reason: not_planned

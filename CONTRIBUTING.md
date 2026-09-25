@@ -2,10 +2,6 @@
 
 We love your input! We want to make contributing to this project as easy and transparent as possible.
 
-## Contribution recogniton
-
-We plan to use [All Contributors](https://allcontributors.org/docs/en/specification) specification to handle recognitions.
-
 ## Summary of the contribution flow
 
 The following is a summary of the ideal contribution flow. Please, note that Pull Requests can also be rejected by the maintainers when appropriate.
@@ -47,7 +43,7 @@ We use Github to host code, to track issues and feature requests, as well as acc
 
 ## Issues
 
-[Open an issue](https://github.com/reshaprio/reshapr/issues/new) **only** if you want to report a bug or a feature. Don't open issues for questions or support, instead join our [Discord `#support`](https://discord.gg/KyDUdam34h) channel and ask there.
+Open an issue in the repository you're contributing to **only** if you want to report a bug or a feature. Don't open issues for questions or support, instead join our [Discord `#support`](https://discord.gg/KyDUdam34h) channel and ask there.
 
 ## Bug Reports and Feature Requests
 
@@ -56,6 +52,14 @@ Please use our issues templates that provide you with hints on what information 
 ## Pull Requests
 
 **Please, make sure you open an issue before starting with a Pull Request, unless it's a typo or a really obvious error.** Pull requests are the best way to propose changes to the specification. Take time to check the current working branch for the repository you want to contribute on before working :wink:
+
+### AI Contribution Policy
+
+If you use Generative AI tools (like GitHub Copilot, Cursor, etc.) to assist in your contributions, you must adhere to our [AI Contribution Policy](AI-POLICY.md). You are 100% accountable for your code, must explicitly disclose AI usage in your PR, and must not use AI tools to auto-reply to maintainers.
+
+## Testing
+
+New features and bug fixes should be accompanied by automated tests. Pull requests that add functionality without corresponding test coverage may be asked to add it before merging.
 
 ## Conventional commits
 
@@ -78,7 +82,7 @@ Happy contributing :heart:
 
 ## License
 
-When you submit changes, your submissions are understood to be under the same [Apache 2.0 License](https://github.com/reshaprio/reshapr/blob/master/LICENSE) that covers the project. Feel free to [contact the maintainers](MAINTAINERS.md) if that's a concern.
+When you submit changes, your submissions are understood to be under the same [Apache 2.0 License](LICENSE) that covers the project. Feel free to [contact the maintainers](MAINTAINERS.md) if that's a concern.
 
 ## References
 
