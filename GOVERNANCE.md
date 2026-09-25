@@ -2,6 +2,8 @@
 
 This document defines governance policies for the reShapr project.
 
+**Last reviewed:** September 25, 2026
+
 ## Principles
 
 The reShapr project community adheres to the following principles:
@@ -30,6 +32,35 @@ The reShapr project has four roles. All project members operate in one (or more)
 
 > 📢 If you're using reShapr in your organization, please add your company name to this [list](https://github.com/reshaprio/.github/blob/main/ADOPTERS.md) 🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a significant impact.
 
+## Decision Making and Voting
+
+Most day-to-day technical decisions, including pull request reviews, merges and releases, are made by Maintainers through lazy consensus. Discussions and decisions should take place in public GitHub issues, pull requests, discussions or community meetings whenever possible.
+
+A formal vote is required for:
+
+- Changes to governance policy or supporting governance documents,
+- Adding or removing a Maintainer,
+- Adding or removing a sub-project or repository,
+- Project-wide strategic direction or roadmap priorities,
+- Requests involving foundation or third-party funds or resources granted to the project,
+- Any other decision that the Maintainers explicitly designate for a formal vote.
+
+Formal votes use organization-balanced voting so that no single organization can control reShapr governance through Maintainer headcount. Each organization has one vote, regardless of how many Maintainers are affiliated with it. Each independent or unaffiliated Maintainer has one vote.
+
+A Maintainer's organization is the affiliation listed in the [centralized Maintainers and Code Owners list](https://github.com/reshaprio/.github/blob/main/MAINTAINERS.md). Maintainers employed by, sponsored by or working primarily on behalf of the same organization are treated as one affiliation. Parent companies and their controlled subsidiaries are also treated as one affiliation. Self-employed or independent Maintainers are each treated as a separate affiliation. Affiliation changes take effect as soon as they are disclosed and recorded in the Maintainers list. The Maintainers must document how any unclear affiliation is classified before a formal vote begins.
+
+When multiple eligible Maintainers share an affiliation, the position supported by a majority of all those Maintainers becomes the organization's vote. If no position has a majority, the organization abstains. An abstention does not reduce the number of organizational votes used to calculate the approval threshold.
+
+A formal vote must:
+
+1. Be opened in a public GitHub issue or pull request and clearly identified as a vote,
+2. Remain open for two weeks unless it can be closed early because the outcome can no longer change,
+3. Allow anyone in the community to comment, while only eligible Maintainers determine organizational votes,
+4. Be approved by at least two-thirds of all eligible organizational votes, rounded up to the next whole vote,
+5. Record each organization's position and the final result in the issue or pull request.
+
+Maintainers must disclose material conflicts of interest and recuse themselves when appropriate. Recused Maintainers do not participate in determining their organization's position. If every Maintainer from an organization is recused, that organization is not eligible for that vote. A Maintainer whose removal is under consideration must recuse themselves from that vote.
+
 ## Contributor ladder
 
 To become a maintainer, you need to get involved with the reShapr project on GitHub and demonstrate commitment and qualities:
@@ -41,15 +72,13 @@ To become a maintainer, you need to get involved with the reShapr project on Git
 
 ### Voting in and voting out maintainers
 
-1. Maintainers make a public announcement during community meetings,
-2. During this meeting, a maintainer nominates to add a new maintainer or remove an existing maintainer,
-3. The nominator will open a PR to the [centralized](MAINTAINERS.md) Maintainer and Code Owners list,
-4. Maintainers vote via GitHub PR comments, with a 2 week deadline. Anyone in the community is welcome to comment. Community comments will be considered but not counted toward the vote,
-5. After two weeks, any maintainer who abstains from voting will not be counted towards the vote,
-6. Decision is approved with a super-majority: 66% 2/3) or more of maintainers who have voted within two weeks,
-7. If 66% (2/3) of all maintainers have approved within two weeks, the voting is closed early.
+1. A Maintainer publicly nominates a person to become a Maintainer, or proposes removing an existing Maintainer, during a community meeting or on a public GitHub issue,
+2. The nominating Maintainer opens a pull request against the [centralized Maintainers and Code Owners list](https://github.com/reshaprio/.github/blob/main/MAINTAINERS.md),
+3. The pull request is clearly identified as a formal vote and follows the organization-balanced voting rules defined in [Decision Making and Voting](#decision-making-and-voting) above,
+4. Anyone in the community may comment during the voting period. Community comments are considered but are not binding votes,
+5. Once the result is approved and the pull request is merged, permissions are added or removed immediately.
 
-For maintainers voted in, permissions are immediately added. For maintainers, voted-out permissions are immediately removed.
+The candidate being nominated does not participate in the vote. A Maintainer whose removal is under consideration must recuse themselves from that vote.
 
 ### Becoming a Code Owner
 
@@ -67,7 +96,7 @@ reShapr maintainers have the authority to add or remove sub-projects or reposito
 When a sub-project is removed, it will be archived as-is, along with its associated repositories, ensuring transparency and historical reference.
 
 ## Conflict Resolutions
-Typically, it is assumed that disputes will be resolved amicably by those involved. However, if the situation becomes more serious, conflicts will be resolved through a voting process. A supermajority of votes from project maintainers is required to make a decision, and the project lead has the final say in the ruling.
+Typically, disputes are resolved amicably by those involved through open discussion and lazy consensus. If a conflict cannot be resolved, a Maintainer may initiate a formal organization-balanced vote, as defined in [Decision Making and Voting](#decision-making-and-voting) above.
 
 ## Community Meetings
 
@@ -82,9 +111,11 @@ The maintainers will also have closed meetings to discuss security reports or Co
 > Coming soon!
 
 ## Governance Changes
-Changes to governance policy and any supporting documents must be agreed upon and approved by 66% (2/3) of the maintainers either by vote or by review and approval of a PR on the document.
+Changes to governance policy and any supporting documents require a formal organization-balanced vote, as defined in [Decision Making and Voting](#decision-making-and-voting) above.
 
 This Project Governance is a living document. As the reShapr community and project continue to evolve, maintainers are **committed** to improving and openly sharing our governance model, ensuring transparency and collaboration every step of the way.
+
+Maintainers review this document at least once every twelve months and after any material change to project structure, roles, decision-making or repository scope. Each review is recorded in a public GitHub issue or pull request. A review that concludes no policy change is needed may update only the **Last reviewed** date through lazy consensus; any substantive change requires a formal organization-balanced vote.
 
 ## Code of Conduct
 reShapr follows the [Code of Conduct](CODE_OF_CONDUCT.md), which is aligned with the [Agentic AI Foundation (AAIF) Code of Conduct](https://github.com/aaif/foundation/blob/main/CODE_OF_CONDUCT.md).
