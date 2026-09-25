@@ -10,7 +10,7 @@ on:
 jobs:
   build-containers:
     if: github.repository_owner == 'reshaprio' && inputs.image-tag != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment: Build
     permissions:
       contents: read

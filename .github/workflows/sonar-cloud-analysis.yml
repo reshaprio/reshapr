@@ -10,7 +10,7 @@ jobs:
   build:
     if: github.repository_owner == 'reshaprio'
     name: Build and analyze
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
 
