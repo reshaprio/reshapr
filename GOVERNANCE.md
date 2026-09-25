@@ -62,7 +62,7 @@ Code owners are enabled to act independently. They do not have responsibilities 
 If a maintainer or code owner can no longer fulfill their commitments, they should consult with the maintainers and either take a sabbatical or step down from their role. All maintainers share the responsibility of ensuring the group operates with consistent dedication. If a maintainer or code owner fails to meet their commitments, they may be voted out by the maintainers and transitioned to emeritus status.
 
 ## Adding or Removing Sub Projects
-reShapr maintainers have the authority to add or remove sub-projects or repositories as needed. We follow a careful approach when making these changes: any new sub-project must serve a long-term purpose that is clearly distinct from existing ones, while sub-projects slated for removal must be shown to have either outlived their usefulness, become deprecated or unmaintainable.
+reShapr maintainers have the authority to add or remove sub-projects or repositories as needed, as tracked in the [Project and Repository Inventory](https://github.com/reshaprio/.github/blob/main/SUBPROJECTS.md). We follow a careful approach when making these changes: any new sub-project must serve a long-term purpose that is clearly distinct from existing ones, while sub-projects slated for removal must be shown to have either outlived their usefulness, become deprecated or unmaintainable.
 
 When a sub-project is removed, it will be archived as-is, along with its associated repositories, ensuring transparency and historical reference.
 
