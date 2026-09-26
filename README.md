@@ -48,16 +48,18 @@ One of the biggest hurdles in building AI agents is **Context Overload**. Sendin
 
 ### Install the CLI
 
+*(Requires [Node.js](https://nodejs.org/) installed)*
 ```sh
 npm install -g @reshapr/reshapr-cli
 ```
 
 ### Choose your platform
 
-You have two simple options:
-1. Use the [https://try.reshapr.io/](https://try.reshapr.io/) to try out the platform. Follow our detailed 
-[Try reShapr online](https://reshapr.io/docs/tutorials/try-reshapr-online) guide.
-2. Run the platform locally using [containers and Docker runtime](https://reshapr.io/docs/how-to-guides/docker-compose). Follow the next section for details.
+Choose how to get started:
+
+1. **Try it online:** Use [try.reshapr.io](https://try.reshapr.io/) for a fully managed sandbox. Follow our [Try reShapr online](https://reshapr.io/docs/tutorials/try-reshapr-online) guide.
+2. **Run it locally (End-User):** See the section below to spin up the latest published release.
+3. **Contribute code / launch the Web UI (Developer):** Head to [install/README.md](install/README.md) to run the `docker-compose` stack — it uses `:nightly` development builds.
 
 ### Run the platform locally
 
