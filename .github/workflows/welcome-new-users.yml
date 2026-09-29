@@ -1,9 +1,11 @@
 # Welcome new users by commenting on the first-time issue/PR.
-# Adding a friendly message in the comment to tip non-stargazers to star our repo.
+# Includes an always-on star tip (not conditional on stargazer status, since
+# checking that requires a GITHUB_TOKEN permission that isn't grantable to
+# Actions' GITHUB_TOKEN and causes "Resource not accessible by integration").
 #
-# Props to https://github.com/wow-actions/welcome 
+# Props to https://github.com/wow-actions/welcome
 
-name: Welcome New Users with Thanks and Tip non-stargazers ;-)
+name: Welcome New Users with Thanks ;-)
 on:
   pull_request_target:
     types: [opened, closed]
@@ -35,7 +37,11 @@ jobs:
             📢 If you're using reShapr in your organization, please [add your company name to this list](https://github.com/reshaprio/.github/blob/main/ADOPTERS.md). 🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
 
             Hope you have a great time there!
-          
+
+            🌟 ~~~~~~~~~ 🌟
+
+            📢 If you like reShapr, please ⭐ star ⭐ our repo to support it!
+
           FIRST_PR_REACTIONS: '+1, hooray, rocket, heart'
           
           FIRST_PR: |
@@ -44,9 +50,13 @@ jobs:
             Welcome to the reShapr community! 💖
             
             Thanks and congrats 🎉 for opening your first pull request here! Be sure to follow the pull request template or please update it accordingly.
-            
-            Hope you have a great time there! 
-          
+
+            Hope you have a great time there!
+
+            🌟 ~~~~~~~~~ 🌟
+
+            📢 If you like reShapr, please ⭐ star ⭐ our repo to support it!
+
           FIRST_PR_MERGED: |
             🎉 @{{ author }}
             
@@ -57,11 +67,3 @@ jobs:
             📢 If you're using reShapr in your organization, please [add your company name to this list](https://github.com/reshaprio/.github/blob/main/ADOPTERS.md). 🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
 
             Kudos and please keep going, we need you 🙌
-            
-          STAR_MESSAGE: |
-            🌟 ~~~~~~~~~ 🌟
-
-            📢 If you like reShapr, please ⭐ star ⭐ our repo to support it!
-            
-            🙏 It really helps the project to gain momentum and credibility. It's a small contribution back to the project with a big impact.
-            
