@@ -112,6 +112,10 @@ The current development version is `1.0.1-SNAPSHOT`.
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=reshaprio_reshapr&metric=security_rating)](https://sonarcloud.io/summary/overall?id=reshaprio_reshapr&branch=main)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=reshaprio_reshapr&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=reshaprio_reshapr&branch=main)
 
+#### OpenSSF best practices
+
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15110/badge)](https://www.bestpractices.dev/en/projects/15110)
+
 ## Contributing
 
 We ❤️ contributors! Reshapr is an open community, and we welcome contributions of **all kinds** — not just code. 
