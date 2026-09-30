@@ -34,8 +34,18 @@ reshapr completion fish > ~/.config/fish/completions/reshapr.fish
 reshapr completion powershell > ~/.reshapr/completion.ps1
 ```
 
-Load the generated Bash or PowerShell script from the corresponding shell
-configuration. Fish discovers scripts in its completions directory automatically.
+Load the generated Bash script from the corresponding shell configuration.
+Fish discovers scripts in its completions directory automatically.
+
+For PowerShell, load the script from your profile. If you don't have a
+profile yet, create one first:
+
+```powershell
+if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
+Add-Content $PROFILE '. ~/.reshapr/completion.ps1'
+```
+
+Restart PowerShell, or run `. $PROFILE`, to load it in the current session.
 
 ## Running the CLI in dev mode
 
@@ -83,6 +93,12 @@ export RESHAPR_ADMIN_API_KEY='<admin-api-key>'
 reshapr admin --server http://localhost:5555 user create jdoe \
   --email jdoe@example.com --password '<password>' \
   --firstname John --lastname Doe
+```
+
+On PowerShell, set the variable for the current session instead:
+
+```powershell
+$env:RESHAPR_ADMIN_API_KEY = '<admin-api-key>'
 ```
 
 You can instead pass `--admin-api-key <key>` after `admin`; this takes
