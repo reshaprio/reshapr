@@ -29,6 +29,10 @@ updates:
     rebase-strategy: disabled
     cooldown:
       default-days: 7
+    ignore:
+      # Managed centrally in reshaprio/.github and replicated here; update there instead.
+      - dependency-name: "wow-actions/welcome"
+      - dependency-name: "actions/stale"
 
   - package-ecosystem: docker
     directories:
