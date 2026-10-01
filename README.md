@@ -115,6 +115,7 @@ The current development version is `1.0.1-SNAPSHOT`.
 #### OpenSSF best practices
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15110/badge)](https://www.bestpractices.dev/en/projects/15110)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/reshaprio/reshapr/badge)](https://securityscorecards.dev/viewer/?uri=github.com/reshaprio/reshapr)
 
 ## Contributing
 
