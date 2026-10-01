@@ -1,0 +1,57 @@
+name: test-coverage-reminder
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    if: github.repository_owner == 'reshaprio'
+    name: Check for test changes
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect source changes without matching test changes
+        id: diff
+        run: |
+          CHANGED=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
+          SRC_CHANGED=$(echo "$CHANGED" | grep -E '/src/main/|/cli/src/|/web-ui/src/' | grep -v -E '\.(test|spec)\.' || true)
+          TEST_CHANGED=$(echo "$CHANGED" | grep -E '/src/test/|\.(test|spec)\.' || true)
+          if [ -n "$SRC_CHANGED" ] && [ -z "$TEST_CHANGED" ]; then
+            echo "needs_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write job summary
+        if: steps.diff.outputs.needs_tests == 'true'
+        run: |
+          {
+            echo "### Test coverage reminder"
+            echo "This PR changes source files but no test files. [CONTRIBUTING.md](https://github.com/reshaprio/reshapr/blob/main/CONTRIBUTING.md) asks new features/fixes to include tests — consider adding some before merge."
+            echo ""
+            echo "_Informational only — this does not block merging._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # GITHUB_TOKEN is read-only for fork-triggered pull_request runs, so posting a
+      # comment only works for same-repo (maintainer-branch) PRs. The job summary
+      # above still runs for everyone, including forks.
+      - name: Comment on PR
+        if: steps.diff.outputs.needs_tests == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "🧪 **Test coverage reminder** — this PR changes source files but no test files.\n\n[CONTRIBUTING.md](https://github.com/reshaprio/reshapr/blob/main/CONTRIBUTING.md) asks new features/fixes to include tests. This comment is informational only and does **not** block merging — just a nudge."
+            })
