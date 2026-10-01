@@ -74,6 +74,9 @@ public class ProxyService {
    @ConfigProperty(name = "reshapr.gateway.backend.http.default-timeout")
    Long defaultBackendTimeout;
 
+   @ConfigProperty(name = "reshapr.gateway.backend.http.max-payload-size", defaultValue = "10485760")
+   Long maxPayloadSize;
+
    /**
     * Build a ProxyService with required dependencies.
     * @param secretResolver The resolver used to resolve secret references locally on the gateway.
@@ -144,30 +147,31 @@ public class ProxyService {
       // Start counter and do the call.
       long startMs = System.currentTimeMillis();
       try {
-         // Call the backend.
-         HttpResponse<byte[]> response = doCallBackend(requestHeaders, requestBuilder, externalUrl.toString());
+         // Call the backend using our custom limiting BodyHandler to prevent OutOfMemoryErrors on massive payloads without performance regression.
+         HttpResponse<byte[]> responseStream = doCallBackendStreaming(requestHeaders, requestBuilder, externalUrl.toString(), maxPayloadSize);
+
+         byte[] responseBody = responseStream.body();
 
          if (logger.isDebugEnabled()) {
-            logger.debugf("Proxy returned: '%s'", response.statusCode());
-            logger.debugf("Proxy response headers: '%s'", response.headers());
-            logger.tracef("Proxy response body: '%s'", new String(response.body(), StandardCharsets.UTF_8));
+            logger.debugf("Proxy returned: '%s'", responseStream.statusCode());
+            logger.debugf("Proxy response headers: '%s'", responseStream.headers());
          }
 
          // If authorization failed, it can be because of a bad elicitation secret value. We need to evict it.
-         if (response.statusCode() == 401 && configuration.backendSecret() != null && configuration.backendSecret().useElicitation()) {
+         if (responseStream.statusCode() == 401 && configuration.backendSecret() != null && configuration.backendSecret().useElicitation()) {
             logger.warnf("Proxy authorization failed with 401, evicting elicitation secret '%s'", configuration.backendSecret().name());
             evictElicitedSecret(configuration.backendSecret());
          }
 
          // If authorization failed with empty body, explanations may be in the WWW-Authenticate header.
-         if (response.statusCode() == 401 && response.body().length == 0 && response.headers().firstValue("www-authenticate").isPresent()) {
-            return buildBackendResponse(response.statusCode(),
-                  response.headers().allValues("www-authenticate").toString().getBytes(StandardCharsets.UTF_8),
-                  response.headers().map(), startMs);
+         if (responseStream.statusCode() == 401 && responseBody.length == 0 && responseStream.headers().firstValue("www-authenticate").isPresent()) {
+            return buildBackendResponse(responseStream.statusCode(),
+                  responseStream.headers().allValues("www-authenticate").toString().getBytes(StandardCharsets.UTF_8),
+                  responseStream.headers().map(), startMs);
          }
 
          // Return the response as is.
-         return buildBackendResponse(response.statusCode(), response.body(), response.headers().map(), startMs);
+         return buildBackendResponse(responseStream.statusCode(), responseBody, responseStream.headers().map(), startMs);
       } catch (HttpTimeoutException e) {
          logger.errorf("Proxy timed out after %dms calling: '%s'", timeoutMs, externalUrl);
          return buildBackendResponse(504, ("Backend timed out after " + timeoutMs + "ms").getBytes(StandardCharsets.UTF_8), Map.of(), startMs);
@@ -181,6 +185,9 @@ public class ProxyService {
          Thread.currentThread().interrupt();
          logger.errorf("Proxy call to backend '%s' was interrupted", externalUrl);
          return buildBackendResponse(500, "Internal Server Error: request was interrupted".getBytes(StandardCharsets.UTF_8), Map.of(), startMs);
+      } catch (PayloadTooLargeException e) {
+         logger.errorf("Proxy rejected response from backend '%s': %s", externalUrl, e.getMessage());
+         return buildBackendResponse(413, e.getMessage().getBytes(StandardCharsets.UTF_8), Map.of(), startMs);
       } catch (Exception e) {
          String message = e.getMessage() != null ? e.getMessage() : "Unknown error";
          logger.errorf("Proxy raised unexpected error calling backend '%s': %s", externalUrl, message);
@@ -189,8 +196,8 @@ public class ProxyService {
    }
 
    @WithSpan(kind = SpanKind.CLIENT)
-   protected HttpResponse<byte[]> doCallBackend(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
-                                                @SpanAttribute("backendEndpoint") String backendEndpoint) throws IOException, InterruptedException {
+   protected HttpResponse<byte[]> doCallBackendStreaming(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
+                                                @SpanAttribute("backendEndpoint") String backendEndpoint, long limit) throws IOException, InterruptedException {
 
       // Inject OpenTelemetry tracing headers here to get correct parent (this current client span).
       HeadersUtil.injectTracingHeaders(requestHeaders);
@@ -200,7 +207,77 @@ public class ProxyService {
 
       // Round-robin shard selection: spreads I/O event processing over SHARD_COUNT selector threads.
       HttpClient client = CLIENTS[Math.floorMod(CURSOR.getAndIncrement(), SHARD_COUNT)];
-      return client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
+      return client.send(requestBuilder.build(), limitingBodyHandler(limit));
+   }
+
+   /**
+    * Returns a BodyHandler that enforces a strict maximum size limit to prevent OOM errors,
+    * with zero buffering overhead.
+    */
+   private HttpResponse.BodyHandler<byte[]> limitingBodyHandler(long limit) {
+      return responseInfo -> {
+         responseInfo.headers().firstValueAsLong("Content-Length").ifPresent(len -> {
+            if (len > limit) {
+               throw new PayloadTooLargeException("Payload Too Large: response Content-Length (" + len + " bytes) exceeds maximum allowed size of " + limit + " bytes");
+            }
+         });
+         return new LimitingBodySubscriber(HttpResponse.BodySubscribers.ofByteArray(), limit);
+      };
+   }
+
+   private static class LimitingBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
+      private final HttpResponse.BodySubscriber<byte[]> delegate;
+      private final long limit;
+      private long total = 0;
+      private java.util.concurrent.Flow.Subscription subscription;
+
+      public LimitingBodySubscriber(HttpResponse.BodySubscriber<byte[]> delegate, long limit) {
+         this.delegate = delegate;
+         this.limit = limit;
+      }
+
+      @Override
+      public java.util.concurrent.CompletionStage<byte[]> getBody() {
+         return delegate.getBody();
+      }
+
+      @Override
+      public void onSubscribe(java.util.concurrent.Flow.Subscription subscription) {
+         this.subscription = subscription;
+         delegate.onSubscribe(subscription);
+      }
+
+      @Override
+      public void onNext(List<java.nio.ByteBuffer> item) {
+         long chunk = 0;
+         for (java.nio.ByteBuffer b : item) {
+            chunk += b.remaining();
+         }
+         total += chunk;
+         if (total > limit) {
+            if (subscription != null) {
+               subscription.cancel();
+            }
+            throw new PayloadTooLargeException("Payload Too Large: response exceeds maximum allowed size of " + limit + " bytes");
+         }
+         delegate.onNext(item);
+      }
+
+      @Override
+      public void onError(Throwable throwable) {
+         delegate.onError(throwable);
+      }
+
+      @Override
+      public void onComplete() {
+         delegate.onComplete();
+      }
+   }
+
+   public static class PayloadTooLargeException extends RuntimeException {
+      public PayloadTooLargeException(String message) {
+         super(message);
+      }
    }
 
    private BackendResponse buildBackendResponse(int status, byte[] content, Map<String, List<String>> headers, long startMs) {
