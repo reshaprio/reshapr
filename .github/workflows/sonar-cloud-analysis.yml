@@ -3,12 +3,21 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 4 * * *'  # Everyday at 4am UTC
 
 jobs:
   build:
-    if: github.repository_owner == 'reshaprio'
+    # Skip on pull_request from forks: SONAR_TOKEN isn't exposed to fork-triggered
+    # PR runs, so this would fail every external contributor's PR with an auth
+    # error they can't fix themselves. Same-repo (maintainer-branch) PRs, pushes,
+    # and the daily cron are unaffected.
+    if: |
+      github.repository_owner == 'reshaprio' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: Build and analyze
     runs-on: ubuntu-26.04
     permissions:
