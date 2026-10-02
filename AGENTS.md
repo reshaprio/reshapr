@@ -52,31 +52,7 @@ Secrets and configuration plans are encrypted at rest with AES-256/GCM. The keys
 
 ## Build & Dev Commands
 
-```bash
-# Full Maven build (Java 25 + preview features required)
-./mvnw clean install -DskipTests
-
-# Run control-plane in dev mode (starts PostgreSQL devservice automatically)
-cd control-plane && ../mvnw quarkus:dev
-
-# Run proxy in dev mode (requires control-plane running)
-cd proxy && ../mvnw quarkus:dev
-
-# CLI development
-cd cli && npm install && npm run dev  # watch mode
-npm link                               # makes `reshapr` binary available
-
-# CLI tests
-cd cli && npm test                     # unit tests (vitest)
-cd cli && npm run test:e2e             # e2e tests
-
-# Web UI development (requires control-plane reachable + RESHAPR_ADMIN_API_KEY in web-ui/.env)
-cd web-ui && cp .env.example .env && npm install && npm run dev # Vite dev server on http://localhost:5173
-cd web-ui && npm run check              # svelte-check type checking
-
-# Native image build
-./mvnw package -Pnative
-```
+See [BUILD.md](BUILD.md) for prerequisites, build and development commands, testing, and local stack instructions.
 
 ## Key Conventions
 
