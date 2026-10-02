@@ -41,6 +41,102 @@ reShapr has adopted a Code of Conduct that we expect project participants to adh
 
 We use Github to host code, to track issues and feature requests, as well as accept pull requests.
 
+## Technical Setup
+
+### Prerequisites
+
+| Requirement | Minimum Version | Notes |
+|---|---|---|
+| [Java](https://adoptium.net/) | 25 (with `--enable-preview`) | All Java modules require the `--enable-preview` flag. Each submodule has its own Maven Wrapper (`mvnw`) which handles this automatically. If you run Maven directly, pass `--enable-preview` to the JVM. |
+| [Node.js](https://nodejs.org/) | 22+ | Required for CLI and Web UI development. |
+| [Docker](https://www.docker.com/) + Docker Compose V2 | Latest stable | Required to run the full local platform stack. |
+
+### Building and Running
+
+This is a monorepo with 6 modules: 4 Maven modules (Java) and 2 standalone Node.js modules (CLI, Web UI). Not all modules depend on each other.
+
+#### Full Maven Build
+
+```bash
+# Each module has its own Maven wrapper.
+# Build in order: api → commons → control-plane → proxy
+cd api && ./mvnw clean install -DskipTests && cd ..
+cd commons && ../mvnw clean install -DskipTests && cd ..
+cd control-plane && ../mvnw clean install -DskipTests && cd ..
+cd proxy && ../mvnw clean install -DskipTests
+```
+
+This builds all Java modules (`api/` — protobuf definitions, `commons/` — shared Java utilities, `control-plane/`, `proxy/`) and installs them locally.
+
+#### Individual Module Commands
+
+**Control Plane** (port 5555):
+```bash
+cd control-plane && ../mvnw quarkus:dev
+```
+
+**Proxy / Gateway** (port 7777):
+```bash
+cd proxy && ../mvnw quarkus:dev
+```
+
+**CLI** (`@reshapr/reshapr-cli`):
+```bash
+cd cli && npm install && npm run dev   # watch mode
+npm link                                # makes the `reshapr` binary globally available
+```
+
+**Web UI** (`@reshapr/reshapr-web-ui`):
+```bash
+cd web-ui && cp .env.example .env && npm install && npm run dev
+```
+See [web-ui/README.md](web-ui/README.md) for full developer documentation (setup, env vars, routing, Docker build, etc.).
+
+### Running the Full Local Stack
+
+The easiest way to run the complete platform locally (all services + Web UI):
+
+```bash
+# Using the CLI
+reshapr run
+
+# Or with Docker Compose directly
+docker compose -f install/docker-compose-all-in-one.yml -f install/docker-compose-ui-addon.yml up
+```
+
+Connect to the control plane at `http://localhost:5555` with `admin`/`password`.
+
+See [install/README.md](install/README.md) for all available compose stacks and addons.
+
+### Running Tests
+
+#### Java Tests
+
+```bash
+cd control-plane && ../mvnw test && cd ..
+cd proxy && ../mvnw test && cd ..
+cd api && ../mvnw test && cd ..
+```
+
+Java tests use JUnit 5 + REST Assured + Quarkus `@QuarkusTest`. Quarkus dev services auto-provision PostgreSQL for tests.
+
+#### CLI Tests
+
+```bash
+cd cli && npm test                   # Unit tests (vitest)
+cd cli && npm run test:e2e           # E2E tests (requires running platform)
+```
+
+See [cli/README.md](cli/README.md) for more CLI development commands.
+
+#### Web UI Tests
+
+See [web-ui/README.md](web-ui/README.md) for linting and type checking commands.
+
+#### Benchmarks
+
+The `benchmarks/` directory contains scripts for performance testing REST, GraphQL, and gRPC proxy paths (e.g., `run-e2e-rest-bench.sh`, `run-graphql-converter-bench.sh`). These require a running platform, same as CLI e2e tests. See individual scripts for usage.
+
 ## Issues
 
 Open an issue in the repository you're contributing to **only** if you want to report a bug or a feature. Don't open issues for questions or support, instead join our [Discord `#support`](https://discord.gg/KyDUdam34h) channel and ask there.
