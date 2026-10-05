@@ -22,6 +22,7 @@ The following members are [code owners](GOVERNANCE.md#maintainers-code-owners-co
 
 | Name | GitHub ID | Affiliation | Sub-Projects |
 |----------------------------------------------------------|-------------------------------------------------------------|-------------------|-------------------|
+| Vaishnav Kale | [Vaishnav88sk](https://github.com/Vaishnav88sk) | Independent | [reshapr](https://github.com/reshaprio/reshapr), [reshapr-controllers](https://github.com/reshaprio/reshapr-controllers) |
 
 ## Emeritus
 
