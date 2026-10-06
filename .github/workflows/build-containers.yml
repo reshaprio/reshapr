@@ -75,7 +75,7 @@ jobs:
           builder: buildx-multi-arch
           file: control-plane/src/main/docker/Dockerfile.jvm
           labels: |
-            org.opencontainers.image.revision=${GITHUB_SHA}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
           tags: quay.io/reshapr/reshapr-ctrl:${{env.IMAGE_TAG}},docker.io/reshapr/reshapr-ctrl:${{env.IMAGE_TAG}}
 
@@ -91,7 +91,7 @@ jobs:
           builder: buildx-multi-arch
           file: proxy/src/main/docker/Dockerfile.jvm
           labels: |
-            org.opencontainers.image.revision=${GITHUB_SHA}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
           tags: quay.io/reshapr/reshapr-proxy:${{env.IMAGE_TAG}},docker.io/reshapr/reshapr-proxy:${{env.IMAGE_TAG}}
 
@@ -118,7 +118,7 @@ jobs:
           builder: buildx-multi-arch
           file: web-ui/Dockerfile
           labels: |
-            org.opencontainers.image.revision=${GITHUB_SHA}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
           tags: quay.io/reshapr/reshapr-ui:${{env.IMAGE_TAG}},docker.io/reshapr/reshapr-ui:${{env.IMAGE_TAG}}
 
