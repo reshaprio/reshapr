@@ -88,8 +88,8 @@ class ProxyServiceTest {
 
       ProxyService proxyService = new ProxyService(null, null) {
          @Override
-         protected HttpResponse<byte[]> doCallBackend(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
-                                                      String backendEndpoint) {
+         protected HttpResponse<byte[]> doCallBackendStreaming(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
+                                                      String backendEndpoint, long limit) {
             try {
                Thread.sleep(50); // simulate network delay
             } catch (InterruptedException e) { }
@@ -97,6 +97,7 @@ class ProxyServiceTest {
          }
       };
       proxyService.defaultBackendTimeout = 3000L;
+      proxyService.maxPayloadSize = 10485760L;
 
       ConfigurationEntry config = new ConfigurationEntry("id", "test", "http://example.com", null, List.of(), List.of(), null, null, null);
       
@@ -114,8 +115,8 @@ class ProxyServiceTest {
    void shouldAddUpstreamServiceTimeHeaderOnException() {
       ProxyService proxyService = new ProxyService(null, null) {
          @Override
-         protected HttpResponse<byte[]> doCallBackend(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
-                                                      String backendEndpoint) throws IOException {
+         protected HttpResponse<byte[]> doCallBackendStreaming(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
+                                                      String backendEndpoint, long limit) throws IOException {
             try {
                Thread.sleep(50); // simulate network delay before failure
             } catch (InterruptedException e) { }
@@ -123,6 +124,7 @@ class ProxyServiceTest {
          }
       };
       proxyService.defaultBackendTimeout = 3000L;
+      proxyService.maxPayloadSize = 10485760L;
 
       ConfigurationEntry config = new ConfigurationEntry("id", "test", "http://example.com", null, List.of(), List.of(), null, null, null);
       
