@@ -43,16 +43,18 @@
 		DropdownMenuTrigger
 	} from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import MoreVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import CopyIcon from '@lucide/svelte/icons/copy';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import XIcon from '@lucide/svelte/icons/x';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { UserIcon } from '@hugeicons/core-free-icons';
+	import {
+		Search01Icon,
+		MoreVerticalIcon,
+		Delete02Icon,
+		Copy01Icon,
+		Tick02Icon,
+		Cancel01Icon,
+		UserIcon
+	} from '@hugeicons/core-free-icons';
 
-	type ApiTokenRow = {
+type ApiTokenRow = {
 		id?: string;
 		organizationId?: string;
 		name?: string;
@@ -225,10 +227,10 @@
 			<div class="flex shrink-0 items-center gap-1">
 				<Button variant="outline" size="sm" onclick={() => void copyCreatedToken()}>
 					{#if copied}
-						<CheckIcon class="size-4" />
+						<HugeiconsIcon icon={Tick02Icon} size={16} />
 						Copied
 					{:else}
-						<CopyIcon class="size-4" />
+						<HugeiconsIcon icon={Copy01Icon} size={16} />
 						Copy
 					{/if}
 				</Button>
@@ -238,7 +240,7 @@
 					onclick={() => (createdToken = null)}
 					aria-label="Dismiss"
 				>
-					<XIcon class="size-4" />
+					<HugeiconsIcon icon={Cancel01Icon} size={16} />
 				</Button>
 			</div>
 		</div>
@@ -260,7 +262,7 @@
 	</div>
 	{#if !loading && rows.length > 0}
 		<div class="relative w-full sm:w-64">
-			<SearchIcon
+			<HugeiconsIcon icon={Search01Icon} size={16}
 				class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
 			/>
 			<Input bind:value={query} placeholder="Filter by name…" class="pl-8" />
@@ -342,7 +344,7 @@
 								<DropdownMenuTrigger>
 									{#snippet child({ props })}
 										<Button variant="ghost" size="icon" {...props}>
-											<MoreVerticalIcon class="size-4" />
+											<HugeiconsIcon icon={MoreVerticalIcon} size={16} />
 										</Button>
 									{/snippet}
 								</DropdownMenuTrigger>
@@ -351,7 +353,7 @@
 										class="text-destructive px-4"
 										onclick={() => void onDelete(row)}
 									>
-										<Trash2Icon class="size-4" />
+										<HugeiconsIcon icon={Delete02Icon} size={16} />
 										Revoke
 									</DropdownMenuItem>
 								</DropdownMenuContent>

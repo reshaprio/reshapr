@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Select as SelectPrimitive } from "bits-ui";
 	import { cn, type WithoutChild } from "$lib/utils.js";
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import { HugeiconsIcon } from '@hugeicons/svelte';
+	import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
 
 	let {
 		ref = $bindable(null),
@@ -25,5 +26,9 @@
 	{...restProps}
 >
 	{@render children?.()}
-	<ChevronDownIcon class="text-muted-foreground size-4 pointer-events-none" />
+		<HugeiconsIcon
+		icon={ArrowDown01Icon}
+		size={16}
+		class="text-muted-foreground size-4 pointer-events-none"
+		/>
 </SelectPrimitive.Trigger>

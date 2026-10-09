@@ -35,10 +35,16 @@
 		TooltipProvider,
 		TooltipTrigger
 	} from '$lib/components/ui/tooltip/index.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { ApiGatewayIcon, Key01Icon, PulseIcon, TagsIcon, RefreshIcon } from '@hugeicons/core-free-icons';
+	import {
+		ApiGatewayIcon,
+		Key01Icon,
+		PulseIcon,
+		TagsIcon,
+		RefreshIcon,
+		Search01Icon,
+		ArrowRight01Icon
+	} from '@hugeicons/core-free-icons';
 	import ApiTokensTab from './ApiTokensTab.svelte';
 
 	const QUOTA_METRIC = 'gateway.count';
@@ -245,8 +251,10 @@
 				</div>
 				{#if !loading && rows.length > 0}
 					<div class="relative w-full sm:w-64">
-						<SearchIcon
-							class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+						<HugeiconsIcon
+							icon={Search01Icon}
+							size={16}
+							class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
 						/>
 						<Input bind:value={query} placeholder="Filter by name…" class="pl-8" />
 					</div>
@@ -292,7 +300,7 @@
 										<span
 											class="inline-flex transition-transform duration-200 {expanded ? 'rotate-90' : ''}"
 										>
-											<ChevronRightIcon class="size-4" />
+											<HugeiconsIcon icon={ArrowRight01Icon} size={16} />
 										</span>
 									</Table.Cell>
 									<Table.Cell class="text-center">

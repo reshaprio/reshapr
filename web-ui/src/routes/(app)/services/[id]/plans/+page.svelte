@@ -31,10 +31,17 @@
 	} from '$lib/components/ui/dropdown-menu/index.js';
 	import { cn } from '$lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { MoreVerticalIcon, PencilEdit02Icon, Delete02Icon, RefreshIcon, Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
-	import UserLockIcon from '@lucide/svelte/icons/user-lock';
-	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
-	import MessageSquareLockIcon from '@lucide/svelte/icons/message-square-lock';
+	import {
+	MoreVerticalIcon,
+	PencilEdit02Icon,
+	Delete02Icon,
+	RefreshIcon,
+	Copy01Icon,
+	Tick02Icon,
+	UserLock01Icon,
+	Key01Icon,
+	MessageLock02Icon
+	} from '@hugeicons/core-free-icons';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -92,24 +99,24 @@
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const CRED_META: Record<CredKind, { label: string; classes: string; icon: any }> = {
-		basic: {
-			label: 'User / password',
-			icon: UserLockIcon,
-			classes: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400'
-		},
-		token: {
-			label: 'Token',
-			icon: KeyRoundIcon,
-			classes: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
-		},
-		elicitation: {
-			label: 'Elicitation',
-			icon: MessageSquareLockIcon,
-			classes: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400'
-		},
+	basic: {
+		label: 'User / password',
+		icon: UserLock01Icon,
+		classes: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400'
+	},
+	token: {
+		label: 'Token',
+		icon: Key01Icon,
+		classes: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
+	},
+	elicitation: {
+		label: 'Elicitation',
+		icon: MessageLock02Icon,
+		classes: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400'
+	},
 		unknown: {
 			label: 'Other',
-			icon: KeyRoundIcon,
+			icon: Key01Icon,
 			classes: 'bg-muted text-muted-foreground ring-border'
 		}
 	};
@@ -361,7 +368,7 @@
 											meta.classes
 										)}
 									>
-										<Icon class="size-3.5" />
+										<HugeiconsIcon icon={meta.icon} size={14} />
 										{meta.label}
 									</span>
 									{#if secret.useElicitation}

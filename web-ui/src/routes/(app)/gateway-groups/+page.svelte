@@ -47,12 +47,14 @@
 	} from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { RefreshIcon } from '@hugeicons/core-free-icons';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import MoreVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import PlusIcon from '@lucide/svelte/icons/plus';
+	import {
+		RefreshIcon,
+		Search01Icon,
+		MoreVerticalIcon,
+		PencilEdit02Icon,
+		Delete02Icon,
+		PlusSignIcon
+	} from '@hugeicons/core-free-icons';
 
 	const QUOTA_METRIC = 'gateway-group.count';
 
@@ -284,8 +286,9 @@
 	</div>
 	{#if !loading && rows.length > 0}
 		<div class="relative w-full sm:w-64">
-			<SearchIcon
-				class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+			<HugeiconsIcon
+			icon={Search01Icon}
+			class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
 			/>
 			<Input bind:value={query} placeholder="Filter by name…" class="pl-8" />
 		</div>
@@ -366,17 +369,17 @@
 								<DropdownMenuTrigger>
 									{#snippet child({ props })}
 										<Button variant="ghost" size="icon" {...props}>
-											<MoreVerticalIcon class="size-4" />
+											<HugeiconsIcon icon={MoreVerticalIcon} size={16} />
 										</Button>
 									{/snippet}
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
 									<DropdownMenuItem class="px-4" onclick={() => void openEdit(row)}>
-										<PencilIcon class="size-4" />
+										<HugeiconsIcon icon={PencilEdit02Icon} size={16} />
 										Edit
 									</DropdownMenuItem>
 									<DropdownMenuItem class="text-destructive px-4" onclick={() => void onDelete(row)}>
-										<Trash2Icon class="size-4" />
+										<HugeiconsIcon icon={Delete02Icon} size={16} />
 										Delete
 									</DropdownMenuItem>
 								</DropdownMenuContent>
@@ -413,7 +416,7 @@
 				<div class="flex items-center justify-between">
 					<Label>Labels</Label>
 					<Button type="button" variant="outline" size="sm" onclick={addLabelRow}>
-						<PlusIcon class="size-4" />
+						<HugeiconsIcon icon={PlusSignIcon} size={16} />
 						Add label
 					</Button>
 				</div>

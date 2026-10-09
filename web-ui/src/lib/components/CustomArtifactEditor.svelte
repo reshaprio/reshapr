@@ -46,8 +46,7 @@
 	} from '$lib/components/ui/tooltip/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { PlusSignIcon } from '@hugeicons/core-free-icons';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import CheckIcon from '@lucide/svelte/icons/check';
+	import { PencilEdit02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 	import type * as Monaco from 'monaco-editor';
 
 	const MONACO_WARNING_SEVERITY = 4;
@@ -261,7 +260,7 @@
 			onmousedown={(e) => e.preventDefault()}
 			onclick={commitTitle}
 		>
-			<CheckIcon class="size-4" />
+			<HugeiconsIcon icon={Tick02Icon} size={16} />
 		</Button>
 	{:else}
 		<h2 class="text-lg font-semibold break-all">{title}</h2>
@@ -273,7 +272,7 @@
 				aria-label="Edit title"
 				onclick={startEditTitle}
 			>
-				<PencilIcon class="size-4" />
+				<HugeiconsIcon icon={PencilEdit02Icon} size={16} />
 			</Button>
 		{/if}
 	{/if}

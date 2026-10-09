@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
-	import MinusIcon from '@lucide/svelte/icons/minus';
-	import CheckIcon from '@lucide/svelte/icons/check';
+	import { HugeiconsIcon } from '@hugeicons/svelte';
+	import { MinusSignIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
 	import type { Snippet } from "svelte";
 
@@ -33,11 +33,11 @@
 			class="absolute right-2 flex items-center justify-center pointer-events-none"
 			data-slot="dropdown-menu-checkbox-item-indicator"
 		>
-			{#if indeterminate}
-				<MinusIcon  />
-			{:else if checked}
-				<CheckIcon  />
-			{/if}
+		{#if indeterminate}
+			<HugeiconsIcon icon={MinusSignIcon} size={16} />
+		{:else if checked}
+			<HugeiconsIcon icon={Tick02Icon} size={16} />
+		{/if}
 		</span>
 		{@render childrenProp?.()}
 	{/snippet}
