@@ -20,7 +20,7 @@
     <jtoon.version>2.0.0</jtoon.version>
     <quickjs4j.version>0.1.0</quickjs4j.version>
     <quarkus-infinispan-embedded.version>2.0.1</quarkus-infinispan-embedded.version>
-    <protostream.version>6.0.6</protostream.version>
+    <protostream.version>15.0.13.Final</protostream.version>
   </properties>
 
   <dependencies>
