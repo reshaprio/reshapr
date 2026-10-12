@@ -436,7 +436,7 @@
 									onclick={() => removeLabelRow(i)}
 									aria-label="Remove label"
 								>
-									<Trash2Icon class="size-4" />
+									<HugeiconsIcon icon={Delete02Icon} class="size-4" />
 								</Button>
 							</div>
 						{/each}

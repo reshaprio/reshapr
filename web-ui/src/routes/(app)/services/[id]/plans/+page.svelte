@@ -360,7 +360,6 @@
 						<Table.Cell>
 							{#if secret}
 								{@const meta = CRED_META[credentialKind(secret)]}
-								{@const Icon = meta.icon}
 								<div class="flex flex-col gap-1">
 									<span
 										class={cn(
