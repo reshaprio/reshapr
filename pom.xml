@@ -15,7 +15,7 @@
   </modules>
 
   <name>Reshapr</name>
-  <description>The open source, no-code MCP Server for AI-Native API Access</description>
+  <description>The open source runtime that turns your APIs AI-Native, without rebuilding them</description>
   <url>https://reshapr.io</url>
   <organization>
     <name>Reshapr</name>

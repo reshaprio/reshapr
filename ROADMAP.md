@@ -17,7 +17,7 @@ For day-to-day tracking, see the [milestones](https://github.com/reshaprio/resha
 Every item on this roadmap is evaluated against reShapr's core thesis:
 
 1. **Fight Context Overload** — fewer, smaller, better-shaped payloads reach the LLM.
-2. **No code required** — capabilities are configured through Services, Configuration Plans and
+2. **No bespoke MCP server** — capabilities are configured through Services, Configuration Plans and
    Expositions, not by writing a bespoke MCP server.
 3. **Client-agnostic** — anything the gateway does must work with *any* standard MCP client
    (Claude Desktop, Cursor, VS Code, custom agents) without a vendor SDK.
@@ -141,7 +141,7 @@ most likely follow the same pattern by adding [AsyncAPI](https://www.asyncapi.co
 service type: an AsyncAPI document declares the channels, messages and protocol bindings (HTTP
 webhooks, Kafka, AMQP, MQTT, WebSocket, …) of an event-driven backend, and the gateway maps them
 onto MCP subscriptions and notifications — exactly as an OpenAPI document is mapped onto tools
-today. This keeps the no-code promise, reuses the import / Configuration Plan / output filter
+today. This keeps the no-bespoke-server promise, reuses the import / Configuration Plan / output filter
 machinery, and leaves the choice of transport adapter to the AsyncAPI bindings.
 
 ### Scope (tentative)

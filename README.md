@@ -16,7 +16,7 @@
 
 ## ✨ What is reShapr?
 
-**reShapr** is the open source, no-code MCP Server for AI-Native API Access. It bridges the gap between traditional REST/GraphQL/gRPC services and LLMs by transforming complex services into discoverable, optimized MCP tools.
+**reShapr** is the open source runtime that turns your existing APIs AI-Native, without rebuilding them. It bridges the gap between traditional REST/GraphQL/gRPC services and LLMs by transforming them into governed, discoverable, context-optimized MCP tools.
 
 <p align="center">
   <a href="https://reshapr.io/docs/tutorials/getting-started">
@@ -40,7 +40,7 @@ One of the biggest hurdles in building AI agents is **Context Overload**. Sendin
 * AI-Native Transformation: Auto-transform API services into LLM-friendly tools.
 * Context Control: Filter and slim down payloads before they reach the LLM.
 * Multi-Protocol: REST, GraphQL, and gRPC support.
-* No-Code: Configure and deploy in minutes.
+* Zero Rewrite: Import an existing contract and get working MCP tools in minutes, with no bespoke MCP server per API.
 
 📖 [**Full Documentation**](https://reshapr.io/docs/) | [**Discord Community**](https://discord.gg/KyDUdam34h)
 
