@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-reShapr is a no-code MCP (Model Context Protocol) Server that transforms REST/GraphQL/gRPC APIs into LLM-friendly tools. It solves "Context Overload" by filtering and slimming API payloads before they reach LLMs.
+reShapr is the open source runtime that turns existing REST/GraphQL/gRPC APIs AI-Native, without rebuilding them, by transforming them into governed, LLM-friendly MCP (Model Context Protocol) tools. It solves "Context Overload" by filtering and slimming API payloads before they reach LLMs.
 
 ## Architecture
 
