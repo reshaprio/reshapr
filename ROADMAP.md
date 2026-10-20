@@ -1,6 +1,6 @@
 # reShapr Roadmap
 
-> **Last updated:** 2026-10-06 · **Current release:** 1.0.x ([releases](https://github.com/reshaprio/reshapr/releases))
+> **Last updated:** 2026-10-20 · **Current release:** 1.1.x ([releases](https://github.com/reshaprio/reshapr/releases))
 
 This document describes where reShapr is heading over the next few minor releases. It is a
 statement of **intent, not a commitment**: priorities may shift based on user feedback, the
@@ -40,7 +40,7 @@ Every item on this roadmap is evaluated against reShapr's core thesis:
 ## 1.1 — MCP Code Mode
 
 **Theme:** let the LLM *write code* against an exposition instead of emitting one tool call at a
-time. 🧭 Exploring — see the [analysis & integration plan](plan-codeMode.md).
+time. ✅ Shipped in [1.1.0](https://github.com/reshaprio/reshapr/releases/tag/1.1.0).
 
 ### Why
 
@@ -50,24 +50,17 @@ plus a typed API generated from the service's schema. The model writes a script 
 calls; intermediate results never transit through the model's context. Published figures report
 order-of-magnitude token savings and better task completion.
 
-reShapr already owns most of the required infrastructure through
-[Scripted Custom Tools](docs/custom-tools-scripting.md) (QuickJS sandbox, `rs.*` host API,
-allow-lists, timeouts, call-depth limits, audit, tracing). Code Mode is largely about opening that
-runner to LLM-authored code, under control — and doing it **server-side**, so any MCP client
-benefits without changes.
+### Delivered in 1.1.0
 
-### Scope (tentative)
+- A *tool exposure mode* per Configuration Plan: `tools`, `code` or `hybrid`.
+- `search_tools`, `get_api_types` and `execute_code`, so any standard MCP client benefits without
+  changes.
+- Client-supplied JavaScript runs in the same sandbox as
+  [Scripted Custom Tools](https://reshapr.io/docs/references/custom-tools-specification), under
+  per-execution limits.
 
-- New *tool exposure mode* per Configuration Plan: `tools` (current) · `code` · `hybrid`.
-- `search_tools` — progressive disclosure over the exposition's operations (reuses the `WorkCache`).
-- `get_api_types` — TypeScript declarations generated from OpenAPI / GraphQL / Protobuf.
-- `execute_code` — runs LLM-authored JavaScript in the existing sandbox; every nested call goes through
-  the normal pipeline (secrets, elicitation, output filters, audit).
-- Sandbox hardening for untrusted code: CPU/memory budgets and interruption, code & result size
-  limits, allow-list derived automatically from the plan's include/exclude rules.
-- Elicitation strategy for scripts (pre-analysis or fail-and-retry).
-- "Promote to Custom Tool": persist a working script as a Scripted Custom Tool.
-- Web UI & CLI support for the new plan options.
+See the [Code Mode explanation](https://reshapr.io/docs/explanations/code-mode) and the
+[how-to guide](https://reshapr.io/docs/how-to-guides/use-code-mode).
 
 ### References
 
