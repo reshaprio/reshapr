@@ -34,7 +34,7 @@ program
     const noAuthCommands = ['login', 'logout', 'run', 'status', 'stop', 'completion', 'complete'];
     const isAdminCommand = belongsToCommand(actionCommand, 'admin');
     if (!noAuthCommands.includes(actionCommand.name()) && !isAdminCommand) {
-      if (!ConfigUtil.config.token) {
+      if (!ConfigUtil.config?.token) {
         Logger.warn(`You are not logged in. Please login first using the \`${CLI_NAME} login\` command.`);
         process.exit(1);
       }
