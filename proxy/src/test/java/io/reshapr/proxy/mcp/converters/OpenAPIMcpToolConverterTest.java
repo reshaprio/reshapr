@@ -32,14 +32,21 @@ import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This is a test case for OpenAPIMcpToolConverter.
@@ -230,5 +237,75 @@ class OpenAPIMcpToolConverterTest {
       assertTrue(putSchema.required().contains("verbose"));
       assertEquals(2, putSchema.properties().size());
       assertEquals("boolean", ((java.util.Map<?, ?>) putSchema.properties().get("verbose")).get("type"));
+   }
+
+   @Test
+   void testLegacyBracketParameterIsAliasedAndRestored() throws Exception {
+      OperationEntry operation = new OperationEntry("GET /legacy", "GET", null, null, null);
+      AtomicReference<URI> backendUri = new AtomicReference<>();
+      TestConverter testConverter = testConverter(operation, backendUri);
+
+      McpSchema.JsonSchema schema = testConverter.converter().getInputSchema(operation);
+      assertTrue(schema.properties().containsKey("filter_equals"));
+      assertTrue(schema.properties().containsKey("filter_equals_2"));
+      assertFalse(schema.properties().containsKey("filter[equals]"));
+
+      Map<String, Object> arguments = new HashMap<>();
+      arguments.put("filter_equals_2", "shoes");
+      arguments.put("filter_equals", "boots");
+      testConverter.converter().getCallResponse(operation, testConverter.configuration(),
+            new McpSchema.SimpleRequest("list", arguments), new HashMap<>());
+
+      assertNotNull(backendUri.get());
+      assertTrue(backendUri.get().getRawQuery().contains("filter%5Bequals%5D=shoes"));
+      assertTrue(backendUri.get().getRawQuery().contains("filter_equals=boots"));
+   }
+
+   @Test
+   void testDeepObjectAndFormArraySerializationWithReferencedSchema() throws Exception {
+      OperationEntry operation = new OperationEntry("GET /products", "GET", null, null, null);
+      AtomicReference<URI> backendUri = new AtomicReference<>();
+      TestConverter testConverter = testConverter(operation, backendUri);
+
+      McpSchema.JsonSchema schema = testConverter.converter().getInputSchema(operation);
+      @SuppressWarnings("unchecked")
+      Map<String, Object> filter = (Map<String, Object>) schema.properties().get("filter");
+      assertEquals("object", filter.get("type"));
+      assertEquals(List.of("shoes", "bags"), ((Map<?, ?>) ((Map<?, ?>) filter.get("properties"))
+            .get("equals")).get("enum"));
+
+      Map<String, Object> arguments = new HashMap<>();
+      arguments.put("filter", Map.of("equals", "shoes", "exists", true));
+      arguments.put("labels", List.of("sale", "clearance"));
+      testConverter.converter().getCallResponse(operation, testConverter.configuration(),
+            new McpSchema.SimpleRequest("list", arguments), new HashMap<>());
+
+      assertNotNull(backendUri.get());
+      String query = backendUri.get().getRawQuery();
+      assertTrue(query.contains("filter%5Bequals%5D=shoes"));
+      assertTrue(query.contains("filter%5Bexists%5D=true"));
+      assertTrue(query.contains("labels=sale") && query.contains("labels=clearance"));
+   }
+
+   private TestConverter testConverter(OperationEntry operation, AtomicReference<URI> backendUri) throws Exception {
+      String specification = FileUtils.readFileToString(
+            new File("target/test-classes/io/reshapr/proxy/mcp/query-parameter-serialization.yaml"),
+            StandardCharsets.UTF_8);
+      ConfigurationEntry configuration = new ConfigurationEntry("1", "default", "http://backend.example.com",
+            null, null, null, null, null, null);
+      ProxyService proxyService = mock(ProxyService.class);
+      when(proxyService.callBackend(any(), any(), any(), any(), any())).thenAnswer(invocation -> {
+         backendUri.set(invocation.getArgument(1));
+         return new io.reshapr.proxy.proxy.BackendResponse(200, "[]".getBytes(), Map.of());
+      });
+      ArtifactEntry artifact = new ArtifactEntry("query-parameters", "query-parameter-serialization.yaml", "REST",
+            ArtifactEntryType.OPEN_API_SPEC, true, specification);
+      ServiceEntry service = new ServiceEntry("svc", "acme", "Query parameters", "1.0", "REST", List.of(operation));
+      ExpositionEntry exposition = new ExpositionEntry("1", "default", service, configuration, artifact, List.of());
+      return new TestConverter(new OpenAPIMcpToolConverter(exposition, new WorkCache(1000), new ObjectMapper(), proxyService),
+            configuration);
+   }
+
+   private record TestConverter(OpenAPIMcpToolConverter converter, ConfigurationEntry configuration) {
    }
 }

@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: Query parameter serialization test
+  version: 1.0.0
+paths:
+  /legacy:
+    get:
+      parameters:
+        - name: filter[equals]
+          in: query
+          schema:
+            type: string
+        - name: filter_equals
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /products:
+    get:
+      parameters:
+        - name: filter
+          in: query
+          style: deepObject
+          schema:
+            $ref: '#/components/schemas/ProductFilter'
+        - name: labels
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    ProductFilter:
+      type: object
+      required: [equals]
+      properties:
+        equals:
+          type: string
+          enum: [shoes, bags]
+        exists:
+          type: boolean
