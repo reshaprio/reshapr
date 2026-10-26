@@ -18,7 +18,7 @@
   "dependencies": {
     "@hugeicons/core-free-icons": "4.3.5",
     "@hugeicons/svelte": "1.1.2",
-    "@sveltejs/kit": "2.70.3",
+    "@sveltejs/kit": "3.0.0",
     "bits-ui": "2.18.1",
     "clsx": "2.1.1",
     "monaco-editor": "0.57.0",
