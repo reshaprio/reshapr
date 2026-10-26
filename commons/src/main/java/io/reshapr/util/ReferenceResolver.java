@@ -175,7 +175,11 @@ public class ReferenceResolver {
    public void cleanResolvedReferences() {
       if (cleanResolvedFiles) {
          for (File referenceFile : resolvedReferences.values()) {
-            referenceFile.delete();
+            try {
+               Files.deleteIfExists(referenceFile.toPath());
+            } catch (IOException e) {
+               log.debugf("Failed to delete resolved reference file %s: %s", referenceFile, e.getMessage());
+            }
          }
       }
       resolvedReferences.clear();

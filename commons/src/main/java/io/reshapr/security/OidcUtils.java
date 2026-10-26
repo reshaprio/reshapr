@@ -113,11 +113,13 @@ public class OidcUtils {
          return new OidcAuthorizationCodeTokens(
                accessTokenNode.asText(),
                idTokenNode == null || idTokenNode.isNull() ? null : idTokenNode.asText());
+      } catch (InterruptedException ie) {
+         Thread.currentThread().interrupt();
+         throw new AuthenticationException("Failed to exchange authorization code: interrupted", ie);
+      } catch (AuthenticationException e) {
+         throw e;
       } catch (Exception e) {
-         if (!(e instanceof AuthenticationException)) {
-            throw new AuthenticationException("Failed to exchange authorization code: " + e.getMessage());
-         }
-         throw (AuthenticationException)e;
+         throw new AuthenticationException("Failed to exchange authorization code: " + e.getMessage(), e);
       }
    }
 
@@ -210,11 +212,13 @@ public class OidcUtils {
          JsonNode expiresInNode = jsonResponse.get("expires_in");
          long expiresIn = expiresInNode != null && expiresInNode.canConvertToLong() ? expiresInNode.asLong() : 0L;
          return new OidcTokenResponse(accessTokenNode.asText(), expiresIn);
+      } catch (InterruptedException ie) {
+         Thread.currentThread().interrupt();
+         throw new AuthenticationException("Failed to fetch client credentials token: interrupted", ie);
+      } catch (AuthenticationException e) {
+         throw e;
       } catch (Exception e) {
-         if (!(e instanceof AuthenticationException)) {
-            throw new AuthenticationException("Failed to fetch client credentials token: " + e.getMessage());
-         }
-         throw (AuthenticationException) e;
+         throw new AuthenticationException("Failed to fetch client credentials token: " + e.getMessage(), e);
       }
    }
 

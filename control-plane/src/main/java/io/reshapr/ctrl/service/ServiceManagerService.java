@@ -40,6 +40,7 @@ import org.jboss.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Predicate;
@@ -116,7 +117,11 @@ public class ServiceManagerService {
       } finally {
          // Cleanup and remove local file.
          if (specificationFile != null) {
-            specificationFile.delete();
+            try {
+               Files.deleteIfExists(specificationFile.toPath());
+            } catch (IOException e) {
+               logger.warnf("Failed to delete temporary specification file %s: %s", specificationFile, e.getMessage());
+            }
          }
       }
    }
@@ -247,7 +252,11 @@ public class ServiceManagerService {
       } finally {
          // Cleanup and remove local file.
          if (artifactFile != null) {
-            artifactFile.delete();
+            try {
+               Files.deleteIfExists(artifactFile.toPath());
+            } catch (IOException e) {
+               logger.warnf("Failed to delete temporary artifact file %s: %s", artifactFile, e.getMessage());
+            }
          }
       }
    }

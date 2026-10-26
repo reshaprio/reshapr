@@ -15,7 +15,8 @@
  */
 package io.reshapr.proxy.registry;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Represents a resource registry entry.
@@ -25,4 +26,31 @@ public record ResourceEntry(
       String type,
       String resourceUri,
       String[] visibility) {
+
+   @Override
+   public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      ResourceEntry that = (ResourceEntry) o;
+      return Objects.equals(type, that.type)
+            && Objects.equals(resourceUri, that.resourceUri)
+            && Arrays.equals(visibility, that.visibility);
+   }
+
+   @Override
+   public int hashCode() {
+      int result = Objects.hash(type, resourceUri);
+      result = 31 * result + Arrays.hashCode(visibility);
+      return result;
+   }
+
+   @Override
+   public String toString() {
+      return "ResourceEntry[" +
+            "type=" + type +
+            ", resourceUri=" + resourceUri +
+            ", visibility=" + (visibility == null ? "null" : Arrays.toString(visibility)) +
+            ']';
+   }
 }
+

@@ -152,7 +152,11 @@ public class OffboardingService {
          organization.owner = null;
          organizationRepository.delete(organization);
       } finally {
-         ReshaprTenantContext.setCurrentTenant(previousTenant);
+         if (previousTenant != null) {
+            ReshaprTenantContext.setCurrentTenant(previousTenant);
+         } else {
+            ReshaprTenantContext.clear();
+         }
       }
 
       logger.infof("Organization '%s' offboarded successfully", organizationName);
@@ -203,7 +207,11 @@ public class OffboardingService {
          user.defaultOrganization = null;
          userRepository.delete(user);
       } finally {
-         ReshaprTenantContext.setCurrentTenant(previousTenant);
+         if (previousTenant != null) {
+            ReshaprTenantContext.setCurrentTenant(previousTenant);
+         } else {
+            ReshaprTenantContext.clear();
+         }
       }
 
       logger.infof("User '%s' offboarded successfully", username);
