@@ -15,8 +15,10 @@
  */
 package io.reshapr.proxy.proxy;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The response of a backend call, as returned by {@link ProxyService} or {@link GrpcProxyService}.
@@ -37,6 +39,34 @@ public record BackendResponse(
    /** Backward-compatible constructor for callers that don't measure upstream time. */
    public BackendResponse(int status, byte[] content, Map<String, List<String>> headers) {
       this(status, content, headers, -1L);
+   }
+
+   @Override
+   public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      BackendResponse that = (BackendResponse) o;
+      return status == that.status
+            && upstreamServiceTimeMs == that.upstreamServiceTimeMs
+            && Arrays.equals(content, that.content)
+            && Objects.equals(headers, that.headers);
+   }
+
+   @Override
+   public int hashCode() {
+      int result = Objects.hash(status, headers, upstreamServiceTimeMs);
+      result = 31 * result + Arrays.hashCode(content);
+      return result;
+   }
+
+   @Override
+   public String toString() {
+      return "BackendResponse[" +
+            "status=" + status +
+            ", content=" + (content == null ? "null" : Arrays.toString(content)) +
+            ", headers=" + headers +
+            ", upstreamServiceTimeMs=" + upstreamServiceTimeMs +
+            ']';
    }
 }
 

@@ -23,11 +23,22 @@ public class ReshaprTenantContext {
 
    private static final ThreadLocal<String> CURRENT_TENANT = new ThreadLocal<>();
 
+   private ReshaprTenantContext() {
+      // Private constructor for utility class
+   }
+
    public static String getCurrentTenant() {
       return CURRENT_TENANT.get();
    }
 
    public static void setCurrentTenant(String tenant) {
       CURRENT_TENANT.set(tenant);
+   }
+
+   /**
+    * Clear the current tenant context from the thread-local storage.
+    */
+   public static void clear() {
+      CURRENT_TENANT.remove();
    }
 }

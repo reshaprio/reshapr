@@ -58,9 +58,10 @@ public class RegistryResource {
       logger.info("Getting registry content summary");
       List<ServiceEntry> services = gatewayRegistry.getAllServices();
       long lastUpdateTimestamp = gatewayRegistry.getLastUpdateTimestamp();
-      String[] organizationIds = services.stream().collect(groupingBy(ServiceEntry::organizationId))
+      List<String> organizationIds = services.stream().collect(groupingBy(ServiceEntry::organizationId))
             .keySet()
-            .toArray(String[]::new);
+            .stream()
+            .toList();
       return Response.ok(new RegistryContentSummary(new Date(lastUpdateTimestamp), services.size(), organizationIds)).build();
    }
    @GET
@@ -86,7 +87,7 @@ public class RegistryResource {
       return Response.ok(services).build();
    }
 
-   private record RegistryContentSummary(Date lastUpdate, int totalServices, String[] organizationIds) {}
+   private record RegistryContentSummary(Date lastUpdate, int totalServices, List<String> organizationIds) {}
 
    private ServiceEntryDTO toServiceEntryDTO(ServiceEntry serviceEntry) {
       ConfigurationEntry configurationEntry = gatewayRegistry.getConfiguration(serviceEntry);
