@@ -29,8 +29,9 @@ import io.reshapr.proxy.registry.OperationEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 import io.reshapr.proxy.util.URIBuilder;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -41,6 +42,7 @@ import org.jboss.logging.Logger;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -67,6 +69,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
    private final WorkCache workCache;
    private final ProxyService proxyService;
    private final ObjectMapper mapper;
+   private final OpenApiQueryParameterSerializer queryParameterSerializer;
 
    private final List<ArtifactEntry> attachedArtifacts;
    private final Map<ArtifactEntry, JsonNode> attachedArtifactsContent = new HashMap<>();
@@ -80,6 +83,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
       this.workCache = workCache;
       this.mapper = mapper;
       this.proxyService = proxyService;
+      this.queryParameterSerializer = new OpenApiQueryParameterSerializer(mapper);
    }
 
    @Override
@@ -130,7 +134,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
       String queryString = "";
       String resourcePath = operation.name().split(" ")[1].trim();
       Map<String, String> pathParams = new HashMap<>();
-      Map<String, String> queryParams = new HashMap<>();
+      Multimap<String, String> queryParams = ArrayListMultimap.create();
 
       // Unwrap the request parameters and headers and remove them from request.
       try {
@@ -140,7 +144,6 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
          JsonNode paramsNode = getParametersNode(schemaNode, operation);
          if (paramsNode != null && !paramsNode.isMissingNode()) {
             paramsNode = followRefIfAny(schemaNode, paramsNode);
-
             Iterator<JsonNode> parameters = paramsNode.elements();
             while (parameters.hasNext()) {
                JsonNode parameter = followRefIfAny(schemaNode, parameters.next());
@@ -149,21 +152,16 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
 
                if (request.arguments().containsKey(paramName)) {
                   Object param = request.arguments().remove(paramName);
-                  String paramValue = param.toString();
-                  if ("path".equals(paramIn)) {
-                     pathParams.put(paramName, paramValue);
-                  } else if ("query".equals(paramIn)) {
-
-                     String paramType = parameter.path("schema").path(JSON_SCHEMA_TYPE_ELEMENT).asText();
-                     // If parameter is an array, we expect a JSON array in input.
-                     if (JSON_SCHEMA_ARRAY_TYPE.equals(paramType)) {
-                        // We need to convert it to comma separated values for the backend call.
-                        List<String> values = mapper.convertValue(param, new TypeReference<List<String>>() {});
-                        paramValue = String.join(",", values);
+                  if (param != null) {
+                     String paramValue = param.toString();
+                     if ("path".equals(paramIn)) {
+                        pathParams.put(paramName, paramValue);
+                     } else if ("query".equals(paramIn)) {
+                        queryParameterSerializer.serialize(parameter, resolveSchema(schemaNode, parameter.get("schema")), param)
+                              .forEach(queryParam -> queryParams.put(queryParam.name(), queryParam.value()));
+                     } else if ("header".equals(paramIn)) {
+                        headers.put(paramName, List.of(paramValue));
                      }
-                     queryParams.put(paramName, paramValue);
-                  } else if ("header".equals(paramIn)) {
-                     headers.put(paramName, List.of(paramValue));
                   }
                }
             }
@@ -286,7 +284,6 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
          JsonNode paramsNode = getParametersNode(schemaNode, operation);
          if (paramsNode != null && !paramsNode.isMissingNode()) {
             paramsNode = followRefIfAny(schemaNode, paramsNode);
-
             Iterator<JsonNode> parameters = paramsNode.elements();
             while (parameters.hasNext()) {
                JsonNode parameter = followRefIfAny(schemaNode, parameters.next());
@@ -298,26 +295,19 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
                if (parameter.path(JSON_SCHEMA_REQUIRED_ELEMENT).asBoolean(false)) {
                   requiredPropertiesNode.add(paramName);
                }
-               if (parameter.has("description")) {
-                  propertyNode.put("description", parameter.get("description").asText());
-               }
 
                // Check the parameter type and default to string.
                JsonNode paramSchema = parameter.get("schema");
                if (paramSchema == null) {
                   propertyNode.put(JSON_SCHEMA_TYPE_ELEMENT, "string");
                } else {
-                  String paramType = paramSchema.path(JSON_SCHEMA_TYPE_ELEMENT).asText();
-                  propertyNode.put(JSON_SCHEMA_TYPE_ELEMENT, paramType);
-                  // Recopy enum if any, as it is not inherited by the parameter node from the schema node.
-                  if (paramSchema.has("enum")) {
-                     propertyNode.set("enum", paramSchema.get("enum"));
+                  JsonNode resolvedSchema = resolveSchema(schemaNode, paramSchema);
+                  if (resolvedSchema instanceof ObjectNode objectSchema) {
+                     propertyNode.setAll(objectSchema);
                   }
-                  //
-                  if (JSON_SCHEMA_ARRAY_TYPE.equals(paramType) && paramSchema.has(JSON_SCHEMA_ITEMS_ELEMENT)) {
-                     propertyNode.set(JSON_SCHEMA_ITEMS_ELEMENT,
-                           dereferencedNode(schemaNode, paramSchema.get(JSON_SCHEMA_ITEMS_ELEMENT), new HashSet<>()));
-                  }
+               }
+               if (parameter.has("description")) {
+                  propertyNode.put("description", parameter.get("description").asText());
                }
             }
          }
@@ -363,6 +353,27 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
             OPEN_API_PATHS_ELEMENT + escapedPath + "/parameters", List.of(path, "parameters"));
 
       return mergeParametersNodes(schemaNode, pathItemParamsNode, operationParamsNode);
+   }
+
+
+   private JsonNode resolveSchema(JsonNode schemaNode, JsonNode parameterSchema) throws Exception {
+      if (parameterSchema == null) {
+         return null;
+      }
+      JsonNode resolvedSchema = parameterSchema;
+      Set<String> references = new HashSet<>();
+      while (resolvedSchema.has("$ref")) {
+         String reference = resolvedSchema.path("$ref").asText();
+         if (!references.add(reference)) {
+            logger.warnf("Skipping recursive parameter schema reference '%s'", reference);
+            return null;
+         }
+         resolvedSchema = followRefIfAny(schemaNode, resolvedSchema);
+         if (resolvedSchema == null || resolvedSchema.isMissingNode()) {
+            return null;
+         }
+      }
+      return dereferencedNode(schemaNode, resolvedSchema.deepCopy(), new HashSet<>());
    }
 
    /** Resolve a parameters node, using the direct pointer first and falling back to a segment traversal. */

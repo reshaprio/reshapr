@@ -78,7 +78,7 @@ public class URIBuilder {
                   if (pattern.contains("=")) {
                      pattern += "&";
                   }
-                  pattern += parameterName + "=" + encodeValue(parameterValue);
+                  pattern += URLEncoder.encode(parameterName, StandardCharsets.UTF_8) + "=" + encodeValue(parameterValue);
                }
             }
          }
