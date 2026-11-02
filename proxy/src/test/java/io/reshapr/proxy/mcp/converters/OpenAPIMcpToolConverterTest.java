@@ -240,18 +240,17 @@ class OpenAPIMcpToolConverterTest {
    }
 
    @Test
-   void testLegacyBracketParameterIsAliasedAndRestored() throws Exception {
+   void testDirectBracketParameterInQueryIsPreservedAndEncoded() throws Exception {
       OperationEntry operation = new OperationEntry("GET /legacy", "GET", null, null, null);
       AtomicReference<URI> backendUri = new AtomicReference<>();
       TestConverter testConverter = testConverter(operation, backendUri);
 
       McpSchema.JsonSchema schema = testConverter.converter().getInputSchema(operation);
+      assertTrue(schema.properties().containsKey("filter[equals]"));
       assertTrue(schema.properties().containsKey("filter_equals"));
-      assertTrue(schema.properties().containsKey("filter_equals_2"));
-      assertFalse(schema.properties().containsKey("filter[equals]"));
 
       Map<String, Object> arguments = new HashMap<>();
-      arguments.put("filter_equals_2", "shoes");
+      arguments.put("filter[equals]", "shoes");
       arguments.put("filter_equals", "boots");
       testConverter.converter().getCallResponse(operation, testConverter.configuration(),
             new McpSchema.SimpleRequest("list", arguments), new HashMap<>());
@@ -259,6 +258,40 @@ class OpenAPIMcpToolConverterTest {
       assertNotNull(backendUri.get());
       assertTrue(backendUri.get().getRawQuery().contains("filter%5Bequals%5D=shoes"));
       assertTrue(backendUri.get().getRawQuery().contains("filter_equals=boots"));
+   }
+
+   @Test
+   void testQueryParameterSerializationStyles() throws Exception {
+      OperationEntry operation = new OperationEntry("GET /styles", "GET", null, null, null);
+      AtomicReference<URI> backendUri = new AtomicReference<>();
+      TestConverter testConverter = testConverter(operation, backendUri);
+
+      Map<String, Object> arguments = new HashMap<>();
+      arguments.put("tagsFormExploded", List.of("red", "blue"));
+      arguments.put("tagsFormUnexploded", List.of("red", "blue"));
+      arguments.put("filterFormExploded", Map.of("equals", "shoes"));
+      arguments.put("filterFormUnexploded", Map.of("equals", "shoes"));
+      arguments.put("tagsSpace", List.of("red", "blue"));
+      arguments.put("tagsPipe", List.of("red", "blue"));
+
+      testConverter.converter().getCallResponse(operation, testConverter.configuration(),
+            new McpSchema.SimpleRequest("list", arguments), new HashMap<>());
+
+      assertNotNull(backendUri.get());
+      String rawQuery = backendUri.get().getRawQuery();
+
+      // tags, form, explode=true -> tagsFormExploded=red&tagsFormExploded=blue
+      assertTrue(rawQuery.contains("tagsFormExploded=red") && rawQuery.contains("tagsFormExploded=blue"));
+      // tags, form, explode=false -> tagsFormUnexploded=red,blue (comma encoded as %2C by URLEncoder)
+      assertTrue(rawQuery.contains("tagsFormUnexploded=red%2Cblue"));
+      // filter, form, explode=true -> equals=shoes
+      assertTrue(rawQuery.contains("equals=shoes"));
+      // filter, form, explode=false -> filterFormUnexploded=equals,shoes (comma encoded as %2C)
+      assertTrue(rawQuery.contains("filterFormUnexploded=equals%2Cshoes"));
+      // tags, spaceDelimited, explode=false -> tagsSpace=red+blue
+      assertTrue(rawQuery.contains("tagsSpace=red+blue"));
+      // tags, pipeDelimited, explode=false -> tagsPipe=red%7Cblue
+      assertTrue(rawQuery.contains("tagsPipe=red%7Cblue"));
    }
 
    @Test

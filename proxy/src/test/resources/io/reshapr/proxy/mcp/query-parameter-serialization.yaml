@@ -34,6 +34,56 @@ paths:
       responses:
         '200':
           description: OK
+  /styles:
+    get:
+      parameters:
+        - name: tagsFormExploded
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: tagsFormUnexploded
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: filterFormExploded
+          in: query
+          style: form
+          explode: true
+          schema:
+            $ref: '#/components/schemas/SimpleFilter'
+        - name: filterFormUnexploded
+          in: query
+          style: form
+          explode: false
+          schema:
+            $ref: '#/components/schemas/SimpleFilter'
+        - name: tagsSpace
+          in: query
+          style: spaceDelimited
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: tagsPipe
+          in: query
+          style: pipeDelimited
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: OK
 components:
   schemas:
     ProductFilter:
@@ -45,3 +95,8 @@ components:
           enum: [shoes, bags]
         exists:
           type: boolean
+    SimpleFilter:
+      type: object
+      properties:
+        equals:
+          type: string

@@ -144,29 +144,24 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
          JsonNode paramsNode = getParametersNode(schemaNode, operation);
          if (paramsNode != null && !paramsNode.isMissingNode()) {
             paramsNode = followRefIfAny(schemaNode, paramsNode);
-            Map<String, String> parameterAliases = getParameterAliases(schemaNode, paramsNode);
-
             Iterator<JsonNode> parameters = paramsNode.elements();
             while (parameters.hasNext()) {
                JsonNode parameter = followRefIfAny(schemaNode, parameters.next());
                String paramName = parameter.path("name").asText();
                String paramIn = parameter.path("in").asText();
 
-               String argumentName = parameterAliases.getOrDefault(parameterKey(schemaNode, parameter), paramName);
-               Object param = request.arguments().remove(argumentName);
-               if (param == null && !argumentName.equals(paramName)) {
-                  // Keep direct calls made against older generated schemas working.
-                  param = request.arguments().remove(paramName);
-               }
-               if (param != null) {
-                  String paramValue = param.toString();
-                  if ("path".equals(paramIn)) {
-                     pathParams.put(paramName, paramValue);
-                  } else if ("query".equals(paramIn)) {
-                     queryParameterSerializer.serialize(parameter, resolveSchema(schemaNode, parameter.get("schema")), param)
-                           .forEach(queryParam -> queryParams.put(queryParam.name(), queryParam.value()));
-                  } else if ("header".equals(paramIn)) {
-                     headers.put(paramName, List.of(paramValue));
+               if (request.arguments().containsKey(paramName)) {
+                  Object param = request.arguments().remove(paramName);
+                  if (param != null) {
+                     String paramValue = param.toString();
+                     if ("path".equals(paramIn)) {
+                        pathParams.put(paramName, paramValue);
+                     } else if ("query".equals(paramIn)) {
+                        queryParameterSerializer.serialize(parameter, resolveSchema(schemaNode, parameter.get("schema")), param)
+                              .forEach(queryParam -> queryParams.put(queryParam.name(), queryParam.value()));
+                     } else if ("header".equals(paramIn)) {
+                        headers.put(paramName, List.of(paramValue));
+                     }
                   }
                }
             }
@@ -289,19 +284,16 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
          JsonNode paramsNode = getParametersNode(schemaNode, operation);
          if (paramsNode != null && !paramsNode.isMissingNode()) {
             paramsNode = followRefIfAny(schemaNode, paramsNode);
-            Map<String, String> parameterAliases = getParameterAliases(schemaNode, paramsNode);
-
             Iterator<JsonNode> parameters = paramsNode.elements();
             while (parameters.hasNext()) {
                JsonNode parameter = followRefIfAny(schemaNode, parameters.next());
                String paramName = parameter.path("name").asText();
-               String mcpParamName = parameterAliases.getOrDefault(parameterKey(schemaNode, parameter), paramName);
 
                // Create a property node for the parameter.
                ObjectNode propertyNode = mapper.createObjectNode();
-               schemaPropertiesNode.set(mcpParamName, propertyNode);
+               schemaPropertiesNode.set(paramName, propertyNode);
                if (parameter.path(JSON_SCHEMA_REQUIRED_ELEMENT).asBoolean(false)) {
-                  requiredPropertiesNode.add(mcpParamName);
+                  requiredPropertiesNode.add(paramName);
                }
 
                // Check the parameter type and default to string.
@@ -363,25 +355,6 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
       return mergeParametersNodes(schemaNode, pathItemParamsNode, operationParamsNode);
    }
 
-   private Map<String, String> getParameterAliases(JsonNode schemaNode, JsonNode paramsNode) throws Exception {
-      List<JsonNode> parameters = new ArrayList<>();
-      List<String> names = new ArrayList<>();
-      for (JsonNode parameterNode : paramsNode) {
-         JsonNode parameter = followRefIfAny(schemaNode, parameterNode);
-         parameters.add(parameter);
-         names.add(parameter.path("name").asText());
-      }
-
-      List<String> aliases = McpParameterNames.aliases(names);
-      Map<String, String> aliasesByParameter = new HashMap<>();
-      for (int index = 0; index < parameters.size(); index++) {
-         String key = parameterKey(schemaNode, parameters.get(index));
-         if (key != null) {
-            aliasesByParameter.put(key, aliases.get(index));
-         }
-      }
-      return aliasesByParameter;
-   }
 
    private JsonNode resolveSchema(JsonNode schemaNode, JsonNode parameterSchema) throws Exception {
       if (parameterSchema == null) {
