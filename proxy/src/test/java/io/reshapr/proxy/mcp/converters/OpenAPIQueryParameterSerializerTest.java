@@ -17,7 +17,7 @@ package io.reshapr.proxy.mcp.converters;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.reshapr.proxy.mcp.converters.OpenApiQueryParameterSerializer.QueryParameter;
+import io.reshapr.proxy.mcp.converters.OpenAPIQueryParameterSerializer.QueryParameter;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for {@link OpenApiQueryParameterSerializer}.
+ * Tests for {@link OpenAPIQueryParameterSerializer}.
  * @author vaishnav
  */
-class OpenApiQueryParameterSerializerTest {
+class OpenAPIQueryParameterSerializerTest {
 
    private final ObjectMapper mapper = new ObjectMapper();
-   private final OpenApiQueryParameterSerializer serializer = new OpenApiQueryParameterSerializer(mapper);
+   private final OpenAPIQueryParameterSerializer serializer = new OpenAPIQueryParameterSerializer(mapper);
 
    @Test
    void testFormArrayExplodedDefault() {

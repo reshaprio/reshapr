@@ -42,7 +42,6 @@ import org.jboss.logging.Logger;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -69,7 +68,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
    private final WorkCache workCache;
    private final ProxyService proxyService;
    private final ObjectMapper mapper;
-   private final OpenApiQueryParameterSerializer queryParameterSerializer;
+   private final OpenAPIQueryParameterSerializer queryParameterSerializer;
 
    private final List<ArtifactEntry> attachedArtifacts;
    private final Map<ArtifactEntry, JsonNode> attachedArtifactsContent = new HashMap<>();
@@ -83,7 +82,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
       this.workCache = workCache;
       this.mapper = mapper;
       this.proxyService = proxyService;
-      this.queryParameterSerializer = new OpenApiQueryParameterSerializer(mapper);
+      this.queryParameterSerializer = new OpenAPIQueryParameterSerializer(mapper);
    }
 
    @Override

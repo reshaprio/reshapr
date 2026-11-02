@@ -69,7 +69,7 @@ import static io.reshapr.json.JsonSchemaElements.JSON_SCHEMA_TYPE_ELEMENT;
  * @see <a href="https://spec.openapis.org/oas/v3.1.1.html#style-values">OpenAPI Style Values</a>
  * @author vaishnav
  */
-final class OpenApiQueryParameterSerializer {
+final class OpenAPIQueryParameterSerializer {
 
    private static final String STYLE_FORM = "form";
    private static final String STYLE_SPACE_DELIMITED = "spaceDelimited";
@@ -83,7 +83,7 @@ final class OpenApiQueryParameterSerializer {
     *
     * @param mapper the mapper used for converting complex values
     */
-   OpenApiQueryParameterSerializer(ObjectMapper mapper) {
+   OpenAPIQueryParameterSerializer(ObjectMapper mapper) {
       this.mapper = mapper;
    }
 
