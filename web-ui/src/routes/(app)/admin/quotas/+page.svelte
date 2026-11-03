@@ -17,14 +17,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
-  import { Switch } from '$lib/components/ui/switch/index.js';
-  import { Card, CardContent } from '$lib/components/ui/card/index.js';
-  import QuotaGauge from '$lib/components/QuotaGauge.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { Card, CardContent } from '#lib/components/ui/card/index.js';
+  import QuotaGauge from '#lib/components/QuotaGauge.svelte';
+  import PageHeader from '#lib/components/PageHeader.svelte';
   import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/svelte';
   import {
     ApiGatewayIcon,

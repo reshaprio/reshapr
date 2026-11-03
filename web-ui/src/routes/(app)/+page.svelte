@@ -15,15 +15,15 @@
   -->
 
 <script lang="ts">
-	import { ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import { QuickStartWizard } from '$lib/components/artifacts/index.js';
-	import { loadDashboardStats, type DashboardStats, type QuotaGauge } from '$lib/dashboardStats.js';
-	import { auth } from '$lib/stores/auth.svelte.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import { ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import { QuickStartWizard } from '#lib/components/artifacts/index.js';
+	import { loadDashboardStats, type DashboardStats, type QuotaGauge } from '#lib/dashboardStats.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		ApiIcon,

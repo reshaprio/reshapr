@@ -15,7 +15,7 @@
   -->
 
 <script lang="ts">
-	import { cn } from '$lib/utils.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { GaugeIcon } from '@hugeicons/core-free-icons';
 

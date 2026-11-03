@@ -17,21 +17,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
   import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-  } from '$lib/components/ui/table/index.js';
+  } from '#lib/components/ui/table/index.js';
   import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose
-  } from '$lib/components/ui/sheet/index.js';
+  } from '#lib/components/ui/sheet/index.js';
   import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-  } from '$lib/components/ui/dropdown-menu/index.js';
-  import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  } from '#lib/components/ui/dropdown-menu/index.js';
+  import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+  import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
   import { HugeiconsIcon } from "@hugeicons/svelte";
   import { Building01Icon, CheckmarkCircle01Icon, Delete02Icon, MoreVerticalIcon } from '@hugeicons/core-free-icons';
 

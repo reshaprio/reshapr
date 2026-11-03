@@ -15,8 +15,8 @@
  */
 
 import type * as Monaco from 'monaco-editor';
-import type { ReshaprArtifactKind } from '$lib/artifacts/types.js';
-import type { ToolSuggestion } from '$lib/artifacts/validators.js';
+import type { ReshaprArtifactKind } from '#lib/artifacts/types.js';
+import type { ToolSuggestion } from '#lib/artifacts/validators.js';
 
 /** Returns the typed word range if the cursor sits where a tool name is expected, otherwise null. */
 function toolNameContext(

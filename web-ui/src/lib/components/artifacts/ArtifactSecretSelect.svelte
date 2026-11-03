@@ -15,8 +15,8 @@
   -->
 
 <script lang="ts">
-	import { apiClient } from '$lib/api/client.js';
-	import * as Select from '$lib/components/ui/select/index.js';
+	import { apiClient } from '#lib/api/client.js';
+	import * as Select from '#lib/components/ui/select/index.js';
 
 	/**
 	 * Reusable picker listing secrets of type `ARTIFACT`. The selected value is the

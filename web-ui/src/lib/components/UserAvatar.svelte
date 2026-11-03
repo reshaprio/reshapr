@@ -15,8 +15,8 @@
   -->
 
 <script lang="ts">
-  import { cn } from '$lib/utils.js';
-  import { gravatarUrl } from '$lib/gravatar.js';
+  import { cn } from '#lib/utils.js';
+  import { gravatarUrl } from '#lib/gravatar.js';
 
   interface Props {
     /** The user's email address used to resolve a Gravatar avatar. */

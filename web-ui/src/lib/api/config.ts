@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { BootstrapConfiguration } from '$lib/types.js';
+import type { BootstrapConfiguration } from '#lib/types.js';
 
 /** Cached bootstrap configuration (fetched once at app startup). */
 let cached: BootstrapConfiguration | null = null;

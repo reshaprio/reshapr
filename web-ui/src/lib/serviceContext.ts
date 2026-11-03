@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ServiceRecord } from '$lib/serviceHub.js';
+import type { ServiceRecord } from '#lib/serviceHub.js';
 
 export const SERVICE_CONTEXT_KEY = Symbol('service-context');
 

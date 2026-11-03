@@ -15,7 +15,7 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { getSessionToken, extractUserProfile, decodeJwtPayload } from '$lib/server/auth.js';
+import { getSessionToken, extractUserProfile, decodeJwtPayload } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types.js';
 
 /**

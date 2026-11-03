@@ -16,8 +16,8 @@
 
 <!-- Shared display of a configuration plan's exposed operations. -->
 <script lang="ts">
-	import { cn } from '$lib/utils.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { cn } from '#lib/utils.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Route01Icon } from '@hugeicons/core-free-icons';
 	import { planOpsMode, planOperations, splitOp, methodStyle } from './planView.js';

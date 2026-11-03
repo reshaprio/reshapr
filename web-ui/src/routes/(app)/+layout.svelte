@@ -18,13 +18,13 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import { sidebar } from '$lib/stores/sidebar.svelte.js';
-  import { theme } from '$lib/stores/theme.svelte.js';
-  import { getBootstrapConfig } from '$lib/api/config.js';
-  import UserAvatar from '$lib/components/UserAvatar.svelte';
-  import { QuickStartWizard } from '$lib/components/artifacts/index.js';
-  import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { sidebar } from '#lib/stores/sidebar.svelte.js';
+  import { theme } from '#lib/stores/theme.svelte.js';
+  import { getBootstrapConfig } from '#lib/api/config.js';
+  import UserAvatar from '#lib/components/UserAvatar.svelte';
+  import { QuickStartWizard } from '#lib/components/artifacts/index.js';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
   import { HugeiconsIcon } from '@hugeicons/svelte';
   import type { IconSvgElement } from '@hugeicons/svelte';
   import {

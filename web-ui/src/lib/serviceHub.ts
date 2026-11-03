@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { apiClient } from '$lib/api/client.js';
+import type { apiClient } from '#lib/api/client.js';
 
 export type ServiceApi = ReturnType<typeof apiClient>;
 

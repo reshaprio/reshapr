@@ -19,12 +19,12 @@
 </script>
 
 <script lang="ts">
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
 	import ArtifactSecretSelect from './ArtifactSecretSelect.svelte';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { FileUploadIcon, Link01Icon } from '@hugeicons/core-free-icons';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';

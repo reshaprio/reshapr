@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { User, AuthMode, UserProfile } from '$lib/types.js';
+import type { User, AuthMode, UserProfile } from '#lib/types.js';
 import { SvelteSet } from 'svelte/reactivity';
 
 /**

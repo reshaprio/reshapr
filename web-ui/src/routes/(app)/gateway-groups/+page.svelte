@@ -16,20 +16,20 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { apiClient } from '$lib/api/client.js';
-	import { formatApiError } from '$lib/format-api-error.js';
-	import { quotaEntry } from '$lib/dashboardStatsCompute.js';
-	import { avatarColor } from '$lib/avatarColor.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import QuotaGauge from '$lib/components/QuotaGauge.svelte';
-	import { auth } from '$lib/stores/auth.svelte.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
+	import { apiClient } from '#lib/api/client.js';
+	import { formatApiError } from '#lib/format-api-error.js';
+	import { quotaEntry } from '#lib/dashboardStatsCompute.js';
+	import { avatarColor } from '#lib/avatarColor.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import QuotaGauge from '#lib/components/QuotaGauge.svelte';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import {
 		Sheet,
 		SheetContent,
@@ -38,14 +38,14 @@
 		SheetDescription,
 		SheetFooter,
 		SheetClose
-	} from '$lib/components/ui/sheet/index.js';
+	} from '#lib/components/ui/sheet/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu/index.js';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		RefreshIcon,

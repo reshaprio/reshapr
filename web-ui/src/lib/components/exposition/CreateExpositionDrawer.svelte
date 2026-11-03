@@ -27,21 +27,21 @@
 -->
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import { parseServiceRecord } from '$lib/serviceHub.js';
-	import { parseArtifactRefList, type ArtifactRef } from '$lib/artifacts/index.js';
-	import { avatarColor, avatarInitials } from '$lib/avatarColor.js';
-	import { cn } from '$lib/utils.js';
-	import { strOf, type BackendSecret } from '$lib/components/plan/planView.js';
-	import PlanOperationsView from '$lib/components/plan/PlanOperationsView.svelte';
-	import PlanCapabilitiesView from '$lib/components/plan/PlanCapabilitiesView.svelte';
-	import PlanBackendView from '$lib/components/plan/PlanBackendView.svelte';
-	import PlanClientAuthView from '$lib/components/plan/PlanClientAuthView.svelte';
-	import PlanAuditView from '$lib/components/plan/PlanAuditView.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import { parseServiceRecord } from '#lib/serviceHub.js';
+	import { parseArtifactRefList, type ArtifactRef } from '#lib/artifacts/index.js';
+	import { avatarColor, avatarInitials } from '#lib/avatarColor.js';
+	import { cn } from '#lib/utils.js';
+	import { strOf, type BackendSecret } from '#lib/components/plan/planView.js';
+	import PlanOperationsView from '#lib/components/plan/PlanOperationsView.svelte';
+	import PlanCapabilitiesView from '#lib/components/plan/PlanCapabilitiesView.svelte';
+	import PlanBackendView from '#lib/components/plan/PlanBackendView.svelte';
+	import PlanClientAuthView from '#lib/components/plan/PlanClientAuthView.svelte';
+	import PlanAuditView from '#lib/components/plan/PlanAuditView.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
 	import {
 		Sheet,
 		SheetContent,
@@ -50,7 +50,7 @@
 		SheetDescription,
 		SheetFooter,
 		SheetClose
-	} from '$lib/components/ui/sheet/index.js';
+	} from '#lib/components/ui/sheet/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Tick02Icon } from '@hugeicons/core-free-icons';
 

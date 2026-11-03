@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { apiClient } from '$lib/api/client.js';
+import { apiClient } from '#lib/api/client.js';
 import {
   buildGatewayRegisteredDetail,
   quotaEntry,
   quotaUsed,
   type GatewayRegisteredDetail
-} from '$lib/dashboardStatsCompute.js';
+} from '#lib/dashboardStatsCompute.js';
 
-export type { GatewayRegisteredDetail, GatewayRowDetail } from '$lib/dashboardStatsCompute'
+export type { GatewayRegisteredDetail, GatewayRowDetail } from '#lib/dashboardStatsCompute.js'
 export {
 	aggregateGatewaysFromActiveExpositions,
 	buildGatewayRegisteredDetail,
 	quotaEntry
-} from '$lib/dashboardStatsCompute'
+} from '#lib/dashboardStatsCompute.js'
 
 type Api = ReturnType<typeof apiClient>
 

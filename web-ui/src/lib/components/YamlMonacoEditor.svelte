@@ -16,14 +16,14 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ensureMonacoYaml, getMonacoYamlHandle } from '$lib/monaco/setup.js';
-	import { artifactModelUri, buildMonacoYamlSchemaForPath } from '$lib/monaco/schemas.js';
-	import { RESHAPR_DARK_THEME, defineReshaprDarkTheme } from '$lib/monaco/theme.js';
-	import { theme } from '$lib/stores/theme.svelte.js';
-	import { registerToolCompletion } from '$lib/monaco/toolCompletion.js';
-	import type { ReshaprArtifactKind } from '$lib/artifacts/types.js';
-	import type { ToolSuggestion } from '$lib/artifacts/validators.js';
-	import ScrollableCode from '$lib/components/ScrollableCode.svelte';
+	import { ensureMonacoYaml, getMonacoYamlHandle } from '#lib/monaco/setup.js';
+	import { artifactModelUri, buildMonacoYamlSchemaForPath } from '#lib/monaco/schemas.js';
+	import { RESHAPR_DARK_THEME, defineReshaprDarkTheme } from '#lib/monaco/theme.js';
+	import { theme } from '#lib/stores/theme.svelte.js';
+	import { registerToolCompletion } from '#lib/monaco/toolCompletion.js';
+	import type { ReshaprArtifactKind } from '#lib/artifacts/types.js';
+	import type { ToolSuggestion } from '#lib/artifacts/validators.js';
+	import ScrollableCode from '#lib/components/ScrollableCode.svelte';
 	import type * as Monaco from 'monaco-editor';
 
 	type EditorWarning = {

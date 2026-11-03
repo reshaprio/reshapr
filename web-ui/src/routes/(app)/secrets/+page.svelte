@@ -16,17 +16,17 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { apiClient } from '$lib/api/client.js';
-	import { formatApiError } from '$lib/format-api-error.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import PasswordInput from '$lib/components/PasswordInput.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
+	import { apiClient } from '#lib/api/client.js';
+	import { formatApiError } from '#lib/format-api-error.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import PasswordInput from '#lib/components/PasswordInput.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import {
 		Sheet,
 		SheetContent,
@@ -35,14 +35,14 @@
 		SheetDescription,
 		SheetFooter,
 		SheetClose
-	} from '$lib/components/ui/sheet/index.js';
+	} from '#lib/components/ui/sheet/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu/index.js';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/svelte';
 	import {
 		RefreshIcon,
@@ -54,7 +54,7 @@
 		Key01Icon,
 		MessageLockIcon
 	} from '@hugeicons/core-free-icons';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '#lib/utils.js';
 
 	type SecretRefRow = {
 		id?: string;

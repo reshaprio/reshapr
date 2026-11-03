@@ -15,7 +15,7 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { clearSessionCookie } from '$lib/server/auth.js';
+import { clearSessionCookie } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types.js';
 
 /**

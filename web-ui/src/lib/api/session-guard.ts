@@ -15,7 +15,7 @@
  */
 
 import { goto } from '$app/navigation';
-import { auth } from '$lib/stores/auth.svelte.js';
+import { auth } from '#lib/stores/auth.svelte.js';
 
 /**
  * Query-string flag appended to the login URL when a session is lost so the

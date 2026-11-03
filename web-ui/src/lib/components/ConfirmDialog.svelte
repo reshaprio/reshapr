@@ -32,10 +32,10 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import { formatApiError } from '$lib/format-api-error.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import { formatApiError } from '#lib/format-api-error.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Delete02Icon } from '@hugeicons/core-free-icons';
 

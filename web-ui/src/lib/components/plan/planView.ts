@@ -24,7 +24,7 @@ import {
 	File01Icon,
 	FilterIcon
 } from '@hugeicons/core-free-icons';
-import type { ArtifactRef, ArtifactType } from '$lib/artifacts/index.js';
+import type { ArtifactRef, ArtifactType } from '#lib/artifacts/index.js';
 
 export function recOf(v: unknown): Record<string, unknown> | null {
 	return v && typeof v === 'object' ? (v as Record<string, unknown>) : null;

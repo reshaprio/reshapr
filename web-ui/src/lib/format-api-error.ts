@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ApiError } from '$lib/api/errors.js';
+import { ApiError } from '#lib/api/errors.js';
 
 export function formatApiError(e: unknown): string {
   if (!(e instanceof ApiError)) return String(e);

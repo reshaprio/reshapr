@@ -16,7 +16,7 @@
 
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { apiClient, ApiError } from '$lib/api/client.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
 	import {
 		artifactTypeLabel,
 		EDITABLE_KINDS,
@@ -27,23 +27,23 @@
 		type ArtifactRef,
 		type ArtifactTypeFilter,
 		type ReshaprArtifactKind
-	} from '$lib/artifacts/index.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { ImportArtifactDialog } from '$lib/components/artifacts/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
+	} from '#lib/artifacts/index.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { ImportArtifactDialog } from '#lib/components/artifacts/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu/index.js';
-	import { cn } from '$lib/utils.js';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		Delete02Icon,

@@ -16,8 +16,8 @@
 
 import { isMap, isScalar, isSeq, parseDocument } from 'yaml';
 import type { Document, Node, Scalar, YAMLMap } from 'yaml';
-import type { ServiceApi } from '$lib/serviceHub.js';
-import { toolNameForOperation } from '$lib/toolName.js';
+import type { ServiceApi } from '#lib/serviceHub.js';
+import { toolNameForOperation } from '#lib/toolName.js';
 import type { ReshaprArtifactKind, ServiceRef } from './types.js';
 
 /**

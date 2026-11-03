@@ -15,7 +15,7 @@
   -->
 
 <script lang="ts">
-import { Badge } from "$lib/components/ui/badge/index.js";
+import { Badge } from "#lib/components/ui/badge/index.js";
 import { HugeiconsIcon } from "@hugeicons/svelte";
 import { Building01Icon } from "@hugeicons/core-free-icons";
 

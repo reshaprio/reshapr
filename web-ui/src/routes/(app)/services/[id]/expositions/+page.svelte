@@ -17,24 +17,24 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import CreateExpositionDrawer from '$lib/components/exposition/CreateExpositionDrawer.svelte';
-	import { expositionBelongsToService } from '$lib/serviceHub.js';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Switch } from '$lib/components/ui/switch/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import CreateExpositionDrawer from '#lib/components/exposition/CreateExpositionDrawer.svelte';
+	import { expositionBelongsToService } from '#lib/serviceHub.js';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu/index.js';
-	import { cn } from '$lib/utils.js';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { MoreVerticalIcon, Delete02Icon, TagsIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 

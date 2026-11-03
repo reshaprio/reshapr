@@ -16,22 +16,22 @@
 
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Switch } from '$lib/components/ui/switch/index.js';
-	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '$lib/artifacts/index.js';
-	import { parseOperationsList, formatOperationsList } from '$lib/operationsList.js';
-	import { cn } from '$lib/utils.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import * as Collapsible from '#lib/components/ui/collapsible/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '#lib/artifacts/index.js';
+	import { parseOperationsList, formatOperationsList } from '#lib/operationsList.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		Search01Icon,

@@ -15,15 +15,15 @@
   -->
 
 <script lang="ts">
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import { ImportArtifactDialog } from '$lib/components/artifacts/index.js';
-	import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import ServiceTypeBadge from '$lib/components/ServiceTypeBadge.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { auth } from '$lib/stores/auth.svelte.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import { ImportArtifactDialog } from '#lib/components/artifacts/index.js';
+	import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import ServiceTypeBadge from '#lib/components/ServiceTypeBadge.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { RefreshIcon, CloudUploadIcon } from '@hugeicons/core-free-icons';
 

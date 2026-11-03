@@ -15,18 +15,18 @@
   -->
 
 <script lang="ts">
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import * as Alert from '$lib/components/ui/alert/index.js';
-  import * as Card from '$lib/components/ui/card/index.js';
-  import * as Table from '$lib/components/ui/table/index.js';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
+  import PageHeader from '#lib/components/PageHeader.svelte';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import * as Alert from '#lib/components/ui/alert/index.js';
+  import * as Card from '#lib/components/ui/card/index.js';
+  import * as Table from '#lib/components/ui/table/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
   import { onMount } from 'svelte';
   import { HugeiconsIcon } from '@hugeicons/svelte';
   import { Building01Icon, PlusSignIcon, Delete01Icon } from '@hugeicons/core-free-icons';
-  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 
   interface MemberDTO {
     username: string;

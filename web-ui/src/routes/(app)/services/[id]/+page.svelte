@@ -16,18 +16,18 @@
 
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { apiClient } from '$lib/api/client.js';
-	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '$lib/artifacts/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { apiClient } from '#lib/api/client.js';
+	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '#lib/artifacts/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import {
 		Tooltip,
 		TooltipContent,
 		TooltipProvider,
 		TooltipTrigger
-	} from '$lib/components/ui/tooltip/index.js';
-	import { cn } from '$lib/utils.js';
-	import { toolNameForOperation } from '$lib/toolName.js';
+	} from '#lib/components/ui/tooltip/index.js';
+	import { cn } from '#lib/utils.js';
+	import { toolNameForOperation } from '#lib/toolName.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		Search01Icon,

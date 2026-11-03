@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import type { Cookies } from '@sveltejs/kit';
 
 /** Name of the httpOnly cookie that holds the JWT. */
@@ -25,24 +25,24 @@ const SESSION_MAX_AGE_SECONDS = 2 * 60 * 60;
 
 /** Resolved control plane base URL (no trailing slash). */
 export function getCtrlUrl(): string {
-  const url = env.RESHAPR_CTRL_URL ?? 'http://localhost:5555';
+  const url = env.RESHAPR_CTRL_URL;
   return url.replace(/\/+$/, '');
 }
 
 /** Public control-plane URL used for browser redirects. */
 export function getCtrlPublicUrl(): string {
-  const url = env.RESHAPR_CTRL_PUBLIC_URL ?? getCtrlUrl();
+  const url = env.RESHAPR_CTRL_PUBLIC_URL || getCtrlUrl();
   return url.replace(/\/+$/, '');
 }
 
 /** Resolved admin API key for the control plane. */
 export function getAdminApiKey(): string {
-  return env.RESHAPR_ADMIN_API_KEY ?? '';
+  return env.RESHAPR_ADMIN_API_KEY;
 }
 
 /** Public URL of this web-ui (used for OIDC redirect_uri). */
 export function getPublicUrl(): string {
-  const url = env.RESHAPR_WEBUI_PUBLIC_URL ?? 'http://localhost:5173';
+  const url = env.RESHAPR_WEBUI_PUBLIC_URL;
   return url.replace(/\/+$/, '');
 }
 

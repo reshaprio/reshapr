@@ -15,11 +15,11 @@
   -->
 
 <script lang="ts">
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import { getBootstrapConfig } from '$lib/api/config.js';
-  import * as Alert from '$lib/components/ui/alert/index.js';
-  import * as Card from '$lib/components/ui/card/index.js';
+  import PageHeader from '#lib/components/PageHeader.svelte';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { getBootstrapConfig } from '#lib/api/config.js';
+  import * as Alert from '#lib/components/ui/alert/index.js';
+  import * as Card from '#lib/components/ui/card/index.js';
   import { onMount } from 'svelte';
 
   let version = $state('');

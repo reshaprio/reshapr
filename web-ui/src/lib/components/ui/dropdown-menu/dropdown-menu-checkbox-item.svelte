@@ -2,7 +2,7 @@
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { MinusSignIcon, Tick02Icon } from '@hugeicons/core-free-icons';
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
 	import type { Snippet } from "svelte";
 
 	let {

@@ -18,12 +18,12 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import { getBootstrapConfig } from '$lib/api/config.js';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { getBootstrapConfig } from '#lib/api/config.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#lib/components/ui/card/index.js';
 
   let username = $state('');
   let password = $state('');

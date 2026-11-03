@@ -16,7 +16,7 @@
 
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { apiClient, ApiError } from '$lib/api/client.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
 	import {
 		buildDefaultArtifactTitle,
 		buildReferenceIndex,
@@ -33,17 +33,17 @@
 		type ReshaprReferenceIndex,
 		type ServiceRef,
 		type ValidatorWarning
-	} from '$lib/artifacts/index.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import YamlMonacoEditor from '$lib/components/YamlMonacoEditor.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	} from '#lib/artifacts/index.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import YamlMonacoEditor from '#lib/components/YamlMonacoEditor.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import {
 		Tooltip,
 		TooltipContent,
 		TooltipProvider,
 		TooltipTrigger
-	} from '$lib/components/ui/tooltip/index.js';
+	} from '#lib/components/ui/tooltip/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { PlusSignIcon } from '@hugeicons/core-free-icons';
 	import { PencilEdit02Icon, Tick02Icon } from '@hugeicons/core-free-icons';

@@ -16,7 +16,7 @@
 
 <!-- Shared display of the MCP endpoint (client-facing) authentication. -->
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		UserShield01Icon,

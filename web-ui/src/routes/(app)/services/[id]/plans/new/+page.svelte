@@ -16,8 +16,8 @@
 
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import PlanEditor from '$lib/components/plan/PlanEditor.svelte';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import PlanEditor from '#lib/components/plan/PlanEditor.svelte';
 
 	const ctx = getContext<ServiceContextValue>(SERVICE_CONTEXT_KEY);
 </script>

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { EDITABLE_KINDS } from '$lib/artifacts/kinds.js';
+import { EDITABLE_KINDS } from '#lib/artifacts/kinds.js';
 import type { SchemasSettings } from 'monaco-yaml';
 
-import customToolsSchema from '$lib/schemas/CustomTools-v1alpha1-schema.json';
-import promptsSchema from '$lib/schemas/Prompts-v1alpha1-schema.json';
-import resourcesSchema from '$lib/schemas/Resources-v1alpha1-schema.json';
-import toolsOutputFiltersSchema from '$lib/schemas/ToolsOutputFilters-v1alpha1-schema.json';
+import customToolsSchema from '#lib/schemas/CustomTools-v1alpha1-schema.json';
+import promptsSchema from '#lib/schemas/Prompts-v1alpha1-schema.json';
+import resourcesSchema from '#lib/schemas/Resources-v1alpha1-schema.json';
+import toolsOutputFiltersSchema from '#lib/schemas/ToolsOutputFilters-v1alpha1-schema.json';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 

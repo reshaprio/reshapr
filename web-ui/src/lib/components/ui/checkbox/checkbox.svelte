@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Checkbox as CheckboxPrimitive } from "bits-ui";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { MinusSignIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 

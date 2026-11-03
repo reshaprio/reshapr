@@ -16,20 +16,20 @@
 
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import { planBelongsToService } from '$lib/serviceHub.js';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import { planBelongsToService } from '#lib/serviceHub.js';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu/index.js';
-	import { cn } from '$lib/utils.js';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 	MoreVerticalIcon,
@@ -42,9 +42,9 @@
 	Key01Icon,
 	MessageLock02Icon
 	} from '@hugeicons/core-free-icons';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 
 	const ctx = getContext<ServiceContextValue>(SERVICE_CONTEXT_KEY);
 

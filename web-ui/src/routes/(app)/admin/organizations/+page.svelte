@@ -17,28 +17,28 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { auth } from '$lib/stores/auth.svelte.js';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs/index.js';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
   import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-  } from '$lib/components/ui/table/index.js';
+  } from '#lib/components/ui/table/index.js';
   import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose
-  } from '$lib/components/ui/sheet/index.js';
+  } from '#lib/components/ui/sheet/index.js';
   import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-  } from '$lib/components/ui/dropdown-menu/index.js';
+  } from '#lib/components/ui/dropdown-menu/index.js';
   import { HugeiconsIcon } from "@hugeicons/svelte";
   import {
     Building01Icon, MoreVerticalIcon, UserGroupIcon, UserIcon, Crown, Delete02Icon
   } from '@hugeicons/core-free-icons';
-  import { Badge } from "$lib/components/ui/badge";
+  import { Badge } from "#lib/components/ui/badge/index.js";
   import UsersTab from './UsersTab.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import PageHeader from '#lib/components/PageHeader.svelte';
+  import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 
   // ── Types ──────────────────────────────────────────────────
   interface Organization {

@@ -18,15 +18,15 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { setContext } from 'svelte';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-	import ServiceTypeBadge from '$lib/components/ServiceTypeBadge.svelte';
-	import { parseServiceRecord } from '$lib/serviceHub.js';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { cn } from '$lib/utils.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+	import ServiceTypeBadge from '#lib/components/ServiceTypeBadge.svelte';
+	import { parseServiceRecord } from '#lib/serviceHub.js';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Delete02Icon } from '@hugeicons/core-free-icons';
 

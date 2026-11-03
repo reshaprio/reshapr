@@ -17,23 +17,23 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import { parseArtifactRefList, type ArtifactRef } from '$lib/artifacts/index.js';
-	import { avatarColor, avatarInitials } from '$lib/avatarColor.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-	import ServiceTypeBadge from '$lib/components/ServiceTypeBadge.svelte';
-	import PlanOperationsView from '$lib/components/plan/PlanOperationsView.svelte';
-	import PlanCapabilitiesView from '$lib/components/plan/PlanCapabilitiesView.svelte';
-	import PlanBackendView from '$lib/components/plan/PlanBackendView.svelte';
-	import PlanClientAuthView from '$lib/components/plan/PlanClientAuthView.svelte';
-	import PlanAuditView from '$lib/components/plan/PlanAuditView.svelte';
-	import { auth } from '$lib/stores/auth.svelte.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { cn } from '$lib/utils.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import { parseArtifactRefList, type ArtifactRef } from '#lib/artifacts/index.js';
+	import { avatarColor, avatarInitials } from '#lib/avatarColor.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+	import ServiceTypeBadge from '#lib/components/ServiceTypeBadge.svelte';
+	import PlanOperationsView from '#lib/components/plan/PlanOperationsView.svelte';
+	import PlanCapabilitiesView from '#lib/components/plan/PlanCapabilitiesView.svelte';
+	import PlanBackendView from '#lib/components/plan/PlanBackendView.svelte';
+	import PlanClientAuthView from '#lib/components/plan/PlanClientAuthView.svelte';
+	import PlanAuditView from '#lib/components/plan/PlanAuditView.svelte';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		ApiGatewayIcon,

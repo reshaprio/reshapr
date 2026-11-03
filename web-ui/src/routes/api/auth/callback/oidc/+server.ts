@@ -15,7 +15,7 @@
  */
 
 import { redirect } from '@sveltejs/kit';
-import { setSessionCookie, extractUserProfile } from '$lib/server/auth.js';
+import { setSessionCookie, extractUserProfile } from '#lib/server/auth.js';
 import type { RequestHandler } from './$types.js';
 
 /**

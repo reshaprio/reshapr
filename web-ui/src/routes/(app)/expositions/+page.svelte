@@ -16,19 +16,19 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { apiClient, ApiError } from '$lib/api/client.js';
-	import { quotaEntry } from '$lib/dashboardStatsCompute.js';
-	import { avatarColor, avatarInitials } from '$lib/avatarColor.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import CreateExpositionDrawer from '$lib/components/exposition/CreateExpositionDrawer.svelte';
-	import OrganizationBadge from '$lib/components/OrganizationBadge.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import QuotaGauge, { type QuotaInfo } from '$lib/components/QuotaGauge.svelte';
-	import { auth } from '$lib/stores/auth.svelte.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Switch } from '$lib/components/ui/switch/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
+	import { quotaEntry } from '#lib/dashboardStatsCompute.js';
+	import { avatarColor, avatarInitials } from '#lib/avatarColor.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import CreateExpositionDrawer from '#lib/components/exposition/CreateExpositionDrawer.svelte';
+	import OrganizationBadge from '#lib/components/OrganizationBadge.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import QuotaGauge, { type QuotaInfo } from '#lib/components/QuotaGauge.svelte';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { ApiIcon, CloudServerIcon, Configuration01Icon, Copy01Icon, Link01Icon, McpServerIcon, Tick02Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 

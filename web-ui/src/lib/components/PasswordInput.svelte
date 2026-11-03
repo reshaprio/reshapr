@@ -15,11 +15,11 @@
   -->
 
 <script lang="ts">
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { ViewIcon, ViewOffSlashIcon } from '@hugeicons/core-free-icons';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '#lib/utils.js';
 
 	let {
 		value = $bindable(''),

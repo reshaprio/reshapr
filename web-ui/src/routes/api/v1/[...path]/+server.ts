@@ -15,8 +15,8 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { getCtrlUrl, getSessionToken } from '$lib/server/auth.js';
-import { sanitizePath, forbiddenPathResponse, proxyRequest } from '$lib/server/proxy.js';
+import { getCtrlUrl, getSessionToken } from '#lib/server/auth.js';
+import { sanitizePath, forbiddenPathResponse, proxyRequest } from '#lib/server/proxy.js';
 import type { RequestHandler } from './$types.js';
 
 /**

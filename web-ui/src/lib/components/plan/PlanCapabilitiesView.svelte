@@ -16,10 +16,10 @@
 
 <!-- Shared display of a configuration plan's capabilities (custom artifacts). -->
 <script lang="ts">
-	import { cn } from '$lib/utils.js';
+	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Wrench01Icon } from '@hugeicons/core-free-icons';
-	import type { ArtifactRef } from '$lib/artifacts/index.js';
+	import type { ArtifactRef } from '#lib/artifacts/index.js';
 	import { capabilityGroups, CAPABILITY_ICONS, CAPABILITY_STYLES } from './planView.js';
 
 	let {

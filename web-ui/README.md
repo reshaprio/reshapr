@@ -136,7 +136,7 @@ web-ui/
 ├── static/                       # Static assets
 ├── .env.example                  # Default environment variables
 ├── Dockerfile                    # Multi-stage Docker build
-├── svelte.config.js              # SvelteKit + adapter-node config
+├── vite.config.ts                # Vite + SvelteKit + adapter-node config
 ├── vite.config.ts                # Vite config
 └── tsconfig.json                 # TypeScript config
 ```

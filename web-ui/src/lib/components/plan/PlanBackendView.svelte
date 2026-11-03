@@ -16,7 +16,7 @@
 
 <!-- Shared display of a configuration plan's backend (endpoint, auth, timeout). -->
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { SquareLock01Icon, Key01Icon, Timer01Icon } from '@hugeicons/core-free-icons';
 	import { backendEndpointOf, backendTimeoutOf, type BackendSecret } from './planView.js';

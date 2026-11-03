@@ -17,7 +17,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { page } from '$app/state';
-	import { apiClient, ApiError } from '$lib/api/client.js';
+	import { apiClient, ApiError } from '#lib/api/client.js';
 	import {
 		buildTemplate,
 		getKindDefinition,
@@ -28,11 +28,11 @@
 		type ArtifactDetail,
 		type EditorMode,
 		type ReshaprArtifactKind
-	} from '$lib/artifacts/index.js';
-	import ApiErrorAlert from '$lib/components/ApiErrorAlert.svelte';
-	import CustomArtifactEditor from '$lib/components/CustomArtifactEditor.svelte';
-	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '$lib/serviceContext.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	} from '#lib/artifacts/index.js';
+	import ApiErrorAlert from '#lib/components/ApiErrorAlert.svelte';
+	import CustomArtifactEditor from '#lib/components/CustomArtifactEditor.svelte';
+	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
+	import { Button } from '#lib/components/ui/button/index.js';
 
 	const ctx = getContext<ServiceContextValue>(SERVICE_CONTEXT_KEY);
 
