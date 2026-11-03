@@ -1,6 +1,6 @@
 {
   "name": "@reshapr/reshapr-cli",
-  "version": "1.1.1-SNAPSHOT",
+  "version": "1.2.0-SNAPSHOT",
   "description": "CLI for reshapr.io - The MCP Gateway for AI-Native API Access!",
   "type": "module",
   "main": "src/cli.ts",
