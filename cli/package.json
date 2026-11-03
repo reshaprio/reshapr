@@ -48,7 +48,7 @@
     "jiti": "2.7.0",
     "typescript": "5.8.3",
     "typescript-eslint": "8.71.0",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "files": [
     "dist"
