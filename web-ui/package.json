@@ -47,5 +47,10 @@
   "imports": {
     "#lib": "./src/lib/index.js",
     "#lib/*": "./src/lib/*"
+  },
+  "overrides": {
+    "runed": {
+      "@sveltejs/kit": "$@sveltejs/kit"
+    }
   }
 }
