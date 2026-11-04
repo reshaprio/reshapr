@@ -163,6 +163,7 @@ enum ArtifactType {
   RESHAPR_CUSTOM_TOOLS = 7; // Reshapr custom tools
   RESHAPR_RESOURCES = 8; // Reshapr resources
   RESHAPR_TOOLS_OUTPUT_FILTERS = 9; // Reshapr tools output filters
+  RESHAPR_SKILLS = 10; // Reshapr skills (Skills over MCP)
 }
 
 // Artifact represents an artifact associated with a service.

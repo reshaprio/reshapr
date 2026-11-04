@@ -567,6 +567,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
          case RESHAPR_CUSTOM_TOOLS -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_CUSTOM_TOOLS;
          case RESHAPR_RESOURCES -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_RESOURCES;
          case RESHAPR_TOOLS_OUTPUT_FILTERS -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_TOOLS_OUTPUT_FILTERS;
+         case RESHAPR_SKILLS -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_SKILLS;
          default ->
                io.reshapr.discovery.exposition.v1.ArtifactType.JSON_FRAGMENT; // Default to JSON_FRAGMENT if unknown
       };

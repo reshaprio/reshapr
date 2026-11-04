@@ -106,6 +106,7 @@ public interface Mappers {
          @ValueMapping(source = "RESHAPR_CUSTOM_TOOLS", target = "RESHAPR_CUSTOM_TOOLS"),
          @ValueMapping(source = "RESHAPR_RESOURCES", target = "RESHAPR_RESOURCES"),
          @ValueMapping(source = "RESHAPR_TOOLS_OUTPUT_FILTERS", target = "RESHAPR_TOOLS_OUTPUT_FILTERS"),
+         @ValueMapping(source = "RESHAPR_SKILLS", target = "RESHAPR_SKILLS"),
          @ValueMapping(source = "UNRECOGNIZED", target = "JSON_FRAGMENT")
    })
    public ArtifactEntryType toArtifactEntryType(ArtifactType artifactType);
