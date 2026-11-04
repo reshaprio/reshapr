@@ -32,4 +32,7 @@ public interface ReshaprArtifactSchemas {
 
    String TOOLS_OUTPUT_FILTERS_KIND = "ToolsOutputFilters";
    String TOOLS_OUTPUT_FILTERS_VERSION_V1ALPHA1 = "reshapr.io/v1alpha1";
+
+   String SKILLS_KIND = "Skills";
+   String SKILLS_VERSION_V1ALPHA1 = "reshapr.io/v1alpha1";
 }

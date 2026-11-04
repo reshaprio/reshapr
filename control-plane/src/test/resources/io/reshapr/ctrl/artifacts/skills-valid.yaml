@@ -1,0 +1,10 @@
+apiVersion: reshapr.io/v1alpha1
+kind: Skills
+service:
+  name: Pastry API
+  version: 2.0.0
+skills:
+  pastry-ordering:
+    remoteContent: http://localhost:3040/skills/pastry-ordering
+    files:
+      - references/MENU.md

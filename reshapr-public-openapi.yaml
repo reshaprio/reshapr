@@ -967,6 +967,8 @@ components:
       - RESHAPR_PROMPTS
       - RESHAPR_CUSTOM_TOOLS
       - RESHAPR_RESOURCES
+      - RESHAPR_TOOLS_OUTPUT_FILTERS
+      - RESHAPR_SKILLS
       type: string
     ArtifactReference:
       description: Basic information about an Artifact in reShapr control plane

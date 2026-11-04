@@ -352,4 +352,22 @@ class ReshaprArtifactBuilderTest {
       // Capabilities are the filtered tool names.
       assertEquals(List.of("listPastries", "getPastry"), artifact.capabilities);
    }
+
+   @Test
+   void testValidParsingSkills() throws Exception {
+      File skillsFile = new File(getClass().getResource("/io/reshapr/ctrl/artifacts/skills-valid.yaml").getFile());
+
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("skills-valid.yaml", skillsFile).artifact();
+
+      assertEquals(ArtifactType.RESHAPR_SKILLS, artifact.type);
+      assertEquals(List.of("pastry-ordering"), artifact.capabilities);
+   }
+
+   @Test
+   void testInvalidParsingSkills() {
+      File skillsFile = new File(getClass().getResource("/io/reshapr/ctrl/artifacts/skills-invalid.yaml").getFile());
+
+      assertThrows(ReshaprArtifactException.class,
+            () -> ReshaprArtifactBuilder.parseArtifact("skills-invalid.yaml", skillsFile));
+   }
 }

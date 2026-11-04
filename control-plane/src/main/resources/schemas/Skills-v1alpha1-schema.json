@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reshapr.io/schemas/Skills-v1alpha1-schema.json",
+  "title": "The Skills JSON schema",
+  "description": "Skills is a specification for serving Agent Skills over MCP (io.modelcontextprotocol/skills extension).",
+  "required": [
+    "apiVersion",
+    "kind",
+    "service",
+    "skills"
+  ],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "title": "The apiVersion of Skills",
+      "const": "reshapr.io/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "title": "The Skills kind schema",
+      "const": "Skills"
+    },
+    "service": {
+      "type": "object",
+      "title": "The target Service for Skills",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of Service these skills relate to."
+        },
+        "version": {
+          "type": "string",
+          "title": "The version of API these skills relate to."
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "title": "The Service skills.",
+      "description": "The skills are defined with the skill name as key. The name must match the 'name' of the SKILL.md frontmatter.",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z0-9]+(-[a-z0-9]+)*$": {
+          "$ref": "#/definitions/skillItem"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "skillItem": {
+      "type": "object",
+      "title": "One skill definition",
+      "description": "A skill directory hosted on an HTTP(S) server. The gateway fetches SKILL.md and the declared files and serves them over MCP.",
+      "required": [
+        "remoteContent"
+      ],
+      "properties": {
+        "remoteContent": {
+          "type": "string",
+          "pattern": "^https?://",
+          "title": "The remote HTTP(S) URL of the skill directory (the one holding SKILL.md)."
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[^/\\s]+(/[^/\\s]+)*$",
+          "title": "Optional organizational prefix of the skill URI, without leading or trailing slash (e.g. 'acme/billing')."
+        },
+        "files": {
+          "type": "array",
+          "title": "Supporting files of the skill, as paths relative to the skill directory (SKILL.md is implicit).",
+          "items": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.)[^\\s]+$"
+          },
+          "uniqueItems": true
+        },
+        "_meta": {
+          "type": "object",
+          "title": "Optional metadata attached to the SKILL.md resource."
+        }
+      }
+    }
+  }
+}

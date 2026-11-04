@@ -62,14 +62,16 @@ public class ReshaprArtifactBuilder {
          "Prompts-reshapr.io/v1alpha1", "/schemas/Prompts-v1alpha1-schema.json",
          "CustomTools-reshapr.io/v1alpha1", "/schemas/CustomTools-v1alpha1-schema.json",
          "Resources-reshapr.io/v1alpha1", "/schemas/Resources-v1alpha1-schema.json",
-         "ToolsOutputFilters-reshapr.io/v1alpha1", "/schemas/ToolsOutputFilters-v1alpha1-schema.json"
+         "ToolsOutputFilters-reshapr.io/v1alpha1", "/schemas/ToolsOutputFilters-v1alpha1-schema.json",
+         "Skills-reshapr.io/v1alpha1", "/schemas/Skills-v1alpha1-schema.json"
    );
 
    private static final Map<String, ArtifactType> KIND_VERSIONS_TYPES = Map.of(
          "Prompts-reshapr.io/v1alpha1", ArtifactType.RESHAPR_PROMPTS,
          "CustomTools-reshapr.io/v1alpha1", ArtifactType.RESHAPR_CUSTOM_TOOLS,
          "Resources-reshapr.io/v1alpha1", ArtifactType.RESHAPR_RESOURCES,
-         "ToolsOutputFilters-reshapr.io/v1alpha1", ArtifactType.RESHAPR_TOOLS_OUTPUT_FILTERS
+         "ToolsOutputFilters-reshapr.io/v1alpha1", ArtifactType.RESHAPR_TOOLS_OUTPUT_FILTERS,
+         "Skills-reshapr.io/v1alpha1", ArtifactType.RESHAPR_SKILLS
    );
 
    private static final ObjectMapper SCHEMA_MAPPER = new ObjectMapper()
@@ -200,6 +202,7 @@ public class ReshaprArtifactBuilder {
             collectFieldNames(artifactNode.get("resourceTemplates"), capabilities);
          }
          case RESHAPR_TOOLS_OUTPUT_FILTERS -> collectFieldNames(artifactNode.get("filters"), capabilities);
+         case RESHAPR_SKILLS -> collectFieldNames(artifactNode.get("skills"), capabilities);
          default -> {
             // Non-custom artifact: no capabilities to extract.
          }

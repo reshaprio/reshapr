@@ -1,0 +1,8 @@
+apiVersion: reshapr.io/v1alpha1
+kind: Skills
+service:
+  name: Pastry API
+  version: 2.0.0
+skills:
+  Pastry_Ordering:
+    remoteContent: ftp://localhost/skills
