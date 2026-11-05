@@ -293,16 +293,16 @@ public class McpController {
       List<String> values = headers.getRequestHeader(McpSchema.HEADER_SESSION_ID);
       return values != null && !values.isEmpty()
             && values.getFirst() != null && !values.getFirst().isBlank();
-    }
+   }
 
-    /**
-     * Whether the given method is a handshake/negotiation method that runs before any session exists or any
-     * protocol version has been pinned ({@code server/discover} and {@code initialize}). These must bypass the
-     * session/protocol-version dispatch guard, otherwise version negotiation can never complete.
-     */
-    private static boolean isHandshakeMethod(String method) {
-       return McpSchema.METHOD_SERVER_DISCOVER.equals(method) || McpSchema.METHOD_INITIALIZE.equals(method);
-    }
+   /**
+    * Whether the given method is a handshake/negotiation method that runs before any session exists or any
+    * protocol version has been pinned ({@code server/discover} and {@code initialize}). These must bypass the
+    * session/protocol-version dispatch guard, otherwise version negotiation can never complete.
+    */
+   private static boolean isHandshakeMethod(String method) {
+      return McpSchema.METHOD_SERVER_DISCOVER.equals(method) || McpSchema.METHOD_INITIALIZE.equals(method);
+   }
 
    /** Return the MCP-Protocol-Version header value if present, or {@code null}. */
    @Nullable
@@ -535,6 +535,16 @@ public class McpController {
             result = handleResourceReadRequest(request, exposition,
                   McpProtocolDialect.forVersion(resolveProtocolVersion(headers)));
 
+         case McpSchema.METHOD_RESOURCES_DIRECTORY_READ ->
+            result = handleDirectoryReadRequest(request, exposition,
+                  McpProtocolDialect.forVersion(resolveProtocolVersion(headers)));
+
+         case McpSchema.METHOD_SKILLS_LIST ->
+            result = handleSkillsListRequest(request, exposition, resolveProtocolVersion(headers));
+
+         case McpSchema.METHOD_SKILLS_GET ->
+            result = handleSkillsGetRequest(request, exposition, resolveProtocolVersion(headers));
+
          case McpSchema.METHOD_TOOLS_LIST ->
             result = handleToolsListRequest(request, exposition,
                   McpProtocolDialect.forVersion(resolveProtocolVersion(headers)));
@@ -587,10 +597,7 @@ public class McpController {
    /** Handle the MCP server/discover request. */
    private McpHandlerResult handleServerDiscoverRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition) {
       ServiceEntry service = exposition.service();
-      McpSchema.ServerCapabilities serverCapabilities = new McpSchema.ServerCapabilities(null, null,
-            new McpSchema.ServerCapabilities.PromptCapabilities(false),
-            new McpSchema.ServerCapabilities.ResourceCapabilities(false, false),
-            new McpSchema.ServerCapabilities.ToolCapabilities(false));
+      McpSchema.ServerCapabilities serverCapabilities = buildServerCapabilities(exposition);
 
       McpSchema.Implementation serverInfo =
             new McpSchema.Implementation(service.name() + " MCP server", service.version());
@@ -623,10 +630,7 @@ public class McpController {
          McpSchema.ClientCapabilities clientCapabilities = initializeRequest.capabilities();
          McpSchema.Implementation clientInfo = initializeRequest.clientInfo();
 
-         McpSchema.ServerCapabilities serverCapabilities = new McpSchema.ServerCapabilities(null, null,
-               new McpSchema.ServerCapabilities.PromptCapabilities(false),
-               new McpSchema.ServerCapabilities.ResourceCapabilities(false, false),
-               new McpSchema.ServerCapabilities.ToolCapabilities(false));
+         McpSchema.ServerCapabilities serverCapabilities = buildServerCapabilities(exposition);
 
          McpSchema.JSONRPCResponse response = buildJSONRPCResponse(request,
                new McpSchema.InitializeResult(initializeRequest.protocolVersion(), serverCapabilities,
@@ -651,6 +655,19 @@ public class McpController {
       return new McpHandlerResult(buildJSONRPCError(request, McpSchema.ErrorCodes.INVALID_PARAMS,
             "Unsupported protocol version: " + initializeRequest.protocolVersion(),
             Map.of("supported", McpSchema.SUPPORTED_PROTOCOL_VERSIONS, "requested", initializeRequest.protocolVersion())), null);
+   }
+
+   /**
+    * Build the server capabilities of an exposition; the Skills extension is only declared when
+    * at least one Skills artifact is attached.
+    */
+   private McpSchema.ServerCapabilities buildServerCapabilities(ExpositionEntry exposition) {
+      Map<String, Object> extensions = buildMcpSkillBuilder(exposition).hasSkills()
+            ? Map.of(McpSchema.EXTENSION_SKILLS, Map.of("directoryRead", true)) : null;
+      return new McpSchema.ServerCapabilities(null, null,
+            new McpSchema.ServerCapabilities.PromptCapabilities(false),
+            new McpSchema.ServerCapabilities.ResourceCapabilities(false, false),
+            new McpSchema.ServerCapabilities.ToolCapabilities(false), extensions);
    }
 
    /** Handle the MCP prompt/list request. */
@@ -734,7 +751,16 @@ public class McpController {
       // Build a MCP Resource Builder based on available elements in registry.
       McpResourceBuilder builder = buildMcpResourceBuilder(exposition);
 
-      List<McpSchema.ResourceContents> contents = builder.readResource(resourceReadRequest, configuration);
+      // Skill files (skill:// URIs) are served by the Skills extension provider.
+      List<McpSchema.ResourceContents> contents = null;
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (resourceReadRequest.uri() != null && resourceReadRequest.uri().startsWith(McpSkillBuilder.SKILL_URI_SCHEME)
+            && skillBuilder.hasSkills()) {
+         contents = skillBuilder.readResource(resourceReadRequest.uri(), configuration);
+      }
+      if (contents == null) {
+         contents = builder.readResource(resourceReadRequest, configuration);
+      }
       if (contents == null) {
          // No resource matches the requested URI: return an in-band JSON-RPC error (HTTP 200) as
          // mandated by the MCP spec conformance checks (invalid params).
@@ -752,6 +778,65 @@ public class McpController {
             .build();
 
       return toMcpHandlerResult(request, result);
+   }
+
+   /** Handle the MCP skills/list request (Skills extension). Unsupported when no skills are attached. */
+   @Nullable
+   private McpHandlerResult handleSkillsListRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+         @Nullable String protocolVersion) {
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (!skillBuilder.hasSkills()) {
+         return null;
+      }
+      ConfigurationEntry configuration = exposition.configuration();
+      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
+      return toMcpHandlerResult(request, new McpSchema.ListSkillsResult(
+            modern ? "complete" : null,
+            skillBuilder.listSkills(configuration), null,
+            modern ? getCacheTtlMs(configuration) : null,
+            modern ? getCacheScope(configuration) : null));
+   }
+
+   /** Handle the MCP skills/get request (Skills extension). Unsupported when no skills are attached. */
+   @Nullable
+   private McpHandlerResult handleSkillsGetRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+         @Nullable String protocolVersion) {
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (!skillBuilder.hasSkills()) {
+         return null;
+      }
+      McpSchema.ReadResourceRequest getRequest = mapper.convertValue(request.params(),
+            new TypeReference<McpSchema.ReadResourceRequest>() {
+            });
+      McpSchema.SkillEntry skill = getRequest.uri() == null ? null
+            : skillBuilder.getSkill(getRequest.uri(), exposition.configuration());
+      if (skill == null) {
+         return toMcpHandlerResult(request, McpSchema.ErrorCodes.INVALID_PARAMS,
+               "Skill not found: " + getRequest.uri(), Map.of("uri", String.valueOf(getRequest.uri())));
+      }
+      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
+      return toMcpHandlerResult(request, new McpSchema.GetSkillResult(modern ? "complete" : null, skill));
+   }
+
+   /** Handle the MCP resources/directory/read request (Skills extension, {@code directoryRead}). */
+   @Nullable
+   private McpHandlerResult handleDirectoryReadRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+         McpProtocolDialect dialect) {
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (!skillBuilder.hasSkills()) {
+         return null;
+      }
+      McpSchema.ReadResourceRequest directoryRequest = mapper.convertValue(request.params(),
+            new TypeReference<McpSchema.ReadResourceRequest>() {
+            });
+      List<McpSchema.Resource> children = directoryRequest.uri() == null ? null
+            : skillBuilder.readDirectory(directoryRequest.uri(), exposition.configuration());
+      if (children == null) {
+         return toMcpHandlerResult(request, McpSchema.ErrorCodes.INVALID_PARAMS,
+               "Directory not found: " + directoryRequest.uri(), Map.of("uri", String.valueOf(directoryRequest.uri())));
+      }
+      boolean modern = dialect instanceof ModernProtocolDialect;
+      return toMcpHandlerResult(request, new McpSchema.ReadDirectoryResult(modern ? "complete" : null, children, null));
    }
 
    /**
@@ -852,7 +937,7 @@ public class McpController {
     * </ul>
     */
    private McpHandlerResult buildElicitationResult(McpSchema.JSONRPCRequest request,
-         ToolCallExecutor.ElicitationRequired elicitationRequired) {
+                                                   ToolCallExecutor.ElicitationRequired elicitationRequired) {
       if (MethodHandlingContext.isStateless()) {
          return toMcpHandlerResult(request, McpSchema.buildInputRequiredResult(
                elicitationRequired.elicitations(), elicitationRequired.requestState()));
@@ -896,7 +981,7 @@ public class McpController {
 
    private static McpSchema.JSONRPCResponse buildJSONRPCError(McpSchema.JSONRPCRequest request, int code, String message, Object data) {
       return new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION, request.id(), null,
-         new McpSchema.JSONRPCResponse.JSONRPCError(code, message, data));
+            new McpSchema.JSONRPCResponse.JSONRPCError(code, message, data));
    }
 
    /**
@@ -934,6 +1019,10 @@ public class McpController {
    private McpPromptBuilder buildMcpPromptBuilder(ExpositionEntry exposition) {
       return new ReshaprPromptsMcpPromptBuilder(exposition.service(),
             exposition.attachedArtifacts(), workCache, mapper);
+   }
+
+   private McpSkillBuilder buildMcpSkillBuilder(ExpositionEntry exposition) {
+      return new ReshaprSkillsMcpSkillBuilder(exposition.service(), exposition.attachedArtifacts(), workCache, proxyService);
    }
 
    private McpResourceBuilder buildMcpResourceBuilder(ExpositionEntry exposition) {
@@ -992,9 +1081,9 @@ public class McpController {
          Integer errorCode = null;
          if (result.isJSONRPCResponse()
                && result.message() instanceof McpSchema.JSONRPCResponse response
-                  && (response.error() != null    // We have a JSONRPCError.
-                     || (response.result() != null   // Or we have a result that may hold and error (such as CallToolResult)
-                           && response.result() instanceof McpSchema.CallToolResult callToolResult && callToolResult.isError()))) {
+               && (response.error() != null    // We have a JSONRPCError.
+               || (response.result() != null   // Or we have a result that may hold and error (such as CallToolResult)
+               && response.result() instanceof McpSchema.CallToolResult callToolResult && callToolResult.isError()))) {
             outcome = AuditEvent.OUTCOME_FAILURE;
             if (response.error() != null) {
                errorCode = response.error().code();

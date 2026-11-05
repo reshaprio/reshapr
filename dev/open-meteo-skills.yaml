@@ -1,0 +1,13 @@
+apiVersion: reshapr.io/v1alpha1
+kind: Skills
+service:
+  name: Open-Meteo APIs
+  version: '1.0'
+skills:
+  # The skill directory (SKILL.md + supporting files) is hosted on an HTTP server, for example:
+  #   cd dev/skills && python3 -m http.server 3040
+  # The gateway fetches the files and serves them as skill:// resources over MCP.
+  open-meteo-forecast:
+    remoteContent: http://localhost:3040/open-meteo-forecast
+    files:
+      - references/VARIABLES.md

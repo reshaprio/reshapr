@@ -112,6 +112,13 @@ public class McpSchema {
    public static final String METHOD_RESOURCES_TEMPLATES_LIST = "resources/templates/list";
    public static final String METHOD_RESOURCES_SUBSCRIBE = "resources/subscribe";
    public static final String METHOD_RESOURCES_UNSUBSCRIBE = "resources/unsubscribe";
+   public static final String METHOD_RESOURCES_DIRECTORY_READ = "resources/directory/read";
+
+   // Skills extension (SEP-2640).
+   public static final String EXTENSION_SKILLS = "io.modelcontextprotocol/skills";
+   public static final String METHOD_SKILLS_LIST = "skills/list";
+   public static final String METHOD_SKILLS_GET = "skills/get";
+   public static final String MIME_TYPE_DIRECTORY = "inode/directory";
 
    // Prompt Methods
    public static final String METHOD_PROMPTS_LIST = "prompts/list";
@@ -281,8 +288,13 @@ public class McpSchema {
          @JsonProperty("logging") LoggingCapabilities logging,
          @JsonProperty("prompts") PromptCapabilities prompts,
          @JsonProperty("resources") ResourceCapabilities resources,
-         @JsonProperty("tools") ToolCapabilities tools) {
+         @JsonProperty("tools") ToolCapabilities tools,
+         @JsonProperty("extensions") Map<String, Object> extensions) {
 
+      public ServerCapabilities(Map<String, Object> experimental, LoggingCapabilities logging,
+                                PromptCapabilities prompts, ResourceCapabilities resources, ToolCapabilities tools) {
+         this(experimental, logging, prompts, resources, tools, null);
+      }
 
       @JsonInclude(JsonInclude.Include.NON_ABSENT)
       public record LoggingCapabilities() {
@@ -527,6 +539,50 @@ public class McpSchema {
             @JsonProperty("ttlMs") Long ttlMs,
             @JsonProperty("cacheScope") String cacheScope) implements ReadResourceResult {
       }
+   }
+
+   /** One file of a skill, with its SHA-256 digest ({@code sha256:<hex>}) and raw size in bytes. */
+   @JsonInclude(JsonInclude.Include.NON_ABSENT)
+   public record SkillFile(
+         @JsonProperty("uri") String uri,
+         @JsonProperty("digest") String digest,
+         @JsonProperty("size") long size) {
+   }
+
+   /** A skill entry as returned by {@code skills/list} and {@code skills/get}. */
+   @JsonInclude(JsonInclude.Include.NON_ABSENT)
+   public record SkillEntry(
+         @JsonProperty("uri") String uri,
+         @JsonProperty("frontmatter") Map<String, Object> frontmatter,
+         @JsonProperty("resources") List<SkillFile> resources) {
+   }
+
+   /**
+    * Result of {@code skills/list}. {@code resultType}, {@code ttlMs} and {@code cacheScope} are only set
+    * for protocol versions {@code >= 2026-07-28} and omitted otherwise.
+    */
+   @JsonInclude(JsonInclude.Include.NON_ABSENT)
+   public record ListSkillsResult(
+         @JsonProperty("resultType") String resultType,
+         @JsonProperty("skills") List<SkillEntry> skills,
+         @JsonProperty("nextCursor") String nextCursor,
+         @JsonProperty("ttlMs") Long ttlMs,
+         @JsonProperty("cacheScope") String cacheScope) {
+   }
+
+   /** Result of {@code skills/get}; {@code resultType} is only set for modern protocol versions. */
+   @JsonInclude(JsonInclude.Include.NON_ABSENT)
+   public record GetSkillResult(
+         @JsonProperty("resultType") String resultType,
+         @JsonProperty("skill") SkillEntry skill) {
+   }
+
+   /** Result of {@code resources/directory/read}; {@code resultType} is only set for modern protocol versions. */
+   @JsonInclude(JsonInclude.Include.NON_ABSENT)
+   public record ReadDirectoryResult(
+         @JsonProperty("resultType") String resultType,
+         @JsonProperty("resources") List<Resource> resources,
+         @JsonProperty("nextCursor") String nextCursor) {
    }
 
    /**
