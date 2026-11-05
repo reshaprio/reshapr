@@ -70,10 +70,10 @@ reshapr run
 
 You should see a message like this:
 ```sh
-ℹ️  Resolved 'latest' to release '1.0.0'.
-ℹ️  Downloading compose file from https://raw.githubusercontent.com/reshaprio/reshapr/refs/tags/1.0.0/install/docker-compose-all-in-one.yml...
-✅ Compose file saved to /Users/<you>/.reshapr/docker-compose-1.0.0.yml
-ℹ️  Starting Reshapr containers (release: 1.0.0)...
+ℹ️  Resolved 'latest' to release '1.1.1'.
+ℹ️  Downloading compose file from https://raw.githubusercontent.com/reshaprio/reshapr/refs/tags/1.1.1/install/docker-compose-all-in-one.yml...
+✅ Compose file saved to /Users/<you>/.reshapr/docker-compose-1.1.1.yml
+ℹ️  Starting Reshapr containers (release: 1.1.1)...
 ✅ Reshapr containers started successfully.
 ```
 
@@ -95,7 +95,7 @@ You can try it out using an MCP client, [explore the CLI](https://reshapr.io/doc
 
 ## Build Status
 
-The current development version is `1.0.1-SNAPSHOT`.
+The current development version is `1.2.0-SNAPSHOT`.
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/reshaprio/reshapr/build-verify.yml?logo=github&style=for-the-badge)](https://github.com/reshaprio/reshapr/actions)
 
