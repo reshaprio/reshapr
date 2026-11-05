@@ -28,7 +28,8 @@ const PAYLOAD_BY_KIND: Record<ReshaprArtifactKind, string> = {
 	Prompts: 'prompts: {}',
 	CustomTools: 'customTools: {}',
 	Resources: 'resources: {}',
-	ToolsOutputFilters: 'filters: {}'
+	ToolsOutputFilters: 'filters: {}',
+	Skills: 'skills: {}'
 };
 
 /** Minimal YAML skeleton for creating a new custom artifact (used in release 4). */

@@ -18,7 +18,14 @@
 	import { getContext } from 'svelte';
 	import { SERVICE_CONTEXT_KEY, type ServiceContextValue } from '#lib/serviceContext.js';
 	import { apiClient } from '#lib/api/client.js';
-	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '#lib/artifacts/index.js';
+	import {
+		CAPABILITY_ICONS,
+		CAPABILITY_STYLES,
+		CUSTOM_ARTIFACT_TYPES,
+		parseArtifactRefList,
+		type ArtifactRef,
+		type ArtifactType
+	} from '#lib/artifacts/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import {
 		Tooltip,
@@ -33,9 +40,6 @@
 		Search01Icon,
 		ArrowRight01Icon,
 		Wrench01Icon,
-		BubbleChatIcon,
-		File01Icon,
-		FilterIcon
 	} from '@hugeicons/core-free-icons';
 
 	const ctx = getContext<ServiceContextValue>(SERVICE_CONTEXT_KEY);
@@ -134,32 +138,8 @@
 		items: { name: string; artifactName: string }[];
 	};
 
-	// Ordered custom artifact types with their display label.
-	const CUSTOM_TYPES: { type: ArtifactType; label: string }[] = [
-		{ type: 'RESHAPR_CUSTOM_TOOLS', label: 'Tools' },
-		{ type: 'RESHAPR_PROMPTS', label: 'Prompts' },
-		{ type: 'RESHAPR_RESOURCES', label: 'Resources' },
-		{ type: 'RESHAPR_TOOLS_OUTPUT_FILTERS', label: 'Output filters' }
-	];
-
-	// Distinctive icon per artifact type.
-	const CAPABILITY_ICONS: Record<string, typeof Wrench01Icon> = {
-		RESHAPR_CUSTOM_TOOLS: Wrench01Icon,
-		RESHAPR_PROMPTS: BubbleChatIcon,
-		RESHAPR_RESOURCES: File01Icon,
-		RESHAPR_TOOLS_OUTPUT_FILTERS: FilterIcon
-	};
-
-	// Color-coded pill per artifact type (mirrors the operations method styling).
-	const CAPABILITY_STYLES: Record<string, string> = {
-		RESHAPR_CUSTOM_TOOLS: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400',
-		RESHAPR_PROMPTS: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400',
-		RESHAPR_RESOURCES: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',
-		RESHAPR_TOOLS_OUTPUT_FILTERS: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
-	};
-
 	const capabilityGroups = $derived.by<CapabilityGroup[]>(() =>
-		CUSTOM_TYPES.map(({ type, label }) => {
+		CUSTOM_ARTIFACT_TYPES.map(({ type, capabilityLabel: label }) => {
 			const items = artifacts
 				.filter((a) => a.type === type && !a.mainArtifact)
 				.flatMap((a) => a.capabilities.map((name) => ({ name, artifactName: a.name })));

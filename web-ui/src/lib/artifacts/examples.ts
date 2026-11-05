@@ -46,7 +46,8 @@ const PAYLOAD_ROOT_KEYS_BY_KIND: Record<ReshaprArtifactKind, string[]> = {
 	Prompts: ['prompts'],
 	CustomTools: ['customTools'],
 	Resources: ['resources', 'resourceTemplates'],
-	ToolsOutputFilters: ['filters']
+	ToolsOutputFilters: ['filters'],
+	Skills: ['skills']
 };
 
 function defaultRootKey(kind: ReshaprArtifactKind): string {
@@ -399,11 +400,29 @@ const TOOLS_OUTPUT_FILTERS_EXAMPLES: ArtifactExample[] = [
 	}
 ];
 
+const SKILLS_EXAMPLES: ArtifactExample[] = [
+	{
+		id: 'skills-remote-skill',
+		label: 'Simple Skill with files',
+		description:
+			'Serve an Agent Skill directory over MCP. The gateway fetches SKILL.md and the listed files from remoteContent.',
+		entryKey: 'pdf-processing',
+		entry: `  # An Agent Skill hosted on an HTTP server, SKILL.md file is required and implied.
+  pdf-processing:
+    remoteContent: http://localhost:3040/skills/pdf-processing
+    files:
+      - references/FORMS.md
+      - scripts/extract.py
+`
+	}
+];
+
 const EXAMPLES_BY_KIND: Record<ReshaprArtifactKind, ArtifactExample[]> = {
 	Prompts: PROMPTS_EXAMPLES,
 	CustomTools: CUSTOM_TOOLS_EXAMPLES,
 	Resources: RESOURCES_EXAMPLES,
-	ToolsOutputFilters: TOOLS_OUTPUT_FILTERS_EXAMPLES
+	ToolsOutputFilters: TOOLS_OUTPUT_FILTERS_EXAMPLES,
+	Skills: SKILLS_EXAMPLES
 };
 
 /** The curated examples available for a given artifact kind (may be empty). */

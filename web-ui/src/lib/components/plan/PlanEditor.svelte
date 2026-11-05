@@ -29,16 +29,19 @@
 	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { Textarea } from '#lib/components/ui/textarea/index.js';
 	import * as Select from '#lib/components/ui/select/index.js';
-	import { parseArtifactRefList, type ArtifactRef, type ArtifactType } from '#lib/artifacts/index.js';
+	import {
+		CAPABILITY_ICONS,
+		CAPABILITY_STYLES,
+		CUSTOM_ARTIFACT_TYPES,
+		parseArtifactRefList,
+		type ArtifactRef,
+		type ArtifactType
+	} from '#lib/artifacts/index.js';
 	import { parseOperationsList, formatOperationsList } from '#lib/operationsList.js';
 	import { cn } from '#lib/utils.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		Search01Icon,
-		Wrench01Icon,
-		BubbleChatIcon,
-		File01Icon,
-		FilterIcon,
 		ArrowRight01Icon,
 		Copy01Icon,
 		Tick02Icon,
@@ -211,31 +214,8 @@
 	// Custom artifacts (non-main) grouped by type for the capability selector.
 	type ArtifactGroup = { type: ArtifactType; label: string; items: ArtifactRef[] };
 
-	const CUSTOM_TYPES: { type: ArtifactType; label: string }[] = [
-		{ type: 'RESHAPR_CUSTOM_TOOLS', label: 'Custom tools' },
-		{ type: 'RESHAPR_PROMPTS', label: 'Prompts' },
-		{ type: 'RESHAPR_RESOURCES', label: 'Resources' },
-		{ type: 'RESHAPR_TOOLS_OUTPUT_FILTERS', label: 'Output filters' }
-	];
-
-	const CAPABILITY_ICONS: Record<string, typeof Wrench01Icon> = {
-		RESHAPR_CUSTOM_TOOLS: Wrench01Icon,
-		RESHAPR_PROMPTS: BubbleChatIcon,
-		RESHAPR_RESOURCES: File01Icon,
-		RESHAPR_TOOLS_OUTPUT_FILTERS: FilterIcon
-	};
-
-	const CAPABILITY_STYLES: Record<string, string> = {
-		RESHAPR_CUSTOM_TOOLS: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400',
-		RESHAPR_PROMPTS: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400',
-		RESHAPR_RESOURCES:
-			'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',
-		RESHAPR_TOOLS_OUTPUT_FILTERS:
-			'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
-	};
-
 	const artifactGroups = $derived.by<ArtifactGroup[]>(() =>
-		CUSTOM_TYPES.map(({ type, label }) => ({
+		CUSTOM_ARTIFACT_TYPES.map(({ type, label }) => ({
 			type,
 			label,
 			items: artifacts.filter((a) => a.type === type && !a.mainArtifact)

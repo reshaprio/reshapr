@@ -737,7 +737,8 @@ export const VALIDATORS_BY_KIND: Record<ReshaprArtifactKind, Validator[]> = {
 		customToolsScriptAllowlistValidator
 	],
 	Resources: [],
-	ToolsOutputFilters: [toolsOutputFiltersReferencesValidator]
+	ToolsOutputFilters: [toolsOutputFiltersReferencesValidator],
+	Skills: []
 };
 
 /** Whether a given kind has any custom validators wired up. */

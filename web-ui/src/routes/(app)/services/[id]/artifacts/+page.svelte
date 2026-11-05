@@ -19,6 +19,8 @@
 	import { apiClient, ApiError } from '#lib/api/client.js';
 	import {
 		artifactTypeLabel,
+		CAPABILITY_ICONS,
+		CAPABILITY_STYLES,
 		EDITABLE_KINDS,
 		isEditableArtifactType,
 		matchesTypeFilter,
@@ -50,33 +52,11 @@
 		MoreVerticalIcon,
 		ViewIcon,
 		PencilEdit02Icon,
-		Wrench01Icon,
-		BubbleChatIcon,
-		File01Icon,
-		FilterIcon,
 		RefreshIcon,
 		Link01Icon
 	} from '@hugeicons/core-free-icons';
 
 	const ctx = getContext<ServiceContextValue>(SERVICE_CONTEXT_KEY);
-
-	// Distinctive icon per custom artifact type (mirrors the overview Capabilities section).
-	const TYPE_ICONS: Record<string, typeof Wrench01Icon> = {
-		RESHAPR_CUSTOM_TOOLS: Wrench01Icon,
-		RESHAPR_PROMPTS: BubbleChatIcon,
-		RESHAPR_RESOURCES: File01Icon,
-		RESHAPR_TOOLS_OUTPUT_FILTERS: FilterIcon
-	};
-
-	// Color-coded pill per artifact type (mirrors the overview Capabilities section styling).
-	const CAPABILITY_STYLES: Record<string, string> = {
-		RESHAPR_CUSTOM_TOOLS: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400',
-		RESHAPR_PROMPTS: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400',
-		RESHAPR_RESOURCES:
-			'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',
-		RESHAPR_TOOLS_OUTPUT_FILTERS:
-			'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
-	};
 
 	let artifacts = $state<ArtifactRef[]>([]);
 	let error = $state<string | null>(null);
@@ -284,7 +264,7 @@
 							</div>
 						</Table.Cell>
 						<Table.Cell>
-							{@const TypeIcon = TYPE_ICONS[artifact.type]}
+							{@const TypeIcon = CAPABILITY_ICONS[artifact.type]}
 							<span class="flex items-center gap-2 text-sm">
 								{#if TypeIcon}
 									<HugeiconsIcon icon={TypeIcon} size={16} class="text-muted-foreground shrink-0" />

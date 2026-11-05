@@ -25,13 +25,15 @@ export type ArtifactType =
 	| 'RESHAPR_PROMPTS'
 	| 'RESHAPR_CUSTOM_TOOLS'
 	| 'RESHAPR_RESOURCES'
-	| 'RESHAPR_TOOLS_OUTPUT_FILTERS';
+	| 'RESHAPR_TOOLS_OUTPUT_FILTERS'
+	| 'RESHAPR_SKILLS';
 
 export type ReshaprArtifactKind =
 	| 'Prompts'
 	| 'CustomTools'
 	| 'Resources'
-	| 'ToolsOutputFilters';
+	| 'ToolsOutputFilters'
+	| 'Skills';
 
 export type EditorMode = 'create' | 'edit' | 'view';
 

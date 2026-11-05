@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+import {
+	BubbleChatIcon,
+	File01Icon,
+	FilterIcon,
+	SparklesIcon,
+	Wrench01Icon
+} from '@hugeicons/core-free-icons';
 import type { ArtifactType, ArtifactTypeFilter, ReshaprArtifactKind } from './types.js';
 
 export type KindDefinition = {
@@ -53,8 +60,75 @@ export const EDITABLE_KINDS: KindDefinition[] = [
 		label: 'Tools output filters',
 		schemaPath: '/schemas/ToolsOutputFilters-v1alpha1-schema.json',
 		isEditable: true
+	},
+	{
+		kind: 'Skills',
+		artifactType: 'RESHAPR_SKILLS',
+		label: 'Skills',
+		schemaPath: '/schemas/Skills-v1alpha1-schema.json',
+		isEditable: true
 	}
 ];
+
+export type CustomArtifactDisplay = {
+	type: ArtifactType;
+	/** Label used in artifact selectors. */
+	label: string;
+	/** Label used for the capabilities group of this artifact type. */
+	capabilityLabel: string;
+	icon: typeof Wrench01Icon;
+	/** Color-coded pill classes. */
+	style: string;
+};
+
+/** Single source of truth (display order, labels, icon, style) for custom artifact types. */
+export const CUSTOM_ARTIFACT_TYPES = [
+	{
+		type: 'RESHAPR_CUSTOM_TOOLS',
+		label: 'Custom tools',
+		capabilityLabel: 'Tools',
+		icon: Wrench01Icon,
+		style: 'bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400'
+	},
+	{
+		type: 'RESHAPR_PROMPTS',
+		label: 'Prompts',
+		capabilityLabel: 'Prompts',
+		icon: BubbleChatIcon,
+		style: 'bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400'
+	},
+	{
+		type: 'RESHAPR_RESOURCES',
+		label: 'Resources',
+		capabilityLabel: 'Resources',
+		icon: File01Icon,
+		style: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400'
+	},
+	{
+		type: 'RESHAPR_TOOLS_OUTPUT_FILTERS',
+		label: 'Output filters',
+		capabilityLabel: 'Output filters',
+		icon: FilterIcon,
+		style: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400'
+	},
+	{
+		type: 'RESHAPR_SKILLS',
+		label: 'Skills',
+		capabilityLabel: 'Skills',
+		icon: SparklesIcon,
+		style: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-400'
+	}
+] as const satisfies readonly CustomArtifactDisplay[];
+
+export type CustomArtifactType = (typeof CUSTOM_ARTIFACT_TYPES)[number]['type'];
+
+export const CAPABILITY_ICONS = Object.fromEntries(
+	CUSTOM_ARTIFACT_TYPES.map((d) => [d.type, d.icon])
+) as Partial<Record<ArtifactType, typeof Wrench01Icon>>;
+
+export const CAPABILITY_STYLES = Object.fromEntries(
+	CUSTOM_ARTIFACT_TYPES.map((d) => [d.type, d.style])
+) as Partial<Record<ArtifactType, string>>;
 
 const KIND_BY_TYPE = new Map(
 	EDITABLE_KINDS.map((def) => [def.artifactType, def] as const)
@@ -70,7 +144,8 @@ export const ARTIFACT_TYPE_LABELS: Record<ArtifactType, string> = {
 	RESHAPR_PROMPTS: 'Prompts',
 	RESHAPR_CUSTOM_TOOLS: 'Custom tools',
 	RESHAPR_RESOURCES: 'Resources',
-	RESHAPR_TOOLS_OUTPUT_FILTERS: 'Tools output filters'
+	RESHAPR_TOOLS_OUTPUT_FILTERS: 'Tools output filters',
+	RESHAPR_SKILLS: 'Skills'
 };
 
 export const TYPE_FILTER_OPTIONS: { value: ArtifactTypeFilter; label: string }[] = [

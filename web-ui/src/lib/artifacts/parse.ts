@@ -31,7 +31,8 @@ const ARTIFACT_TYPES = new Set<string>([
 	'RESHAPR_PROMPTS',
 	'RESHAPR_CUSTOM_TOOLS',
 	'RESHAPR_RESOURCES',
-	'RESHAPR_TOOLS_OUTPUT_FILTERS'
+	'RESHAPR_TOOLS_OUTPUT_FILTERS',
+	'RESHAPR_SKILLS'
 ]);
 
 function parseArtifactType(value: unknown): ArtifactType {
@@ -101,5 +102,6 @@ function normalizeKind(value: unknown): ReshaprArtifactKind | null {
 		return value;
 	}
 	if (value === 'ToolsOutputFilters') return 'ToolsOutputFilters';
+	if (value === 'Skills') return 'Skills';
 	return null;
 }

@@ -21,6 +21,7 @@ import customToolsSchema from '#lib/schemas/CustomTools-v1alpha1-schema.json';
 import promptsSchema from '#lib/schemas/Prompts-v1alpha1-schema.json';
 import resourcesSchema from '#lib/schemas/Resources-v1alpha1-schema.json';
 import toolsOutputFiltersSchema from '#lib/schemas/ToolsOutputFilters-v1alpha1-schema.json';
+import skillsSchema from '#lib/schemas/Skills-v1alpha1-schema.json';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -28,7 +29,8 @@ const SCHEMA_BY_PATH: Record<string, Record<string, unknown>> = {
 	'/schemas/Prompts-v1alpha1-schema.json': promptsSchema,
 	'/schemas/CustomTools-v1alpha1-schema.json': customToolsSchema,
 	'/schemas/Resources-v1alpha1-schema.json': resourcesSchema,
-	'/schemas/ToolsOutputFilters-v1alpha1-schema.json': toolsOutputFiltersSchema
+	'/schemas/ToolsOutputFilters-v1alpha1-schema.json': toolsOutputFiltersSchema,
+	'/schemas/Skills-v1alpha1-schema.json': skillsSchema
 };
 
 /** Inline local `#/…` refs so monaco-yaml sees properties under patternProperties. */
@@ -74,7 +76,9 @@ export function resolveLocalRefs<T extends Record<string, unknown>>(schema: T): 
 /**
  * monaco-yaml / yaml-language-server complete nested keys from `properties` and
  * `additionalProperties`, not from `patternProperties`. Reshapr maps use
- * `patternProperties: { "^.": … }` for dynamic keys (e.g. prompt names).
+ * a single `patternProperties` entry for dynamic keys (e.g. prompt or skill names). The
+ * key pattern itself is not enforced in the editor (the control plane still does), but the
+ * entry must replace `additionalProperties: false`, otherwise every key is rejected.
  */
 export function promotePatternProperties<T extends JsonValue>(node: T): T {
 	if (node === null || typeof node !== 'object') return node;
@@ -94,8 +98,8 @@ export function promotePatternProperties<T extends JsonValue>(node: T): T {
 	const patternProps = obj.patternProperties;
 	if (patternProps && typeof patternProps === 'object' && !Array.isArray(patternProps)) {
 		const patterns = Object.keys(patternProps);
-		if (patterns.length === 1 && patterns[0] === '^.') {
-			const valueSchema = patternProps['^.'];
+		if (patterns.length === 1) {
+			const valueSchema = patternProps[patterns[0]];
 			if (valueSchema && typeof valueSchema === 'object') {
 				out.additionalProperties = promotePatternProperties(valueSchema);
 			}
