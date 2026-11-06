@@ -296,8 +296,8 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
       for (String relativePath : definition.allFiles()) {
          BackendResponse response = fetch(definition, relativePath, configuration);
          if (response == null) {
-            logger.warnf("Skill '%s' of service '%s' is skipped: cannot fetch '%s'", definition.name(),
-                  service.id(), relativePath);
+            logger.warnf("Skill '%s' of service '%s' is skipped: cannot fetch '%s' from '%s'", definition.name(),
+                  service.id(), relativePath, definition.remoteUrl(relativePath));
             return null;
          }
          byte[] content = response.content() != null ? response.content() : new byte[0];
@@ -335,13 +335,15 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
          BackendResponse response = proxyService.callBackend(configuration,
                URI.create(definition.remoteUrl(relativePath)), "GET", Collections.emptyMap(), null);
          if (response == null || response.status() < 200 || response.status() >= 300) {
-            logger.debugf("Remote skill file '%s' returned status %s", definition.remoteUrl(relativePath),
-                  response != null ? response.status() : null);
+            logger.warnf("Skill '%s' of service '%s': remote file '%s' returned HTTP status %s",
+                  definition.name(), service.id(), definition.remoteUrl(relativePath),
+                  response != null ? response.status() : "no response");
             return null;
          }
          return response;
       } catch (Exception e) {
-         logger.errorf(e, "Cannot fetch remote skill file '%s'", definition.remoteUrl(relativePath));
+         logger.warnf(e, "Skill '%s' of service '%s': cannot fetch remote file '%s'", definition.name(),
+               service.id(), definition.remoteUrl(relativePath));
          return null;
       }
    }
