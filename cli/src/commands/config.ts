@@ -17,7 +17,7 @@ import { program } from "commander";
 import inquirer from 'inquirer';
 import { Logger } from "../utils/logger.js";
 import { ConfigUtil } from "../utils/config.js";
-import { openUpdateEditor } from "../utils/editor.js";
+import { openUpdateEditor, readInlineDefinition, applyMergePatch } from "../utils/editor.js";
 import { Context } from "../utils/context.js";
 import { CLI_LABEL } from '../constants.js';
 import type { ConfigurationPlan, HeaderPolicy, HeaderRename, HeaderRules, ToolExposureMode } from '../types/models.js';
@@ -296,8 +296,11 @@ configCommand.command('create-oauth <name>')
   });
 
 configCommand.command('update <id>')
-  .description('Update configuration plan by ID')
-  .action(async (id: string) => {
+  .description('Update configuration plan by ID (opens an editor unless --patch, --file or --data is provided)')
+  .option('-f, --file <path>', 'Path to a JSON file with the complete definition (\'-\' for stdin)')
+  .option('-d, --data <json>', 'Inline JSON with the complete definition')
+  .option('-p, --patch <json>', 'Inline JSON merge patch (RFC 7396) applied on the current definition; null removes a property')
+  .action(async (id: string, options: { file?: string, data?: string, patch?: string }) => {
     try {
       // First, fetch the current configuration plan
       const response = await fetch(`${ConfigUtil.config.server}/api/v1/configurationPlans/${id}`, {
@@ -313,9 +316,8 @@ configCommand.command('update <id>')
       }
 
       const config: ConfigurationPlan = await response.json();
-      Logger.info(`Opening editor for configuration plan: ${config.name}`);
-      
-      await openUpdateEditor(config, async (modifiedConfig: ConfigurationPlan) => {
+
+      const applyUpdate = async (modifiedConfig: ConfigurationPlan) => {
         // Enforce properties that are immutable.
         modifiedConfig.id = config.id; // Ensure the ID remains the same.
         modifiedConfig.organizationId = config.organizationId; // Ensure the organization ID remains the same.
@@ -335,7 +337,19 @@ configCommand.command('update <id>')
         }
 
         Logger.success(`Configuration plan ${id} updated successfully.`);
-      });
+      };
+
+      if (options.patch && (options.file || options.data)) {
+        throw new Error('Option --patch cannot be combined with --file or --data');
+      }
+      if (options.patch) {
+        await applyUpdate(applyMergePatch(config, options.patch));
+      } else if (options.file || options.data) {
+        await applyUpdate(await readInlineDefinition<ConfigurationPlan>(options));
+      } else {
+        Logger.info(`Opening editor for configuration plan: ${config.name}`);
+        await openUpdateEditor(config, applyUpdate);
+      }
     } catch (error) {
       Logger.error('Updating configuration plan failed: ' + (error as Error).message);
       process.exit(1);

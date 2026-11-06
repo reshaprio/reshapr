@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import { program } from "commander";
 import { Logger } from "../utils/logger.js";
 import { ConfigUtil } from "../utils/config.js";
-import { openUpdateEditor } from "../utils/editor.js";
+import { openUpdateEditor, readInlineDefinition, applyMergePatch } from "../utils/editor.js";
 import { Context } from '../utils/context.js';
 import { CLI_LABEL } from '../constants.js';
 import type { Secret, SecretAuthMethod } from '../types/models.js';
@@ -319,7 +319,11 @@ secretCommand.command('create-client-credentials <name>')
 /** Update secret by ID */
 secretCommand.command('update <id>')
   .description('Update a secret by ID')
-  .action(async (id) => {
+  .description('Update a secret by ID (opens an editor unless --patch, --file or --data is provided)')
+  .option('-f, --file <path>', 'Path to a JSON file with the complete definition (\'-\' for stdin)')
+  .option('-d, --data <json>', 'Inline JSON with the complete definition')
+  .option('-p, --patch <json>', 'Inline JSON merge patch (RFC 7396) applied on the current definition; null removes a property')
+  .action(async (id: string, options: { file?: string, data?: string, patch?: string }) => {
     try {
       // First, fetch the current secret
       const response = await fetch(`${ConfigUtil.config.server}/api/v1/secrets/${id}`, {
@@ -335,9 +339,8 @@ secretCommand.command('update <id>')
       }
 
       const secret = await response.json();
-      Logger.info(`Opening editor for secret: ${secret.name}`);
 
-      await openUpdateEditor(secret, async (modifiedSecret: Secret) => {
+      const applyUpdate = async (modifiedSecret: Secret) => {
         // Enforce properties that are immutable.
         modifiedSecret.id = secret.id; // Ensure the ID remains the same.
         modifiedSecret.organizationId = secret.organizationId; // Ensure the organization ID remains the same.
@@ -357,7 +360,19 @@ secretCommand.command('update <id>')
         }
 
         Logger.success(`Secret updated successfully: ${id}`);
-      });
+      };
+
+      if (options.patch && (options.file || options.data)) {
+        throw new Error('Option --patch cannot be combined with --file or --data');
+      }
+      if (options.patch) {
+        await applyUpdate(applyMergePatch(secret, options.patch));
+      } else if (options.file || options.data) {
+        await applyUpdate(await readInlineDefinition<Secret>(options));
+      } else {
+        Logger.info(`Opening editor for secret: ${secret.name}`);
+        await openUpdateEditor(secret, applyUpdate);
+      }
 
     } catch (error) {
       Logger.error('Updating secret failed: ' + (error as Error).message);
