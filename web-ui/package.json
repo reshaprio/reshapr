@@ -16,7 +16,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@hugeicons/core-free-icons": "4.3.5",
+    "@hugeicons/core-free-icons": "4.4.0",
     "@hugeicons/svelte": "1.1.2",
     "@sveltejs/kit": "3.0.0",
     "bits-ui": "2.18.1",
