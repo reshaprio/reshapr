@@ -17,6 +17,7 @@ import { Command } from "commander";
 
 import { Logger } from "../utils/logger.js";
 import { runDockerCompose, type ContainerEngine } from '../utils/containers.js';
+import { appleContainerStatus } from '../utils/apple-container.js';
 import { CLI_LABEL } from '../constants.js';
 import { readRunState } from './run.js';
 
@@ -31,6 +32,10 @@ export const statusCommand = new Command('status')
 
     const engine: ContainerEngine = (state.engine as ContainerEngine) ?? 'docker';
     Logger.info(`${CLI_LABEL} containers (release: ${state.release}, engine: ${engine}, started at: ${state.startedAt})`);
+    if (engine === 'container') {
+      Logger.log(appleContainerStatus());
+      return;
+    }
     const exitCode = await runDockerCompose(['ps'], state.composeFiles, engine);
 
     if (exitCode !== 0) {

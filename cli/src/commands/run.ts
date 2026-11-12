@@ -20,6 +20,7 @@ import * as path from 'node:path';
 import { Command } from "commander";
 import { Logger } from "../utils/logger.js";
 import { runDockerCompose, resolveContainerEngine } from '../utils/containers.js';
+import { startAppleContainerStack } from '../utils/apple-container.js';
 import { CLI_NAME, CLI_LABEL } from '../constants.js';
 
 const GITHUB_REPO = 'reshaprio/reshapr';
@@ -35,7 +36,7 @@ const RUN_STATE_FILE = path.join(RESHAPR_DIR, 'run-state.json');
 export const runCommand = new Command('run')
   .description(`Start ${CLI_LABEL} locally using Docker Compose`)
   .option('-r, --release <release>', 'Release of the containers to run', 'latest')
-  .option('-e, --engine <engine>', 'Container engine to use (docker or podman)')
+  .option('-e, --engine <engine>', 'Container engine to use (docker, podman or container)')
   .option('--ui', 'Enable and deploy the web ui addon')
   .action(async (options) => {
     let release: string = options.release;
@@ -45,6 +46,11 @@ export const runCommand = new Command('run')
     if (release === 'latest') {
       release = await resolveLatestRelease();
       Logger.info(`Resolved 'latest' to release '${release}'.`);
+    }
+
+    if (engine === 'container') {
+      await runOnAppleContainer(release, options.ui === true);
+      return;
     }
 
     const composeFile = getComposeFilePath(release);
@@ -83,6 +89,34 @@ export const runCommand = new Command('run')
       Logger.info(`The web UI should be available at http://localhost:3333 once the containers are ready.`);
     }
   });
+
+// apple/container has no Compose: the stack is started with `container run`. The UI admin API key is
+// read from the UI addon compose file so that it stays in sync with the release.
+async function runOnAppleContainer(release: string, ui: boolean): Promise<void> {
+  let uiAdminApiKey: string | undefined;
+  if (ui) {
+    const uiAddonFile = getUiAddonFilePath(release);
+    if (!fs.existsSync(uiAddonFile)) {
+      await downloadComposeFile(release, uiAddonFile, UI_ADDON_REMOTE_PATH);
+    }
+    uiAdminApiKey = /RESHAPR_ADMIN_API_KEY=(\S+)/.exec(fs.readFileSync(uiAddonFile, 'utf-8'))?.[1];
+  }
+
+  Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: container)...`);
+  try {
+    await startAppleContainerStack({ release, ui, uiAdminApiKey });
+  } catch (err) {
+    Logger.error((err as Error).message);
+    process.exit(1);
+  }
+
+  saveRunState(release, [], 'container');
+  Logger.success(`${CLI_LABEL} containers started successfully.`);
+  Logger.info('Control plane: http://localhost:5555, gateway: http://localhost:7777');
+  if (ui) {
+    Logger.info('The web UI is available at http://localhost:3333');
+  }
+}
 
 function getComposeFilePath(release: string): string {
   return path.join(RESHAPR_DIR, `docker-compose-${release}.yml`);

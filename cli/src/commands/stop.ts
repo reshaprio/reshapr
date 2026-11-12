@@ -17,6 +17,7 @@ import { Command } from "commander";
 
 import { Logger } from "../utils/logger.js";
 import { runDockerCompose, type ContainerEngine } from '../utils/containers.js';
+import { stopAppleContainerStack } from '../utils/apple-container.js';
 import { CLI_LABEL } from '../constants.js';
 import { readRunState, removeRunState } from './run.js';
 
@@ -32,6 +33,12 @@ export const stopCommand = new Command('stop')
 
     const engine: ContainerEngine = (state.engine as ContainerEngine) ?? 'docker';
     Logger.info(`Stopping ${CLI_LABEL} containers (release: ${state.release}, engine: ${engine})...`);
+    if (engine === 'container') {
+      stopAppleContainerStack();
+      removeRunState();
+      Logger.success(`${CLI_LABEL} containers stopped successfully.`);
+      return;
+    }
     const exitCode = await runDockerCompose(['down'], state.composeFiles, engine);
 
     if (exitCode !== 0) {

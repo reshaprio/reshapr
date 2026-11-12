@@ -17,7 +17,7 @@ import { spawn, execFileSync } from 'node:child_process';
 
 import { Logger } from "./logger.js";
 
-export type ContainerEngine = 'docker' | 'podman';
+export type ContainerEngine = 'docker' | 'podman' | 'container';
 
 /**
  * Check whether a given binary is available on the system PATH.
@@ -34,7 +34,7 @@ function isCommandAvailable(command: string): boolean {
 /**
  * Detect the container engine to use.
  *  - If the user explicitly chose one via `--engine`, validate it is available and return it.
- *  - Otherwise, try `docker` first, then fall back to `podman`.
+ *  - Otherwise, try `docker` first, then `podman`, then `container` (apple/container).
  *  - Exit with an error if no engine is found.
  */
 export function resolveContainerEngine(explicit?: string): ContainerEngine {
@@ -58,7 +58,12 @@ export function resolveContainerEngine(explicit?: string): ContainerEngine {
     return 'podman';
   }
 
-  Logger.error('No container engine found. Please install docker or podman.');
+  if (isCommandAvailable('container')) {
+    Logger.info('Detected container engine: container (apple/container)');
+    return 'container';
+  }
+
+  Logger.error('No container engine found. Please install docker, podman or apple/container.');
   process.exit(1);
 }
 
