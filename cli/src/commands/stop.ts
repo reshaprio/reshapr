@@ -33,8 +33,8 @@ export const stopCommand = new Command('stop')
 
     const engine: ContainerEngine = (state.engine as ContainerEngine) ?? 'docker';
     Logger.info(`Stopping ${CLI_LABEL} containers (release: ${state.release}, engine: ${engine})...`);
-    if (engine === 'container') {
-      stopAppleContainerStack();
+    if (engine === 'apple') {
+      stopAppleContainerStack(state.composeFiles);
       removeRunState();
       Logger.success(`${CLI_LABEL} containers stopped successfully.`);
       return;

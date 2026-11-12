@@ -32,8 +32,8 @@ export const statusCommand = new Command('status')
 
     const engine: ContainerEngine = (state.engine as ContainerEngine) ?? 'docker';
     Logger.info(`${CLI_LABEL} containers (release: ${state.release}, engine: ${engine}, started at: ${state.startedAt})`);
-    if (engine === 'container') {
-      Logger.log(appleContainerStatus());
+    if (engine === 'apple') {
+      Logger.log(appleContainerStatus(state.composeFiles));
       return;
     }
     const exitCode = await runDockerCompose(['ps'], state.composeFiles, engine);

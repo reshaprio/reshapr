@@ -36,7 +36,7 @@ const RUN_STATE_FILE = path.join(RESHAPR_DIR, 'run-state.json');
 export const runCommand = new Command('run')
   .description(`Start ${CLI_LABEL} locally using Docker Compose`)
   .option('-r, --release <release>', 'Release of the containers to run', 'latest')
-  .option('-e, --engine <engine>', 'Container engine to use (docker, podman or container)')
+  .option('-e, --engine <engine>', 'Container engine to use (docker, podman or apple for apple/container)')
   .option('--ui', 'Enable and deploy the web ui addon')
   .action(async (options) => {
     let release: string = options.release;
@@ -48,7 +48,7 @@ export const runCommand = new Command('run')
       Logger.info(`Resolved 'latest' to release '${release}'.`);
     }
 
-    if (engine === 'container') {
+    if (engine === 'apple') {
       await runOnAppleContainer(release, options.ui === true);
       return;
     }
@@ -90,27 +90,30 @@ export const runCommand = new Command('run')
     }
   });
 
-// apple/container has no Compose: the stack is started with `container run`. The UI admin API key is
-// read from the UI addon compose file so that it stays in sync with the release.
+// apple/container has no Compose: the stack described by the release compose files is started with `container run`.
 async function runOnAppleContainer(release: string, ui: boolean): Promise<void> {
-  let uiAdminApiKey: string | undefined;
+  const composeFiles = [getComposeFilePath(release)];
   if (ui) {
-    const uiAddonFile = getUiAddonFilePath(release);
-    if (!fs.existsSync(uiAddonFile)) {
-      await downloadComposeFile(release, uiAddonFile, UI_ADDON_REMOTE_PATH);
+    composeFiles.push(getUiAddonFilePath(release));
+  }
+  const remotePaths = [COMPOSE_REMOTE_PATH, UI_ADDON_REMOTE_PATH];
+  for (const [index, file] of composeFiles.entries()) {
+    if (!fs.existsSync(file)) {
+      await downloadComposeFile(release, file, remotePaths[index]);
+    } else {
+      Logger.info(`Using cached compose file ${file}.`);
     }
-    uiAdminApiKey = /RESHAPR_ADMIN_API_KEY=(\S+)/.exec(fs.readFileSync(uiAddonFile, 'utf-8'))?.[1];
   }
 
-  Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: container)...`);
+  Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: apple)...`);
   try {
-    await startAppleContainerStack({ release, ui, uiAdminApiKey });
+    await startAppleContainerStack(composeFiles);
   } catch (err) {
     Logger.error((err as Error).message);
     process.exit(1);
   }
 
-  saveRunState(release, [], 'container');
+  saveRunState(release, composeFiles, 'apple');
   Logger.success(`${CLI_LABEL} containers started successfully.`);
   Logger.info('Control plane: http://localhost:5555, gateway: http://localhost:7777');
   if (ui) {
