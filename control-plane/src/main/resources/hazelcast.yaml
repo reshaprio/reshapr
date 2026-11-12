@@ -10,6 +10,13 @@ hazelcast:
         # We're looking for services endpoints in this namespace with this name
         namespace: reshapr-system
         service-name: reshapr-ctrl-plane
+      # Since every other join mechanism above is disabled, Hazelcast falls back to its
+      # "Auto Detection" joiner by default, which probes the environment (Kubernetes API,
+      # multicast, etc.) before giving up and starting a single-member cluster. This adds
+      # a multi-second delay to every startup even outside Kubernetes, so disable it here:
+      # we don't need clustering for this non-k8s configuration.
+      auto-detection:
+        enabled: false
 
   # Optional: cluster name to avoid collisions with other hazelcast clusters in the same network
   cluster-name: reshapr-ctrl-plane-cluster

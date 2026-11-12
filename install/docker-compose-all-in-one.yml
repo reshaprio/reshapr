@@ -52,8 +52,8 @@ services:
       #- QUARKUS_LOG_CATEGORY__IO_RESHAPR_CTRL__LEVEL=DEBUG
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5555/q/health/ready" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 3s
+      interval: 1s
       timeout: 2s
       retries: 3
 
@@ -82,7 +82,7 @@ services:
       - QUARKUS_OTEL_SDK_DISABLED=true
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7777/q/health/ready" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 3s
+      interval: 1s
       timeout: 2s
       retries: 3

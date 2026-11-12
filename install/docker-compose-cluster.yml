@@ -62,8 +62,8 @@ services:
       - RESHAPR_ENCRYPTION_KEY=my-super-secret-key-32-char-long
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5555/q/health/ready" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 3s
+      interval: 1s
       timeout: 2s
       retries: 3
 
@@ -92,8 +92,8 @@ services:
           - reshapr-gateways
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7777/q/health/ready" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 3s
+      interval: 1s
       timeout: 2s
       retries: 3
 
@@ -122,8 +122,8 @@ services:
           - reshapr-gateways
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7777/q/health/ready" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 3s
+      interval: 1s
       timeout: 2s
       retries: 3
 

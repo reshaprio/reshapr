@@ -12,6 +12,10 @@ hazelcast:
         #service-label-value: reshapr-ctrl-plane
         #pod-label-name: app
         #pod-label-value: reshapr-ctrl-plane
+      # Explicitly disable Hazelcast's "Auto Detection" fallback joiner so that only the
+      # Kubernetes join mechanism above is attempted, avoiding extra discovery-probing delay.
+      auto-detection:
+        enabled: false
 
   # Optional: cluster name to avoid collisions with other hazelcast clusters in the same network
   cluster-name: reshapr-ctrl-plane-cluster
