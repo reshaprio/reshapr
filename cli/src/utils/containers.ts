@@ -17,7 +17,12 @@ import { spawn, execFileSync } from 'node:child_process';
 
 import { Logger } from "./logger.js";
 
-export type ContainerEngine = 'docker' | 'podman';
+export type ContainerEngine = 'docker' | 'podman' | 'apple';
+
+/** Binary invoked for each engine: the `apple` engine is Apple's `container` CLI. */
+export function engineBinary(engine: ContainerEngine): string {
+  return engine === 'apple' ? 'container' : engine;
+}
 
 /**
  * Check whether a given binary is available on the system PATH.
@@ -34,13 +39,13 @@ function isCommandAvailable(command: string): boolean {
 /**
  * Detect the container engine to use.
  *  - If the user explicitly chose one via `--engine`, validate it is available and return it.
- *  - Otherwise, try `docker` first, then fall back to `podman`.
+ *  - Otherwise, try `docker` first, then `podman`, then `container` (apple/container, engine `apple`).
  *  - Exit with an error if no engine is found.
  */
 export function resolveContainerEngine(explicit?: string): ContainerEngine {
   if (explicit) {
     const engine = explicit as ContainerEngine;
-    if (!isCommandAvailable(engine)) {
+    if (!isCommandAvailable(engineBinary(engine))) {
       Logger.error(`Container engine '${engine}' was explicitly requested but is not available on your system.`);
       process.exit(1);
     }
@@ -58,7 +63,12 @@ export function resolveContainerEngine(explicit?: string): ContainerEngine {
     return 'podman';
   }
 
-  Logger.error('No container engine found. Please install docker or podman.');
+  if (isCommandAvailable('container')) {
+    Logger.info('Detected container engine: apple (apple/container)');
+    return 'apple';
+  }
+
+  Logger.error('No container engine found. Please install docker, podman or apple/container (engine "apple").');
   process.exit(1);
 }
 

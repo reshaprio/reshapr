@@ -20,6 +20,7 @@ import * as path from 'node:path';
 import { Command } from "commander";
 import { Logger } from "../utils/logger.js";
 import { runDockerCompose, resolveContainerEngine } from '../utils/containers.js';
+import { startAppleContainerStack } from '../utils/apple-container.js';
 import { CLI_NAME, CLI_LABEL } from '../constants.js';
 
 const GITHUB_REPO = 'reshaprio/reshapr';
@@ -35,7 +36,7 @@ const RUN_STATE_FILE = path.join(RESHAPR_DIR, 'run-state.json');
 export const runCommand = new Command('run')
   .description(`Start ${CLI_LABEL} locally using Docker Compose`)
   .option('-r, --release <release>', 'Release of the containers to run', 'latest')
-  .option('-e, --engine <engine>', 'Container engine to use (docker or podman)')
+  .option('-e, --engine <engine>', 'Container engine to use (docker, podman or apple for apple/container)')
   .option('--ui', 'Enable and deploy the web ui addon')
   .action(async (options) => {
     let release: string = options.release;
@@ -45,6 +46,11 @@ export const runCommand = new Command('run')
     if (release === 'latest') {
       release = await resolveLatestRelease();
       Logger.info(`Resolved 'latest' to release '${release}'.`);
+    }
+
+    if (engine === 'apple') {
+      await runOnAppleContainer(release, options.ui === true);
+      return;
     }
 
     const composeFile = getComposeFilePath(release);
@@ -83,6 +89,37 @@ export const runCommand = new Command('run')
       Logger.info(`The web UI should be available at http://localhost:3333 once the containers are ready.`);
     }
   });
+
+// apple/container has no Compose: the stack described by the release compose files is started with `container run`.
+async function runOnAppleContainer(release: string, ui: boolean): Promise<void> {
+  const composeFiles = [getComposeFilePath(release)];
+  if (ui) {
+    composeFiles.push(getUiAddonFilePath(release));
+  }
+  const remotePaths = [COMPOSE_REMOTE_PATH, UI_ADDON_REMOTE_PATH];
+  for (const [index, file] of composeFiles.entries()) {
+    if (!fs.existsSync(file)) {
+      await downloadComposeFile(release, file, remotePaths[index]);
+    } else {
+      Logger.info(`Using cached compose file ${file}.`);
+    }
+  }
+
+  Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: apple)...`);
+  try {
+    await startAppleContainerStack(composeFiles);
+  } catch (err) {
+    Logger.error((err as Error).message);
+    process.exit(1);
+  }
+
+  saveRunState(release, composeFiles, 'apple');
+  Logger.success(`${CLI_LABEL} containers started successfully.`);
+  Logger.info('Control plane: http://localhost:5555, gateway: http://localhost:7777');
+  if (ui) {
+    Logger.info('The web UI is available at http://localhost:3333');
+  }
+}
 
 function getComposeFilePath(release: string): string {
   return path.join(RESHAPR_DIR, `docker-compose-${release}.yml`);
