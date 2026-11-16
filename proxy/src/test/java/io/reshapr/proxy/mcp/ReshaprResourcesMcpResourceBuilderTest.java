@@ -74,7 +74,8 @@ class ReshaprResourcesMcpResourceBuilderTest {
 
       ServiceEntry service = new ServiceEntry("svc-1", "org-1", "UI Service", "1.0", "REST", List.of());
       ArtifactEntry artifact = new ArtifactEntry(
-            "art-res", "resources.yaml", null, ArtifactEntryType.RESHAPR_RESOURCES, false, yaml, List.of(uiSecret));
+            "art-res", "resources.yaml", null, ArtifactEntryType.RESHAPR_RESOURCES, false, yaml,
+            Map.of(uiSecret.name(), uiSecret));
       ConfigurationEntry config = new ConfigurationEntry(
             "cfg-1", "plan", "http://backend.local", null, List.of(), List.of(), null, null, backendSecret);
 
@@ -85,6 +86,11 @@ class ReshaprResourcesMcpResourceBuilderTest {
       assertNotNull(protectedContents);
       Mockito.verify(proxyService).callBackend(
             eq(config), eq(URI.create("https://ui.internal.example/protected.html")), eq("GET"), any(), isNull(), eq(uiSecret));
+
+      var templateContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/items/42"), config);
+      assertNotNull(templateContents);
+      Mockito.verify(proxyService).callBackend(
+            eq(config), eq(URI.create("https://ui.internal.example/item.html")), eq("GET"), any(), isNull(), eq(uiSecret));
 
       var publicContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/public"), config);
       assertNotNull(publicContents);

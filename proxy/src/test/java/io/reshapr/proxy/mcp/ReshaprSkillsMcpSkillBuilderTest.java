@@ -165,7 +165,8 @@ public class ReshaprSkillsMcpSkillBuilderTest {
 
       ServiceEntry svc = new ServiceEntry("svc-sec", "org", "Test", "1.0", "REST", List.of());
       ArtifactEntry artifact = new ArtifactEntry(
-            "art-sec", "skills", null, ArtifactEntryType.RESHAPR_SKILLS, false, yaml, List.of(skillsToken));
+            "art-sec", "skills", null, ArtifactEntryType.RESHAPR_SKILLS, false, yaml,
+            Map.of(skillsToken.name(), skillsToken));
       ReshaprSkillsMcpSkillBuilder skillBuilder = new ReshaprSkillsMcpSkillBuilder(
             svc, List.of(artifact), new WorkCache(100), mockProxy);
 

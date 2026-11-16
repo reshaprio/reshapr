@@ -15,7 +15,6 @@
  */
 package io.reshapr.ctrl.service;
 
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.reshapr.ctrl.model.Artifact;
 import io.reshapr.ctrl.model.ArtifactType;
 import io.reshapr.ctrl.model.Exposition;
@@ -31,7 +30,9 @@ import io.reshapr.discovery.exposition.v1.ArtifactsRequest;
 import io.reshapr.discovery.exposition.v1.ArtifactsResponse;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryRequest;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryResponse;
+
 import io.grpc.stub.StreamObserver;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -191,6 +192,11 @@ class ExpositionDiscoveryServiceHandlerTest {
         docsToken.setToken("tok-123");
         docsToken.tokenHeader = "X-Docs-Token";
 
+        Secret templateToken = new Secret();
+        templateToken.name = "template-token";
+        templateToken.authMethod = SecretAuthMethod.BEARER_TOKEN;
+        templateToken.setToken("tpl-456");
+
         Secret skillsBasic = new Secret();
         skillsBasic.name = "skills-basic";
         skillsBasic.authMethod = SecretAuthMethod.BASIC;
@@ -198,6 +204,7 @@ class ExpositionDiscoveryServiceHandlerTest {
         skillsBasic.setPassword("secret-pass");
 
         when(secretRepository.findByName("docs-token")).thenReturn(docsToken);
+        when(secretRepository.findByName("template-token")).thenReturn(templateToken);
         when(secretRepository.findByName("skills-basic")).thenReturn(skillsBasic);
         when(secretRepository.findByName("missing-secret")).thenReturn(null);
 
@@ -215,12 +222,18 @@ class ExpositionDiscoveryServiceHandlerTest {
         assertEquals(2, response.getArtifactsCount());
 
         var grpcResources = response.getArtifacts(0);
-        // Deduplicated: docs-token appears twice in YAML, resolved once.
-        assertEquals(1, grpcResources.getRelatedSecretsCount());
-        assertEquals("docs-token", grpcResources.getRelatedSecrets(0).getName());
-        assertEquals("tok-123", grpcResources.getRelatedSecrets(0).getToken());
-        assertEquals("X-Docs-Token", grpcResources.getRelatedSecrets(0).getTokenHeader());
-        assertEquals("BEARER_TOKEN", grpcResources.getRelatedSecrets(0).getAuthMethod());
+        // Deduplicated: docs-token appears twice in resources + template-token in resourceTemplates.
+        assertEquals(2, grpcResources.getRelatedSecretsCount());
+        var resolvedByName = grpcResources.getRelatedSecretsList().stream()
+              .collect(java.util.stream.Collectors.toMap(
+                    io.reshapr.discovery.exposition.v1.Secret::getName,
+                    java.util.function.Function.identity()));
+        assertTrue(resolvedByName.containsKey("docs-token"));
+        assertEquals("tok-123", resolvedByName.get("docs-token").getToken());
+        assertEquals("X-Docs-Token", resolvedByName.get("docs-token").getTokenHeader());
+        assertEquals("BEARER_TOKEN", resolvedByName.get("docs-token").getAuthMethod());
+        assertTrue(resolvedByName.containsKey("template-token"));
+        assertEquals("tpl-456", resolvedByName.get("template-token").getToken());
 
         var grpcSkills = response.getArtifacts(1);
         // skills-basic resolved; missing-secret logged and omitted without failing.
@@ -230,6 +243,7 @@ class ExpositionDiscoveryServiceHandlerTest {
         assertEquals("secret-pass", grpcSkills.getRelatedSecrets(0).getPassword());
 
         verify(secretRepository, times(1)).findByName("docs-token");
+        verify(secretRepository, times(1)).findByName("template-token");
         verify(secretRepository, times(1)).findByName("skills-basic");
         verify(secretRepository, times(1)).findByName("missing-secret");
     }

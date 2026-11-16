@@ -17,7 +17,7 @@ package io.reshapr.proxy.registry;
 
 import jakarta.annotation.Nullable;
 
-import java.util.List;
+import java.util.Map;
 
 public record ArtifactEntry(
       String id,
@@ -26,15 +26,15 @@ public record ArtifactEntry(
       ArtifactEntryType type,
       boolean mainArtifact,
       String content,
-      List<SecretEntry> relatedSecrets) {
+      Map<String, SecretEntry> relatedSecrets) {
 
    public ArtifactEntry {
-      relatedSecrets = relatedSecrets != null ? List.copyOf(relatedSecrets) : List.of();
+      relatedSecrets = relatedSecrets != null ? Map.copyOf(relatedSecrets) : Map.of();
    }
 
    public ArtifactEntry(String id, String name, String path, ArtifactEntryType type,
                         boolean mainArtifact, String content) {
-      this(id, name, path, type, mainArtifact, content, List.of());
+      this(id, name, path, type, mainArtifact, content, Map.of());
    }
 
    /**
@@ -46,11 +46,6 @@ public record ArtifactEntry(
       if (secretName == null || secretName.isBlank()) {
          return null;
       }
-      for (SecretEntry secret : relatedSecrets) {
-         if (secretName.equals(secret.name())) {
-            return secret;
-         }
-      }
-      return null;
+      return relatedSecrets.get(secretName);
    }
 }

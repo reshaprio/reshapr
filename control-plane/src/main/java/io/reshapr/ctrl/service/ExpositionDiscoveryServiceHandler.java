@@ -51,7 +51,6 @@ import jakarta.enterprise.context.control.ActivateRequestContext;
 import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
@@ -574,28 +573,22 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
     * against the current organization's secrets so the gateway can authenticate remote fetches.
     */
    private List<io.reshapr.discovery.exposition.v1.Secret> resolveRelatedSecrets(Artifact artifact) {
-      String sectionKey = switch (artifact.type) {
-         case RESHAPR_RESOURCES -> "resources";
-         case RESHAPR_SKILLS -> "skills";
-         default -> null;
+      List<String> sectionKeys = switch (artifact.type) {
+         case RESHAPR_RESOURCES -> List.of("resources", "resourceTemplates");
+         case RESHAPR_SKILLS -> List.of("skills");
+         default -> List.of();
       };
-      if (sectionKey == null || artifact.content == null || artifact.content.isBlank() || secretRepository == null) {
+      if (sectionKeys.isEmpty() || artifact.content == null || artifact.content.isBlank() || secretRepository == null) {
          return List.of();
       }
 
-      Set<String> secretNames = new LinkedHashSet<>();
+      Set<String> secretNames = new HashSet<>();
       try {
          JsonNode root = YAML_MAPPER.readTree(artifact.content);
-         JsonNode section = root != null ? root.get(sectionKey) : null;
-         if (section != null && section.isObject()) {
-            section.elements().forEachRemaining(item -> {
-               if (item != null && item.isObject()) {
-                  String secretName = item.path("remoteSecret").asText(null);
-                  if (secretName != null && !secretName.isBlank()) {
-                     secretNames.add(secretName);
-                  }
-               }
-            });
+         if (root != null) {
+            for (String sectionKey : sectionKeys) {
+               collectRemoteSecrets(root.get(sectionKey), secretNames);
+            }
          }
       } catch (Exception e) {
          logger.warnf(e, "Failed to parse artifact '%s' while resolving remoteSecret references", artifact.name);
@@ -617,6 +610,19 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
          }
       }
       return resolved;
+   }
+
+   private static void collectRemoteSecrets(JsonNode section, Set<String> secretNames) {
+      if (section != null && section.isObject()) {
+         section.elements().forEachRemaining(item -> {
+            if (item != null && item.isObject()) {
+               String secretName = item.path("remoteSecret").asText(null);
+               if (secretName != null && !secretName.isBlank()) {
+                  secretNames.add(secretName);
+               }
+            }
+         });
+      }
    }
 
    private io.reshapr.discovery.exposition.v1.ArtifactType grpcArtifactTypeFromModel(ArtifactType type) {

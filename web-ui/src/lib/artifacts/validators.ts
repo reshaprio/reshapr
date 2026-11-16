@@ -769,19 +769,25 @@ const promptsPlaceholdersValidator: Validator = {
 const remoteSecretReferencesValidator: Validator = {
 	id: 'remote-secret-references',
 	async validate(doc, ctx) {
-		const sectionKey = ctx.kind === 'Resources' ? 'resources' : ctx.kind === 'Skills' ? 'skills' : null;
-		if (!sectionKey) return [];
-
-		const section = asMapNode(doc.get(sectionKey, true));
-		if (!section) return [];
+		const sectionKeys =
+			ctx.kind === 'Resources'
+				? ['resources', 'resourceTemplates']
+				: ctx.kind === 'Skills'
+					? ['skills']
+					: [];
+		if (sectionKeys.length === 0) return [];
 
 		const refs: Array<{ node: Node; name: string }> = [];
-		for (const { value } of mapEntries(section)) {
-			const item = asMapNode(value);
-			if (!item) continue;
-			const secretNode = item.get('remoteSecret', true);
-			if (isScalar(secretNode) && typeof secretNode.value === 'string' && secretNode.value.trim().length > 0) {
-				refs.push({ node: secretNode as Node, name: secretNode.value });
+		for (const sectionKey of sectionKeys) {
+			const section = asMapNode(doc.get(sectionKey, true));
+			if (!section) continue;
+			for (const { value } of mapEntries(section)) {
+				const item = asMapNode(value);
+				if (!item) continue;
+				const secretNode = item.get('remoteSecret', true);
+				if (isScalar(secretNode) && typeof secretNode.value === 'string' && secretNode.value.trim().length > 0) {
+					refs.push({ node: secretNode as Node, name: secretNode.value });
+				}
 			}
 		}
 		if (refs.length === 0) return [];

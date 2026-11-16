@@ -202,6 +202,10 @@
         },
         "annotations": {
           "$ref": "#/definitions/annotations"
+        },
+        "remoteSecret": {
+          "type": "string",
+          "title": "The name of an existing Reshapr Secret used to authenticate remoteContent fetches, if applicable."
         }
       }
     },

@@ -378,7 +378,9 @@ class ReshaprArtifactBuilderTest {
 
       Artifact artifact = ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-valid.yaml", resourcesFile).artifact();
       assertEquals(ArtifactType.RESHAPR_RESOURCES, artifact.type);
-      assertEquals(List.of("ui://repo/dashboard", "ui://repo/about", "ui://repo/public"), artifact.capabilities);
+      assertEquals(
+            List.of("ui://repo/dashboard", "ui://repo/about", "ui://repo/public", "ui://repo/files/{path}"),
+            artifact.capabilities);
    }
 
    @Test
