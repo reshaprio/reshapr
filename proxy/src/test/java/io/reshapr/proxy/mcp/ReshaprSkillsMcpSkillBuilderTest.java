@@ -15,6 +15,7 @@
  */
 package io.reshapr.proxy.mcp;
 
+import io.reshapr.proxy.TestResources;
 import io.reshapr.proxy.proxy.BackendResponse;
 import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
@@ -140,25 +141,7 @@ public class ReshaprSkillsMcpSkillBuilderTest {
 
    @Test
    void testRemoteSecretPassedToProxyServiceAndUnresolvedFallsBackToNull() {
-      String yaml = """
-            apiVersion: reshapr.io/v1alpha1
-            kind: Skills
-            service:
-              name: Test
-              version: '1.0'
-            skills:
-              pdf-processing:
-                path: acme
-                remoteContent: http://skills.local/pdf-processing
-                remoteSecret: skills-token
-              public-skill:
-                path: acme
-                remoteContent: http://skills.local/public
-              broken-secret-skill:
-                path: acme
-                remoteContent: http://skills.local/broken
-                remoteSecret: unknown-secret
-            """;
+      String yaml = TestResources.readString("io/reshapr/proxy/mcp/skills-remote-secret.yaml");
 
       SecretEntry skillsToken = new SecretEntry("skills-token", null, null, "tok-xyz", null, null, false, null);
       SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "backend-tok", null, null, false, null);

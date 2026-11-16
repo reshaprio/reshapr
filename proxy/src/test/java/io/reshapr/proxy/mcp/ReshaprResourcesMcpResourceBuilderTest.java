@@ -16,6 +16,7 @@
 package io.reshapr.proxy.mcp;
 
 import io.reshapr.json.ObjectMapperFactory;
+import io.reshapr.proxy.TestResources;
 import io.reshapr.proxy.proxy.BackendResponse;
 import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
@@ -62,25 +63,7 @@ class ReshaprResourcesMcpResourceBuilderTest {
 
    @Test
    void testRemoteContentUsesResolvedRemoteSecretOrFallsBackToUnauthenticated() {
-      String yaml = """
-            apiVersion: reshapr.io/v1alpha1
-            kind: Resources
-            service:
-              name: UI Service
-              version: '1.0'
-            resources:
-              'ui://app/protected':
-                name: protected-ui
-                remoteContent: https://ui.internal.example/protected.html
-                remoteSecret: ui-secret
-              'ui://app/public':
-                name: public-ui
-                remoteContent: https://ui.example.com/public.html
-              'ui://app/missing-secret':
-                name: missing-secret-ui
-                remoteContent: https://ui.internal.example/other.html
-                remoteSecret: unknown-secret
-            """;
+      String yaml = TestResources.readString("io/reshapr/proxy/mcp/resources-remote-secret.yaml");
 
       SecretEntry uiSecret = new SecretEntry("ui-secret", null, null, "ui-tok", null, null, false, null);
       SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "api-tok", null, null, false, null);

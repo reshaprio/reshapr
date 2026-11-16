@@ -19,12 +19,9 @@ import io.reshapr.ctrl.model.Artifact;
 import io.reshapr.ctrl.model.ArtifactType;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -375,65 +372,31 @@ class ReshaprArtifactBuilderTest {
    }
 
    @Test
-   void testValidParsingResourcesWithRemoteSecret(@TempDir Path tempDir) throws Exception {
-      Path file = tempDir.resolve("resources-remote-secret.yaml");
-      Files.writeString(file, """
-            apiVersion: reshapr.io/v1alpha1
-            kind: Resources
-            service:
-              name: Repository Service
-              version: '1.0.0'
-            resources:
-              'ui://repo/dashboard':
-                name: dashboard
-                remoteContent: https://ui.internal.example/dashboard.html
-                remoteSecret: internal-ui-secret
-            """);
+   void testValidParsingResourcesWithRemoteSecret() throws Exception {
+      File resourcesFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/resources-remote-secret-valid.yaml").getFile());
 
-      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("resources-remote-secret.yaml", file.toFile()).artifact();
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-valid.yaml", resourcesFile).artifact();
       assertEquals(ArtifactType.RESHAPR_RESOURCES, artifact.type);
-      assertEquals(List.of("ui://repo/dashboard"), artifact.capabilities);
+      assertEquals(List.of("ui://repo/dashboard", "ui://repo/about", "ui://repo/public"), artifact.capabilities);
    }
 
    @Test
-   void testInvalidResourcesRemoteSecretWithoutRemoteContent(@TempDir Path tempDir) throws Exception {
-      Path file = tempDir.resolve("resources-remote-secret-invalid.yaml");
-      Files.writeString(file, """
-            apiVersion: reshapr.io/v1alpha1
-            kind: Resources
-            service:
-              name: Repository Service
-              version: '1.0.0'
-            resources:
-              'file:///readme.md':
-                name: readme
-                text: hello
-                remoteSecret: internal-ui-secret
-            """);
+   void testInvalidResourcesRemoteSecretWithoutRemoteContent() {
+      File resourcesFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/resources-remote-secret-invalid.yaml").getFile());
 
       assertThrows(ReshaprArtifactException.class,
-            () -> ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-invalid.yaml", file.toFile()));
+            () -> ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-invalid.yaml", resourcesFile));
    }
 
    @Test
-   void testValidParsingSkillsWithRemoteSecret(@TempDir Path tempDir) throws Exception {
-      Path file = tempDir.resolve("skills-remote-secret.yaml");
-      Files.writeString(file, """
-            apiVersion: reshapr.io/v1alpha1
-            kind: Skills
-            service:
-              name: Pastry API
-              version: 2.0.0
-            skills:
-              pastry-ordering:
-                remoteContent: https://docs.internal.example/skills/pastry-ordering
-                remoteSecret: internal-docs-secret
-                files:
-                  - references/MENU.md
-            """);
+   void testValidParsingSkillsWithRemoteSecret() throws Exception {
+      File skillsFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/skills-remote-secret-valid.yaml").getFile());
 
-      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("skills-remote-secret.yaml", file.toFile()).artifact();
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("skills-remote-secret-valid.yaml", skillsFile).artifact();
       assertEquals(ArtifactType.RESHAPR_SKILLS, artifact.type);
-      assertEquals(List.of("pastry-ordering"), artifact.capabilities);
+      assertEquals(List.of("pastry-ordering", "unlinked-skill"), artifact.capabilities);
    }
 }

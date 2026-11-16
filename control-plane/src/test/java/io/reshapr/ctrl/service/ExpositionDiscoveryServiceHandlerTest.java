@@ -39,6 +39,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -167,53 +170,20 @@ class ExpositionDiscoveryServiceHandlerTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void testFetchArtifactsResolvesRemoteSecretsForResourcesAndSkills() {
+    void testFetchArtifactsResolvesRemoteSecretsForResourcesAndSkills() throws Exception {
         Artifact resources = new Artifact();
         resources.id = "art-res";
-        resources.name = "resources.yaml";
+        resources.name = "resources-remote-secret-valid.yaml";
         resources.type = ArtifactType.RESHAPR_RESOURCES;
         resources.mainArtifact = false;
-        resources.content = """
-              apiVersion: reshapr.io/v1alpha1
-              kind: Resources
-              service:
-                name: Pastry API
-                version: 2.0.0
-              resources:
-                'ui://pastry/menu':
-                  name: menu
-                  remoteContent: https://ui.internal.example/menu.html
-                  remoteSecret: docs-token
-                'ui://pastry/about':
-                  name: about
-                  remoteContent: https://ui.internal.example/about.html
-                  remoteSecret: docs-token
-                'ui://pastry/public':
-                  name: public
-                  remoteContent: https://ui.example.com/public.html
-              """;
+        resources.content = readArtifactFixture("resources-remote-secret-valid.yaml");
 
         Artifact skills = new Artifact();
         skills.id = "art-skills";
-        skills.name = "skills.yaml";
+        skills.name = "skills-remote-secret-valid.yaml";
         skills.type = ArtifactType.RESHAPR_SKILLS;
         skills.mainArtifact = false;
-        skills.content = """
-              apiVersion: reshapr.io/v1alpha1
-              kind: Skills
-              service:
-                name: Pastry API
-                version: 2.0.0
-              skills:
-                pastry-ordering:
-                  remoteContent: https://docs.internal.example/skills/pastry-ordering
-                  remoteSecret: skills-basic
-                  files:
-                    - references/MENU.md
-                unlinked-skill:
-                  remoteContent: https://docs.internal.example/skills/other
-                  remoteSecret: missing-secret
-              """;
+        skills.content = readArtifactFixture("skills-remote-secret-valid.yaml");
 
         Secret docsToken = new Secret();
         docsToken.name = "docs-token";
@@ -266,12 +236,12 @@ class ExpositionDiscoveryServiceHandlerTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void testFetchArtifactsByExpositionResolvesRemoteSecrets() {
+    void testFetchArtifactsByExpositionResolvesRemoteSecrets() throws Exception {
         Service service = new Service();
         service.id = "srv-1";
         ConfigurationPlan plan = new ConfigurationPlan();
         plan.id = "plan-1";
-        plan.includedArtifacts = List.of("skills.yaml");
+        plan.includedArtifacts = List.of("skills-remote-secret-valid.yaml");
         Exposition exposition = new Exposition();
         exposition.id = "exp-1";
         exposition.service = service;
@@ -279,34 +249,27 @@ class ExpositionDiscoveryServiceHandlerTest {
 
         Artifact main = new Artifact();
         main.id = "art-main";
-        main.name = "openapi.yaml";
+        main.name = "openapi.json";
         main.type = ArtifactType.OPEN_API_SPEC;
         main.mainArtifact = true;
-        main.content = "openapi: 3.0.1";
+        main.content = readArtifactFixture("openapi.json");
 
         Artifact skills = new Artifact();
         skills.id = "art-skills";
-        skills.name = "skills.yaml";
+        skills.name = "skills-remote-secret-valid.yaml";
         skills.type = ArtifactType.RESHAPR_SKILLS;
         skills.mainArtifact = false;
-        skills.content = """
-              apiVersion: reshapr.io/v1alpha1
-              kind: Skills
-              service:
-                name: Test
-                version: '1.0'
-              skills:
-                helper:
-                  remoteContent: https://skills.internal/helper
-                  remoteSecret: helper-secret
-              """;
+        skills.content = readArtifactFixture("skills-remote-secret-valid.yaml");
 
-        Secret helperSecret = new Secret();
-        helperSecret.name = "helper-secret";
-        helperSecret.setToken("helper-tok");
+        Secret skillsBasic = new Secret();
+        skillsBasic.name = "skills-basic";
+        skillsBasic.authMethod = SecretAuthMethod.BASIC;
+        skillsBasic.username = "reader";
+        skillsBasic.setPassword("secret-pass");
 
         when(expositionManagerService.getExposition("exp-1")).thenReturn(exposition);
-        when(secretRepository.findByName("helper-secret")).thenReturn(helperSecret);
+        when(secretRepository.findByName("skills-basic")).thenReturn(skillsBasic);
+        when(secretRepository.findByName("missing-secret")).thenReturn(null);
 
         PanacheQuery<Artifact> query = mock(PanacheQuery.class);
         when(query.list()).thenReturn(List.of(main, skills));
@@ -324,6 +287,13 @@ class ExpositionDiscoveryServiceHandlerTest {
         assertEquals(2, response.getArtifactsCount());
         assertEquals(0, response.getArtifacts(0).getRelatedSecretsCount());
         assertEquals(1, response.getArtifacts(1).getRelatedSecretsCount());
-        assertEquals("helper-secret", response.getArtifacts(1).getRelatedSecrets(0).getName());
+        assertEquals("skills-basic", response.getArtifacts(1).getRelatedSecrets(0).getName());
+    }
+
+    private String readArtifactFixture(String name) throws IOException {
+        try (InputStream in = getClass().getResourceAsStream("/io/reshapr/ctrl/artifacts/" + name)) {
+            assertNotNull(in, "Missing test artifact fixture: " + name);
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 }
