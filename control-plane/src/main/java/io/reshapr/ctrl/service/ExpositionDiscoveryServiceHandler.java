@@ -25,6 +25,7 @@ import io.reshapr.ctrl.model.Operation;
 import io.reshapr.ctrl.model.Secret;
 import io.reshapr.ctrl.model.Service;
 import io.reshapr.ctrl.repository.ArtifactRepository;
+import io.reshapr.ctrl.repository.SecretRepository;
 import io.reshapr.ctrl.security.ReshaprTenantContext;
 import io.reshapr.discovery.exposition.v1.ArtifactsRequest;
 import io.reshapr.discovery.exposition.v1.ArtifactsResponse;
@@ -34,7 +35,10 @@ import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryRequest;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryResponse;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryServiceGrpc;
 import io.reshapr.discovery.exposition.v1.ExpositionFetchRequest;
+import io.reshapr.json.ObjectMapperFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -47,6 +51,7 @@ import jakarta.enterprise.context.control.ActivateRequestContext;
 import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
@@ -77,18 +82,23 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
     */
    private final Map<String, List<OrganizationExpositionsObserver>> expositionChangeObservers = new ConcurrentHashMap<>();
 
+   private static final ObjectMapper YAML_MAPPER = ObjectMapperFactory.getYamlObjectMapper();
+
    private final ExpositionManagerService expositionManagerService;
    private final ArtifactRepository artifactRepository;
+   private final SecretRepository secretRepository;
 
    /**
     * @param expositionManagerService
     * @param artifactRepository
+    * @param secretRepository
     */
    public ExpositionDiscoveryServiceHandler(ExpositionManagerService expositionManagerService,
-                                            ArtifactRepository artifactRepository) {
+                                            ArtifactRepository artifactRepository,
+                                            SecretRepository secretRepository) {
       this.expositionManagerService = expositionManagerService;
       this.artifactRepository = artifactRepository;
-
+      this.secretRepository = secretRepository;
    }
 
    @Override
@@ -553,7 +563,60 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
       if (artifact.path != null) {
          builder.setPath(artifact.path);
       }
+      for (io.reshapr.discovery.exposition.v1.Secret secret : resolveRelatedSecrets(artifact)) {
+         builder.addRelatedSecrets(secret);
+      }
       return builder.build();
+   }
+
+   /**
+    * Resolve any {@code remoteSecret} names declared inside Resources or Skills artifact content
+    * against the current organization's secrets so the gateway can authenticate remote fetches.
+    */
+   private List<io.reshapr.discovery.exposition.v1.Secret> resolveRelatedSecrets(Artifact artifact) {
+      String sectionKey = switch (artifact.type) {
+         case RESHAPR_RESOURCES -> "resources";
+         case RESHAPR_SKILLS -> "skills";
+         default -> null;
+      };
+      if (sectionKey == null || artifact.content == null || artifact.content.isBlank() || secretRepository == null) {
+         return List.of();
+      }
+
+      Set<String> secretNames = new LinkedHashSet<>();
+      try {
+         JsonNode root = YAML_MAPPER.readTree(artifact.content);
+         JsonNode section = root != null ? root.get(sectionKey) : null;
+         if (section != null && section.isObject()) {
+            section.elements().forEachRemaining(item -> {
+               if (item != null && item.isObject()) {
+                  String secretName = item.path("remoteSecret").asText(null);
+                  if (secretName != null && !secretName.isBlank()) {
+                     secretNames.add(secretName);
+                  }
+               }
+            });
+         }
+      } catch (Exception e) {
+         logger.warnf(e, "Failed to parse artifact '%s' while resolving remoteSecret references", artifact.name);
+         return List.of();
+      }
+
+      if (secretNames.isEmpty()) {
+         return List.of();
+      }
+
+      List<io.reshapr.discovery.exposition.v1.Secret> resolved = new ArrayList<>();
+      for (String secretName : secretNames) {
+         Secret secret = secretRepository.findByName(secretName);
+         if (secret == null) {
+            logger.warnf("Artifact '%s' references unknown remoteSecret '%s'; remote fetches will proceed unauthenticated",
+                  artifact.name, secretName);
+         } else {
+            resolved.add(grpcSecretFromModel(secret));
+         }
+      }
+      return resolved;
    }
 
    private io.reshapr.discovery.exposition.v1.ArtifactType grpcArtifactTypeFromModel(ArtifactType type) {

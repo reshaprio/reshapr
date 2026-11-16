@@ -293,6 +293,7 @@
 			{schemaUri}
 			{kind}
 			getToolSuggestions={async () => (await loadReferenceIndex()).toolSuggestions}
+			getSecretSuggestions={async () => (await loadReferenceIndex()).secretSuggestions}
 			warnings={editable ? validatorWarnings : []}
 			height="min(70vh, 32rem)"
 			onChange={(value) => {

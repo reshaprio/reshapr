@@ -15,12 +15,20 @@
  */
 package io.reshapr.ctrl.service;
 
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.reshapr.ctrl.model.Artifact;
+import io.reshapr.ctrl.model.ArtifactType;
 import io.reshapr.ctrl.model.Exposition;
 import io.reshapr.ctrl.model.GatewayGroup;
 import io.reshapr.ctrl.model.ConfigurationPlan;
+import io.reshapr.ctrl.model.Secret;
+import io.reshapr.ctrl.model.SecretAuthMethod;
 import io.reshapr.ctrl.model.Service;
 import io.reshapr.ctrl.model.ServiceType;
 import io.reshapr.ctrl.repository.ArtifactRepository;
+import io.reshapr.ctrl.repository.SecretRepository;
+import io.reshapr.discovery.exposition.v1.ArtifactsRequest;
+import io.reshapr.discovery.exposition.v1.ArtifactsResponse;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryRequest;
 import io.reshapr.discovery.exposition.v1.ExpositionDiscoveryResponse;
 import io.grpc.stub.StreamObserver;
@@ -51,13 +59,19 @@ class ExpositionDiscoveryServiceHandlerTest {
     private ArtifactRepository artifactRepository;
 
     @Mock
+    private SecretRepository secretRepository;
+
+    @Mock
     private StreamObserver<ExpositionDiscoveryResponse> responseObserver;
+
+    @Mock
+    private StreamObserver<ArtifactsResponse> artifactsResponseObserver;
 
     private ExpositionDiscoveryServiceHandler handler;
 
     @BeforeEach
     void setup() {
-        handler = new ExpositionDiscoveryServiceHandler(expositionManagerService, artifactRepository);
+        handler = new ExpositionDiscoveryServiceHandler(expositionManagerService, artifactRepository, secretRepository);
     }
 
     @Test
@@ -149,5 +163,167 @@ class ExpositionDiscoveryServiceHandlerTest {
         assertEquals(List.of("inv-mcp-router", "other-audience"), oauth2.getStaticAudiencesList());
         assertEquals(List.of("profile"), oauth2.getScopesList());
         assertFalse(oauth2.getDisableAudienceValidation());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testFetchArtifactsResolvesRemoteSecretsForResourcesAndSkills() {
+        Artifact resources = new Artifact();
+        resources.id = "art-res";
+        resources.name = "resources.yaml";
+        resources.type = ArtifactType.RESHAPR_RESOURCES;
+        resources.mainArtifact = false;
+        resources.content = """
+              apiVersion: reshapr.io/v1alpha1
+              kind: Resources
+              service:
+                name: Pastry API
+                version: 2.0.0
+              resources:
+                'ui://pastry/menu':
+                  name: menu
+                  remoteContent: https://ui.internal.example/menu.html
+                  remoteSecret: docs-token
+                'ui://pastry/about':
+                  name: about
+                  remoteContent: https://ui.internal.example/about.html
+                  remoteSecret: docs-token
+                'ui://pastry/public':
+                  name: public
+                  remoteContent: https://ui.example.com/public.html
+              """;
+
+        Artifact skills = new Artifact();
+        skills.id = "art-skills";
+        skills.name = "skills.yaml";
+        skills.type = ArtifactType.RESHAPR_SKILLS;
+        skills.mainArtifact = false;
+        skills.content = """
+              apiVersion: reshapr.io/v1alpha1
+              kind: Skills
+              service:
+                name: Pastry API
+                version: 2.0.0
+              skills:
+                pastry-ordering:
+                  remoteContent: https://docs.internal.example/skills/pastry-ordering
+                  remoteSecret: skills-basic
+                  files:
+                    - references/MENU.md
+                unlinked-skill:
+                  remoteContent: https://docs.internal.example/skills/other
+                  remoteSecret: missing-secret
+              """;
+
+        Secret docsToken = new Secret();
+        docsToken.name = "docs-token";
+        docsToken.authMethod = SecretAuthMethod.BEARER_TOKEN;
+        docsToken.setToken("tok-123");
+        docsToken.tokenHeader = "X-Docs-Token";
+
+        Secret skillsBasic = new Secret();
+        skillsBasic.name = "skills-basic";
+        skillsBasic.authMethod = SecretAuthMethod.BASIC;
+        skillsBasic.username = "reader";
+        skillsBasic.setPassword("secret-pass");
+
+        when(secretRepository.findByName("docs-token")).thenReturn(docsToken);
+        when(secretRepository.findByName("skills-basic")).thenReturn(skillsBasic);
+        when(secretRepository.findByName("missing-secret")).thenReturn(null);
+
+        PanacheQuery<Artifact> query = mock(PanacheQuery.class);
+        when(query.list()).thenReturn(List.of(resources, skills));
+        when(artifactRepository.findByServiceId("srv-1")).thenReturn(query);
+
+        handler.fetchArtifacts(ArtifactsRequest.newBuilder().setServiceId("srv-1").build(), artifactsResponseObserver);
+
+        ArgumentCaptor<ArtifactsResponse> captor = ArgumentCaptor.forClass(ArtifactsResponse.class);
+        verify(artifactsResponseObserver).onNext(captor.capture());
+        verify(artifactsResponseObserver).onCompleted();
+
+        ArtifactsResponse response = captor.getValue();
+        assertEquals(2, response.getArtifactsCount());
+
+        var grpcResources = response.getArtifacts(0);
+        // Deduplicated: docs-token appears twice in YAML, resolved once.
+        assertEquals(1, grpcResources.getRelatedSecretsCount());
+        assertEquals("docs-token", grpcResources.getRelatedSecrets(0).getName());
+        assertEquals("tok-123", grpcResources.getRelatedSecrets(0).getToken());
+        assertEquals("X-Docs-Token", grpcResources.getRelatedSecrets(0).getTokenHeader());
+        assertEquals("BEARER_TOKEN", grpcResources.getRelatedSecrets(0).getAuthMethod());
+
+        var grpcSkills = response.getArtifacts(1);
+        // skills-basic resolved; missing-secret logged and omitted without failing.
+        assertEquals(1, grpcSkills.getRelatedSecretsCount());
+        assertEquals("skills-basic", grpcSkills.getRelatedSecrets(0).getName());
+        assertEquals("reader", grpcSkills.getRelatedSecrets(0).getUsername());
+        assertEquals("secret-pass", grpcSkills.getRelatedSecrets(0).getPassword());
+
+        verify(secretRepository, times(1)).findByName("docs-token");
+        verify(secretRepository, times(1)).findByName("skills-basic");
+        verify(secretRepository, times(1)).findByName("missing-secret");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testFetchArtifactsByExpositionResolvesRemoteSecrets() {
+        Service service = new Service();
+        service.id = "srv-1";
+        ConfigurationPlan plan = new ConfigurationPlan();
+        plan.id = "plan-1";
+        plan.includedArtifacts = List.of("skills.yaml");
+        Exposition exposition = new Exposition();
+        exposition.id = "exp-1";
+        exposition.service = service;
+        exposition.configurationPlan = plan;
+
+        Artifact main = new Artifact();
+        main.id = "art-main";
+        main.name = "openapi.yaml";
+        main.type = ArtifactType.OPEN_API_SPEC;
+        main.mainArtifact = true;
+        main.content = "openapi: 3.0.1";
+
+        Artifact skills = new Artifact();
+        skills.id = "art-skills";
+        skills.name = "skills.yaml";
+        skills.type = ArtifactType.RESHAPR_SKILLS;
+        skills.mainArtifact = false;
+        skills.content = """
+              apiVersion: reshapr.io/v1alpha1
+              kind: Skills
+              service:
+                name: Test
+                version: '1.0'
+              skills:
+                helper:
+                  remoteContent: https://skills.internal/helper
+                  remoteSecret: helper-secret
+              """;
+
+        Secret helperSecret = new Secret();
+        helperSecret.name = "helper-secret";
+        helperSecret.setToken("helper-tok");
+
+        when(expositionManagerService.getExposition("exp-1")).thenReturn(exposition);
+        when(secretRepository.findByName("helper-secret")).thenReturn(helperSecret);
+
+        PanacheQuery<Artifact> query = mock(PanacheQuery.class);
+        when(query.list()).thenReturn(List.of(main, skills));
+        when(artifactRepository.findByServiceId("srv-1")).thenReturn(query);
+
+        handler.fetchArtifacts(
+              ArtifactsRequest.newBuilder().setServiceId("srv-1").setExpositionId("exp-1").build(),
+              artifactsResponseObserver);
+
+        ArgumentCaptor<ArtifactsResponse> captor = ArgumentCaptor.forClass(ArtifactsResponse.class);
+        verify(artifactsResponseObserver).onNext(captor.capture());
+        verify(artifactsResponseObserver).onCompleted();
+
+        ArtifactsResponse response = captor.getValue();
+        assertEquals(2, response.getArtifactsCount());
+        assertEquals(0, response.getArtifacts(0).getRelatedSecretsCount());
+        assertEquals(1, response.getArtifacts(1).getRelatedSecretsCount());
+        assertEquals("helper-secret", response.getArtifacts(1).getRelatedSecrets(0).getName());
     }
 }

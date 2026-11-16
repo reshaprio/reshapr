@@ -65,6 +65,10 @@
           "pattern": "^https?://",
           "title": "The remote HTTP(S) URL of the skill directory (the one holding SKILL.md)."
         },
+        "remoteSecret": {
+          "type": "string",
+          "title": "The name of an existing Reshapr Secret used to authenticate remoteContent fetches, if applicable."
+        },
         "path": {
           "type": "string",
           "pattern": "^[^/\\s]+(/[^/\\s]+)*$",

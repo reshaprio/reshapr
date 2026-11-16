@@ -15,11 +15,42 @@
  */
 package io.reshapr.proxy.registry;
 
+import jakarta.annotation.Nullable;
+
+import java.util.List;
+
 public record ArtifactEntry(
       String id,
       String name,
       String path,
       ArtifactEntryType type,
       boolean mainArtifact,
-      String content) {
+      String content,
+      List<SecretEntry> relatedSecrets) {
+
+   public ArtifactEntry {
+      relatedSecrets = relatedSecrets != null ? List.copyOf(relatedSecrets) : List.of();
+   }
+
+   public ArtifactEntry(String id, String name, String path, ArtifactEntryType type,
+                        boolean mainArtifact, String content) {
+      this(id, name, path, type, mainArtifact, content, List.of());
+   }
+
+   /**
+    * Find a resolved secret attached to this artifact by its name.
+    * @param secretName The secret name declared in the artifact content.
+    * @return The matching {@link SecretEntry}, or {@code null} if not present.
+    */
+   public @Nullable SecretEntry findRelatedSecret(@Nullable String secretName) {
+      if (secretName == null || secretName.isBlank()) {
+         return null;
+      }
+      for (SecretEntry secret : relatedSecrets) {
+         if (secretName.equals(secret.name())) {
+            return secret;
+         }
+      }
+      return null;
+   }
 }

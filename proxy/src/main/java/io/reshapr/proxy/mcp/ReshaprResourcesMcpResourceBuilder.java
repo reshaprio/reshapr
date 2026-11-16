@@ -22,6 +22,7 @@ import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
 import io.reshapr.proxy.registry.ArtifactEntryType;
 import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -215,9 +216,11 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
                results.add(new McpSchema.TextResourceContents(request.uri(), "text/plain",
                      "No remoteResource property found for ui:// resource '" + request.uri() + "'."));
             } else {
-               // Fetch from remoteResource URL.
+               // Fetch from remoteResource URL using declared remoteSecret (or unauthenticated when absent/unresolved).
+               String remoteSecretName = resourceNode.path("remoteSecret").asText(null);
+               SecretEntry remoteSecret = resolveRemoteSecret(request.uri(), remoteSecretName);
                BackendResponse fetchResponse = proxyService.callBackend(configuration, URI.create(remoteResourceUrl),
-                     "GET", Collections.emptyMap(), null);
+                     "GET", Collections.emptyMap(), null, remoteSecret);
 
                Map<String, Object> meta = resourceNode.has("_meta") ?
                      YAML_MAPPER.convertValue(resourceNode.get("_meta"), new TypeReference<Map<String, Object>>() {}) : null;
@@ -236,6 +239,35 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
 
    private @Nullable JsonNode getResourceTemplatesNode() {
       return mergeAcrossArtifacts("resourceTemplates", CACHE_KEYS_PREFIX + "-templates");
+   }
+
+   /**
+    * Resolve the {@link SecretEntry} named by {@code remoteSecret} against the owning Resources artifact's
+    * {@code relatedSecrets}. Returns {@code null} (and logs a warning when a secret name was declared) if it
+    * cannot be resolved so the caller falls back to an unauthenticated fetch.
+    */
+   private @Nullable SecretEntry resolveRemoteSecret(String uri, @Nullable String remoteSecretName) {
+      if (remoteSecretName == null || remoteSecretName.isBlank()) {
+         return null;
+      }
+      if (attachedArtifacts != null) {
+         for (ArtifactEntry artifact : attachedArtifacts) {
+            if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
+               continue;
+            }
+            JsonNode subNode = getSubNodeForArtifact(artifact, "resources", CACHE_KEYS_PREFIX);
+            if (subNode != null && subNode.has(uri)) {
+               SecretEntry resolved = artifact.findRelatedSecret(remoteSecretName);
+               if (resolved != null) {
+                  return resolved;
+               }
+               break;
+            }
+         }
+      }
+      logger.warnf("Remote secret '%s' referenced by resource '%s' of service '%s' could not be resolved; proceeding unauthenticated",
+            remoteSecretName, uri, service.id());
+      return null;
    }
 
    /**

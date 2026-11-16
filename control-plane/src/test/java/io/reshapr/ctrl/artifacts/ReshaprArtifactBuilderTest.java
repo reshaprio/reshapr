@@ -19,9 +19,12 @@ import io.reshapr.ctrl.model.Artifact;
 import io.reshapr.ctrl.model.ArtifactType;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -369,5 +372,68 @@ class ReshaprArtifactBuilderTest {
 
       assertThrows(ReshaprArtifactException.class,
             () -> ReshaprArtifactBuilder.parseArtifact("skills-invalid.yaml", skillsFile));
+   }
+
+   @Test
+   void testValidParsingResourcesWithRemoteSecret(@TempDir Path tempDir) throws Exception {
+      Path file = tempDir.resolve("resources-remote-secret.yaml");
+      Files.writeString(file, """
+            apiVersion: reshapr.io/v1alpha1
+            kind: Resources
+            service:
+              name: Repository Service
+              version: '1.0.0'
+            resources:
+              'ui://repo/dashboard':
+                name: dashboard
+                remoteContent: https://ui.internal.example/dashboard.html
+                remoteSecret: internal-ui-secret
+            """);
+
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("resources-remote-secret.yaml", file.toFile()).artifact();
+      assertEquals(ArtifactType.RESHAPR_RESOURCES, artifact.type);
+      assertEquals(List.of("ui://repo/dashboard"), artifact.capabilities);
+   }
+
+   @Test
+   void testInvalidResourcesRemoteSecretWithoutRemoteContent(@TempDir Path tempDir) throws Exception {
+      Path file = tempDir.resolve("resources-remote-secret-invalid.yaml");
+      Files.writeString(file, """
+            apiVersion: reshapr.io/v1alpha1
+            kind: Resources
+            service:
+              name: Repository Service
+              version: '1.0.0'
+            resources:
+              'file:///readme.md':
+                name: readme
+                text: hello
+                remoteSecret: internal-ui-secret
+            """);
+
+      assertThrows(ReshaprArtifactException.class,
+            () -> ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-invalid.yaml", file.toFile()));
+   }
+
+   @Test
+   void testValidParsingSkillsWithRemoteSecret(@TempDir Path tempDir) throws Exception {
+      Path file = tempDir.resolve("skills-remote-secret.yaml");
+      Files.writeString(file, """
+            apiVersion: reshapr.io/v1alpha1
+            kind: Skills
+            service:
+              name: Pastry API
+              version: 2.0.0
+            skills:
+              pastry-ordering:
+                remoteContent: https://docs.internal.example/skills/pastry-ordering
+                remoteSecret: internal-docs-secret
+                files:
+                  - references/MENU.md
+            """);
+
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("skills-remote-secret.yaml", file.toFile()).artifact();
+      assertEquals(ArtifactType.RESHAPR_SKILLS, artifact.type);
+      assertEquals(List.of("pastry-ordering"), artifact.capabilities);
    }
 }

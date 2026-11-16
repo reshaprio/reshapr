@@ -93,6 +93,7 @@ public interface Mappers {
    @Mapping(target = "scopes", source = "scopesList")
    public OAuth2ClientConfigurationEntry toOAuth2ClientConfigurationEntry(OAuth2ClientConfiguration oauth2ClientConfiguration);
 
+   @Mapping(target = "relatedSecrets", source = "relatedSecretsList")
    public ArtifactEntry toArtifactEntry(Artifact artifact);
 
    @ValueMappings({
