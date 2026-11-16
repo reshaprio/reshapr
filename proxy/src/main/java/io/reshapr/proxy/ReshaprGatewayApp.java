@@ -91,6 +91,9 @@ public class ReshaprGatewayApp {
    @ConfigProperty(name = "reshapr.gateway.fqdns", defaultValue = "localhost:7777")
    List<String> fqdns;
 
+   @ConfigProperty(name = "reshapr.gateway.startup.fail-fast", defaultValue = "true")
+   boolean failFastOnStartup;
+
    @ConfigProperty(name = "quarkus.application.version", defaultValue = "unknown")
    String applicationVersion;
 
@@ -145,7 +148,11 @@ public class ReshaprGatewayApp {
          hasConnectedToControlPlane = true;
          logger.infof("Startup completed with %d expositions registered. Now listening for changes.", discoveryResponse.getExpositionsCount());
       } catch (Throwable t) {
+         // Fail fast: a gateway that could not register and sync at startup must not run without change stream.
          logger.error("Failed to fetch expositions during startup", t);
+         if (failFastOnStartup) {
+            throw new IllegalStateException("Unable to register and discover expositions from the control plane at startup", t);
+         }
       }
    }
 
@@ -192,7 +199,6 @@ public class ReshaprGatewayApp {
 
       ExpositionDiscoveryResponse discoveryResponse = discoveryService.discoverExpositions(discoveryRequest);
       logger.infof("Fetched %d expositions during registration", discoveryResponse.getExpositionsCount());
-      hasConnectedToControlPlane = true;
 
       discoveryResponse.getExpositionsList().forEach(this::fetchExposition);
       return discoveryResponse;
