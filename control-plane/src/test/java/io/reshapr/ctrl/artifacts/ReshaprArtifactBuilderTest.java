@@ -370,4 +370,35 @@ class ReshaprArtifactBuilderTest {
       assertThrows(ReshaprArtifactException.class,
             () -> ReshaprArtifactBuilder.parseArtifact("skills-invalid.yaml", skillsFile));
    }
+
+   @Test
+   void testValidParsingResourcesWithRemoteSecret() throws Exception {
+      File resourcesFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/resources-remote-secret-valid.yaml").getFile());
+
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-valid.yaml", resourcesFile).artifact();
+      assertEquals(ArtifactType.RESHAPR_RESOURCES, artifact.type);
+      assertEquals(
+            List.of("ui://repo/dashboard", "ui://repo/about", "ui://repo/public", "ui://repo/files/{path}"),
+            artifact.capabilities);
+   }
+
+   @Test
+   void testInvalidResourcesRemoteSecretWithoutRemoteContent() {
+      File resourcesFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/resources-remote-secret-invalid.yaml").getFile());
+
+      assertThrows(ReshaprArtifactException.class,
+            () -> ReshaprArtifactBuilder.parseArtifact("resources-remote-secret-invalid.yaml", resourcesFile));
+   }
+
+   @Test
+   void testValidParsingSkillsWithRemoteSecret() throws Exception {
+      File skillsFile = new File(
+            getClass().getResource("/io/reshapr/ctrl/artifacts/skills-remote-secret-valid.yaml").getFile());
+
+      Artifact artifact = ReshaprArtifactBuilder.parseArtifact("skills-remote-secret-valid.yaml", skillsFile).artifact();
+      assertEquals(ArtifactType.RESHAPR_SKILLS, artifact.type);
+      assertEquals(List.of("pastry-ordering", "unlinked-skill"), artifact.capabilities);
+   }
 }

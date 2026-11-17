@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.stream.StreamSupport;
@@ -316,13 +317,13 @@ public class ReshaprGatewayApp {
          return;
       }
 
-      // Index the previous artifacts content by id.
-      Map<String, String> previousContentById = new HashMap<>();
+      // Index previous artifacts by id so content or related-secret changes invalidate the cache.
+      Map<String, ArtifactEntry> previousById = new HashMap<>();
       if (previous.mainArtifact() != null) {
-         previousContentById.put(previous.mainArtifact().id(), previous.mainArtifact().content());
+         previousById.put(previous.mainArtifact().id(), previous.mainArtifact());
       }
       for (ArtifactEntry previousArtifact : previous.attachedArtifacts()) {
-         previousContentById.put(previousArtifact.id(), previousArtifact.content());
+         previousById.put(previousArtifact.id(), previousArtifact);
       }
 
       // Collect the freshly fetched artifacts.
@@ -332,11 +333,13 @@ public class ReshaprGatewayApp {
       }
       newArtifacts.addAll(newAttached);
 
-      // Invalidate only the artifacts whose content actually changed.
+      // Invalidate only the artifacts whose content or related secrets actually changed.
       for (ArtifactEntry artifact : newArtifacts) {
-         String previousContent = previousContentById.get(artifact.id());
-         if (previousContent != null && !previousContent.equals(artifact.content())) {
-            logger.debugf("Artifact '%s' content changed, invalidating its work cache entries", artifact.id());
+         ArtifactEntry previousArtifact = previousById.get(artifact.id());
+         if (previousArtifact != null
+               && (!Objects.equals(previousArtifact.content(), artifact.content())
+                     || !Objects.equals(previousArtifact.relatedSecrets(), artifact.relatedSecrets()))) {
+            logger.debugf("Artifact '%s' changed, invalidating its work cache entries", artifact.id());
             workCache.invalidateMajor(artifact.id());
          }
       }

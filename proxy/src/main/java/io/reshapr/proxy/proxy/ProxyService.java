@@ -26,6 +26,7 @@ import io.reshapr.proxy.secret.SecretReferenceResolver;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import jakarta.annotation.Nullable;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.HttpHeaders;
@@ -116,9 +117,30 @@ public class ProxyService {
     * @param body The body of the request, if applicable (e.g., for POST requests).
     * @return A BackendResponse containing the status code, body, and headers from the backend response.
     */
-   public BackendResponse callBackend(ConfigurationEntry configuration, URI externalUrl, String method, Map<String, List<String>> headers, String body) {
+   public BackendResponse callBackend(ConfigurationEntry configuration, URI externalUrl, String method,
+                                      Map<String, List<String>> headers, String body) {
+      SecretEntry secret = configuration != null ? configuration.backendSecret() : null;
+      return callBackend(configuration, externalUrl, method, headers, body, secret);
+   }
+
+   /**
+    * Proxy an HTTP request using an explicit {@link SecretEntry} override instead of
+    * {@code configuration.backendSecret()}. Passing {@code null} performs an unauthenticated
+    * request (e.g. for remote Resources/Skills fetches without a {@code remoteSecret}).
+    *
+    * @param configuration The configuration entry supplying timeout and header policy.
+    * @param externalUrl The target URL.
+    * @param method The HTTP method to use for the request (e.g., GET, POST).
+    * @param headers The headers to include in the request.
+    * @param body The body of the request, if applicable.
+    * @param secret The explicit secret used to authenticate this request, or {@code null} for none.
+    * @return A BackendResponse containing the status code, body, and headers from the response.
+    */
+   public BackendResponse callBackend(ConfigurationEntry configuration, URI externalUrl, String method,
+                                      Map<String, List<String>> headers, String body, @Nullable SecretEntry secret) {
       // Set timeout with priority to configuration value, then default if not set.
-      long timeoutMs = configuration.backendTimeout() != null ? configuration.backendTimeout() : defaultBackendTimeout;
+      long timeoutMs = configuration != null && configuration.backendTimeout() != null
+            ? configuration.backendTimeout() : defaultBackendTimeout;
 
       // Treat a null or empty body as "no body": some CDNs/WAFs (e.g. Cloudflare) reject requests
       // carrying an empty payload on methods that aren't expected to have one (typically GET).
@@ -130,14 +152,15 @@ public class ProxyService {
       // Apply the configuration plan header propagation policy: strip the non-overridable baseline
       // (hop-by-hop + internal), enforce the allow/deny lists (with Authorization/Cookie denied by
       // default) and apply any rewrite directives on the client-supplied headers.
-      Map<String, List<String>> requestHeaders = HeaderPolicyEngine.applyRequestPolicy(headers, configuration.headerPolicy());
+      ConfigurationEntry.HeaderPolicyEntry headerPolicy = configuration != null ? configuration.headerPolicy() : null;
+      Map<String, List<String>> requestHeaders = HeaderPolicyEngine.applyRequestPolicy(headers, headerPolicy);
 
       // Manage the Forwarded and X-Forwarded-For headers.
       HeadersUtil.addForwardingHeaders(requestHeaders);
 
-      // If the configuration has a backend secret, manage security headers.
-      if (configuration.backendSecret() != null) {
-         manageSecurityHeaders(configuration.backendSecret(), requestHeaders);
+      // If an explicit secret is provided, manage security headers.
+      if (secret != null) {
+         manageSecurityHeaders(secret, requestHeaders);
       }
 
       if (logger.isDebugEnabled()) {
@@ -160,9 +183,9 @@ public class ProxyService {
          }
 
          // If authorization failed, it can be because of a bad elicitation secret value. We need to evict it.
-         if (responseStream.statusCode() == 401 && configuration.backendSecret() != null && configuration.backendSecret().useElicitation()) {
-            logger.warnf("Proxy authorization failed with 401, evicting elicitation secret '%s'", configuration.backendSecret().name());
-            evictElicitedSecret(configuration.backendSecret());
+         if (responseStream.statusCode() == 401 && secret != null && secret.useElicitation()) {
+            logger.warnf("Proxy authorization failed with 401, evicting elicitation secret '%s'", secret.name());
+            evictElicitedSecret(secret);
          }
 
          // If authorization failed with empty body, explanations may be in the WWW-Authenticate header.

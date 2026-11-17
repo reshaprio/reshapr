@@ -93,7 +93,22 @@ public interface Mappers {
    @Mapping(target = "scopes", source = "scopesList")
    public OAuth2ClientConfigurationEntry toOAuth2ClientConfigurationEntry(OAuth2ClientConfiguration oauth2ClientConfiguration);
 
+   @Mapping(target = "relatedSecrets", expression = "java(toRelatedSecretsMap(artifact.getRelatedSecretsList()))")
    public ArtifactEntry toArtifactEntry(Artifact artifact);
+
+   /** Index an artifact's related secrets by name once when updating the registry. */
+   default java.util.Map<String, SecretEntry> toRelatedSecretsMap(java.util.List<Secret> secrets) {
+      if (secrets == null || secrets.isEmpty()) {
+         return java.util.Map.of();
+      }
+      java.util.Map<String, SecretEntry> map = new java.util.HashMap<>(secrets.size());
+      for (Secret secret : secrets) {
+         if (secret != null && !secret.getName().isBlank()) {
+            map.putIfAbsent(secret.getName(), toSecret(secret));
+         }
+      }
+      return java.util.Collections.unmodifiableMap(map);
+   }
 
    @ValueMappings({
          @ValueMapping(source = "OPEN_API_SPEC", target = "OPEN_API_SPEC"),

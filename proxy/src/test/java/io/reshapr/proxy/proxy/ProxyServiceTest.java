@@ -19,6 +19,8 @@ package io.reshapr.proxy.proxy;
 import io.reshapr.proxy.context.MethodHandlingContext;
 import io.reshapr.proxy.context.MethodHandlingInfo;
 import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
+import io.reshapr.proxy.secret.SecretReferenceResolver;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -32,6 +34,7 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -140,6 +143,45 @@ class ProxyServiceTest {
          assertEquals(502, response.status());
          long elapsed = response.upstreamServiceTimeMs();
          assertTrue(elapsed >= 50, "Elapsed time should be at least 50ms, but was: " + elapsed);
+      });
+   }
+
+   @Test
+   void shouldUseExplicitSecretOverrideAndAllowUnauthenticatedCalls() {
+      HttpResponse<byte[]> mockHttpResponse = Mockito.mock(HttpResponse.class);
+      Mockito.when(mockHttpResponse.statusCode()).thenReturn(200);
+      Mockito.when(mockHttpResponse.body()).thenReturn("ok".getBytes());
+      Mockito.when(mockHttpResponse.headers()).thenReturn(HttpHeaders.of(Map.of(), (k, v) -> true));
+
+      Map<String, List<String>> capturedHeaders = new HashMap<>();
+      ProxyService proxyService = new ProxyService(new SecretReferenceResolver(List.of()), null) {
+         @Override
+         protected HttpResponse<byte[]> doCallBackend(Map<String, List<String>> requestHeaders, HttpRequest.Builder requestBuilder,
+                                                      String backendEndpoint, long limit) {
+            capturedHeaders.clear();
+            capturedHeaders.putAll(requestHeaders);
+            return mockHttpResponse;
+         }
+      };
+      proxyService.defaultBackendTimeout = 3000L;
+      proxyService.maxPayloadSize = 10485760L;
+
+      SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "backend-tok", null, null, false, null);
+      SecretEntry remoteSecret = new SecretEntry("remote-secret", null, null, "remote-tok", "X-Remote-Auth", null, false, null);
+      ConfigurationEntry config = new ConfigurationEntry(
+            "id", "test", "http://backend.example.com", null, List.of(), List.of(), null, null, backendSecret);
+
+      MethodHandlingInfo info = new MethodHandlingInfo("127.0.0.1", null, null, null, null);
+      ScopedValue.where(MethodHandlingContext.METHOD_HANDLING_INFO, info).run(() -> {
+         // Explicit secret overrides configuration.backendSecret().
+         proxyService.callBackend(config, URI.create("http://remote.example.com"), "GET", Map.of(), null, remoteSecret);
+         assertEquals(List.of("remote-tok"), capturedHeaders.get("X-Remote-Auth"));
+         assertFalse(capturedHeaders.containsKey("Authorization"));
+
+         // Explicit null secret performs an unauthenticated call and does not fall back to backendSecret.
+         proxyService.callBackend(config, URI.create("http://remote.example.com"), "GET", Map.of(), null, null);
+         assertFalse(capturedHeaders.containsKey("Authorization"));
+         assertFalse(capturedHeaders.containsKey("X-Remote-Auth"));
       });
    }
 }

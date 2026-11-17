@@ -49,6 +49,11 @@ export type ToolSuggestion = {
 	detail: string;
 };
 
+export type SecretSuggestion = {
+	name: string;
+	detail: string;
+};
+
 export type ReshaprReferenceIndex = {
 	/** Tool names (as exposed over MCP, not raw operation names) of the current service + custom-tool capabilities. */
 	knownTools: Set<string>;
@@ -56,6 +61,12 @@ export type ReshaprReferenceIndex = {
 	toolSuggestions: ToolSuggestion[];
 	/** Known services expressed as `${name}:${version}` for cross-service references. */
 	knownServices: Set<string>;
+	/** Known secret names configured in the organization. */
+	knownSecrets: Set<string>;
+	/** Completion candidates for `remoteSecret:` in Resources/Skills artifacts. */
+	secretSuggestions: SecretSuggestion[];
+	/** Whether secret references loaded cleanly (avoids false warnings on transient API errors). */
+	knownSecretsLoaded: boolean;
 };
 
 /** The public context the editor provides when running validators for a document. */
@@ -228,7 +239,10 @@ export async function buildReferenceIndex(
 ): Promise<ReshaprReferenceIndex> {
 	const knownTools = new Set<string>();
 	const knownServices = new Set<string>();
+	const knownSecrets = new Set<string>();
+	let knownSecretsLoaded = false;
 	const toolSuggestions: ToolSuggestion[] = [];
+	const secretSuggestions: SecretSuggestion[] = [];
 
 	try {
 		const services = await api.listServices();
@@ -289,7 +303,31 @@ export async function buildReferenceIndex(
 		}
 	}
 
-	return { knownTools, knownServices, toolSuggestions };
+	try {
+		const secretRefs = await api.listSecretRefs();
+		if (Array.isArray(secretRefs)) {
+			for (const raw of secretRefs) {
+				const s = raw as { name?: unknown; type?: unknown } | null;
+				if (s && typeof s.name === 'string' && s.name.length > 0) {
+					knownSecrets.add(s.name);
+					const secretType = typeof s.type === 'string' && s.type.length > 0 ? s.type : 'Secret';
+					secretSuggestions.push({ name: s.name, detail: `Secret (${secretType})` });
+				}
+			}
+			knownSecretsLoaded = true;
+		}
+	} catch {
+		/* best-effort */
+	}
+
+	return {
+		knownTools,
+		knownServices,
+		knownSecrets,
+		knownSecretsLoaded,
+		toolSuggestions,
+		secretSuggestions
+	};
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -727,6 +765,52 @@ const promptsPlaceholdersValidator: Validator = {
 	}
 };
 
+/** Resources & Skills: every `remoteSecret` should reference an existing Secret in the organization. */
+const remoteSecretReferencesValidator: Validator = {
+	id: 'remote-secret-references',
+	async validate(doc, ctx) {
+		const sectionKeys =
+			ctx.kind === 'Resources'
+				? ['resources', 'resourceTemplates']
+				: ctx.kind === 'Skills'
+					? ['skills']
+					: [];
+		if (sectionKeys.length === 0) return [];
+
+		const refs: Array<{ node: Node; name: string }> = [];
+		for (const sectionKey of sectionKeys) {
+			const section = asMapNode(doc.get(sectionKey, true));
+			if (!section) continue;
+			for (const { value } of mapEntries(section)) {
+				const item = asMapNode(value);
+				if (!item) continue;
+				const secretNode = item.get('remoteSecret', true);
+				if (isScalar(secretNode) && typeof secretNode.value === 'string' && secretNode.value.trim().length > 0) {
+					refs.push({ node: secretNode as Node, name: secretNode.value });
+				}
+			}
+		}
+		if (refs.length === 0) return [];
+
+		const index = await ctx.loadReferenceIndex();
+		if (!index.knownSecretsLoaded) return [];
+
+		const warnings: ValidatorWarning[] = [];
+		for (const ref of refs) {
+			if (!index.knownSecrets.has(ref.name)) {
+				warnings.push(
+					ctx.warnNode(
+						this.id,
+						ref.node,
+						`Secret "${ref.name}" does not exist in this organization; remote fetches will proceed unauthenticated.`
+					)
+				);
+			}
+		}
+		return warnings;
+	}
+};
+
 /** Per-kind validator registry. Kinds without an entry simply run no custom validation. */
 export const VALIDATORS_BY_KIND: Record<ReshaprArtifactKind, Validator[]> = {
 	Prompts: [promptsPlaceholdersValidator],
@@ -736,9 +820,9 @@ export const VALIDATORS_BY_KIND: Record<ReshaprArtifactKind, Validator[]> = {
 		customToolsScriptValidator,
 		customToolsScriptAllowlistValidator
 	],
-	Resources: [],
+	Resources: [remoteSecretReferencesValidator],
 	ToolsOutputFilters: [toolsOutputFiltersReferencesValidator],
-	Skills: []
+	Skills: [remoteSecretReferencesValidator]
 };
 
 /** Whether a given kind has any custom validators wired up. */

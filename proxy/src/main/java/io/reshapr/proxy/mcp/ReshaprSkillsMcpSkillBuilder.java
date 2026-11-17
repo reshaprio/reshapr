@@ -21,6 +21,7 @@ import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
 import io.reshapr.proxy.registry.ArtifactEntryType;
 import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -84,8 +85,8 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
    }
 
    /** A skill as declared in an artifact. */
-   record SkillDefinition(String name, String root, String remoteContent, List<String> files,
-                          @Nullable Map<String, Object> meta) {
+   record SkillDefinition(String name, String root, String remoteContent, @Nullable String remoteSecret,
+                          List<String> files, @Nullable Map<String, Object> meta, String artifactId) {
 
       String skillFileUri() {
          return root + "/" + SKILL_FILE_NAME;
@@ -245,6 +246,10 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
             if (remoteContent == null) {
                continue;
             }
+            String remoteSecret = skillNode.path("remoteSecret").asText(null);
+            if (remoteSecret != null && remoteSecret.isBlank()) {
+               remoteSecret = null;
+            }
             String path = skillNode.path("path").asText("");
             Set<String> files = new LinkedHashSet<>();
             if (skillNode.path("files").isArray()) {
@@ -254,7 +259,7 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
             Map<String, Object> meta = skillNode.has("_meta")
                   ? YAML_MAPPER.convertValue(skillNode.get("_meta"), new TypeReference<Map<String, Object>>() {}) : null;
             String root = SKILL_URI_SCHEME + (path.isEmpty() ? "" : path + "/") + name;
-            definitions.add(new SkillDefinition(name, root, remoteContent, List.copyOf(files), meta));
+            definitions.add(new SkillDefinition(name, root, remoteContent, remoteSecret, List.copyOf(files), meta, artifact.id()));
          }
       } catch (Exception e) {
          logger.errorf(e, "Cannot read Reshapr Skills artifact '%s' for service '%s'", artifact.id(), service.id());
@@ -332,8 +337,9 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
    @Nullable
    private BackendResponse fetch(SkillDefinition definition, String relativePath, ConfigurationEntry configuration) {
       try {
+         SecretEntry remoteSecret = resolveRemoteSecret(definition);
          BackendResponse response = proxyService.callBackend(configuration,
-               URI.create(definition.remoteUrl(relativePath)), "GET", Collections.emptyMap(), null);
+               URI.create(definition.remoteUrl(relativePath)), "GET", Collections.emptyMap(), null, remoteSecret);
          if (response == null || response.status() < 200 || response.status() >= 300) {
             logger.warnf("Skill '%s' of service '%s': remote file '%s' returned HTTP status %s",
                   definition.name(), service.id(), definition.remoteUrl(relativePath),
@@ -346,6 +352,33 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
                service.id(), definition.remoteUrl(relativePath));
          return null;
       }
+   }
+
+   /**
+    * Resolve the {@link SecretEntry} named by {@code remoteSecret} against the owning Skills artifact's
+    * {@code relatedSecrets}. Returns {@code null} (and logs a warning when a secret name was declared) if it
+    * cannot be resolved so the fetch falls back to unauthenticated.
+    */
+   @Nullable
+   private SecretEntry resolveRemoteSecret(SkillDefinition definition) {
+      String remoteSecretName = definition.remoteSecret();
+      if (remoteSecretName == null || remoteSecretName.isBlank()) {
+         return null;
+      }
+      if (attachedArtifacts != null) {
+         for (ArtifactEntry artifact : attachedArtifacts) {
+            if (definition.artifactId().equals(artifact.id())) {
+               SecretEntry resolved = artifact.findRelatedSecret(remoteSecretName);
+               if (resolved != null) {
+                  return resolved;
+               }
+               break;
+            }
+         }
+      }
+      logger.warnf("Remote secret '%s' referenced by skill '%s' of service '%s' could not be resolved; proceeding unauthenticated",
+            remoteSecretName, definition.name(), service.id());
+      return null;
    }
 
    /** Parse the YAML frontmatter of a SKILL.md, or return null if absent or invalid. */

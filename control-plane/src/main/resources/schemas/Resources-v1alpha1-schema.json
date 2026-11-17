@@ -158,7 +158,14 @@
         "remoteContent": {
           "type": "string",
           "title": "The remote URI where this resource content can be found, if applicable."
+        },
+        "remoteSecret": {
+          "type": "string",
+          "title": "The name of an existing Reshapr Secret used to authenticate remoteContent fetches, if applicable."
         }
+      },
+      "dependentRequired": {
+        "remoteSecret": ["remoteContent"]
       }
     },
     "resourceTemplateItem": {
@@ -195,6 +202,10 @@
         },
         "annotations": {
           "$ref": "#/definitions/annotations"
+        },
+        "remoteSecret": {
+          "type": "string",
+          "title": "The name of an existing Reshapr Secret used to authenticate remoteContent fetches, if applicable."
         }
       }
     },

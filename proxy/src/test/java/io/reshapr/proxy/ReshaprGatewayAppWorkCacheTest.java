@@ -25,11 +25,13 @@ import io.reshapr.proxy.registry.ArtifactEntryType;
 import io.reshapr.proxy.registry.ConfigurationEntry;
 import io.reshapr.proxy.registry.ExpositionEntry;
 import io.reshapr.proxy.registry.GatewayRegistry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -134,6 +136,32 @@ class ReshaprGatewayAppWorkCacheTest {
       // The exposition is gone from the registry, but the artifact cache is untouched (content unchanged).
       assertNull(registry.getExpositionById("e1"), "the deleted exposition must be removed");
       assertNotNull(cache.get("main", MINOR), "DELETE must not invalidate shared artifact caches");
+   }
+
+   /** A related-secret value change invalidates that artifact's cache even when YAML content is unchanged. */
+   @Test
+   void testRelatedSecretsChangeInvalidatesOnlyChangedArtifact() {
+      GatewayRegistry registry = new GatewayRegistry();
+      WorkCache cache = new WorkCache(1000);
+      ReshaprGatewayApp app = app(registry, cache);
+
+      SecretEntry secretV1 = new SecretEntry("docs-token", null, null, "tok-v1", null, null, false, null);
+      SecretEntry secretV2 = new SecretEntry("docs-token", null, null, "tok-v2", null, null, false, null);
+
+      ArtifactEntry mainV1 = artifact("main", "v1");
+      ArtifactEntry skillsV1 = new ArtifactEntry("skills", "skills.yaml", null,
+            ArtifactEntryType.RESHAPR_SKILLS, false, "skills-yaml", Map.of(secretV1.name(), secretV1));
+      ExpositionEntry previous = new ExpositionEntry("e1", null, service(), config(), mainV1, List.of(skillsV1));
+
+      cache.set("main", MINOR, new Object());
+      cache.set("skills", MINOR, new Object());
+
+      ArtifactEntry skillsV2 = new ArtifactEntry("skills", "skills.yaml", null,
+            ArtifactEntryType.RESHAPR_SKILLS, false, "skills-yaml", Map.of(secretV2.name(), secretV2));
+      app.invalidateChangedArtifacts(previous, artifact("main", "v1"), List.of(skillsV2));
+
+      assertNotNull(cache.get("main", MINOR), "unchanged artifact cache must be preserved");
+      assertNull(cache.get("skills", MINOR), "artifact with updated relatedSecrets must be invalidated");
    }
 }
 

@@ -22,6 +22,7 @@ import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
 import io.reshapr.proxy.registry.ArtifactEntryType;
 import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -152,11 +153,7 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
          Iterator<String> uriTemplatesIterator = templatesNode.fieldNames();
          while (uriTemplatesIterator.hasNext()) {
             String uriTemplate = uriTemplatesIterator.next();
-            String uriPattern = uriTemplate.replace("/", "\\/")   // Escape slashes.
-                  .replace("?", "\\?")                            // Escape query parameters marker.
-                  .replaceAll("\\{(.*)\\}", "(.*)");              // Prepare groups for extraction.
-
-            if (request.uri().matches(uriPattern)) {
+            if (matchesUriTemplate(uriTemplate, request.uri())) {
                resourceNode = templatesNode.get(uriTemplate);
                break;
             }
@@ -215,9 +212,10 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
                results.add(new McpSchema.TextResourceContents(request.uri(), "text/plain",
                      "No remoteResource property found for ui:// resource '" + request.uri() + "'."));
             } else {
-               // Fetch from remoteResource URL.
+               // Fetch from remoteResource URL using declared remoteSecret (or unauthenticated when absent/unresolved).
+               SecretEntry remoteSecret = resolveRemoteSecret(request.uri(), resourceNode);
                BackendResponse fetchResponse = proxyService.callBackend(configuration, URI.create(remoteResourceUrl),
-                     "GET", Collections.emptyMap(), null);
+                     "GET", Collections.emptyMap(), null, remoteSecret);
 
                Map<String, Object> meta = resourceNode.has("_meta") ?
                      YAML_MAPPER.convertValue(resourceNode.get("_meta"), new TypeReference<Map<String, Object>>() {}) : null;
@@ -236,6 +234,66 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
 
    private @Nullable JsonNode getResourceTemplatesNode() {
       return mergeAcrossArtifacts("resourceTemplates", CACHE_KEYS_PREFIX + "-templates");
+   }
+
+   /**
+    * Resolve the {@link SecretEntry} declared by {@code remoteSecret} on {@code resourceNode} against
+    * the owning Resources artifact's {@code relatedSecrets}. Checks direct {@code resources} first and
+    * falls back to {@code resourceTemplates}, mirroring {@link #readResource}. Returns {@code null}
+    * (and logs a warning when a secret name was declared) if it cannot be resolved.
+    */
+   private @Nullable SecretEntry resolveRemoteSecret(String uri, JsonNode resourceNode) {
+      String remoteSecretName = resourceNode.path("remoteSecret").asText(null);
+      if (remoteSecretName == null || remoteSecretName.isBlank()) {
+         return null;
+      }
+      ArtifactEntry owner = findOwningArtifact(uri);
+      if (owner != null) {
+         SecretEntry resolved = owner.findRelatedSecret(remoteSecretName);
+         if (resolved != null) {
+            return resolved;
+         }
+      }
+      logger.warnf("Remote secret '%s' referenced by resource '%s' of service '%s' could not be resolved; proceeding unauthenticated",
+            remoteSecretName, uri, service.id());
+      return null;
+   }
+
+   private @Nullable ArtifactEntry findOwningArtifact(String uri) {
+      if (attachedArtifacts == null) {
+         return null;
+      }
+      for (ArtifactEntry artifact : attachedArtifacts) {
+         if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
+            continue;
+         }
+         JsonNode resources = getSubNodeForArtifact(artifact, "resources", CACHE_KEYS_PREFIX);
+         if (resources != null && resources.has(uri)) {
+            return artifact;
+         }
+      }
+      for (ArtifactEntry artifact : attachedArtifacts) {
+         if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
+            continue;
+         }
+         JsonNode templates = getSubNodeForArtifact(artifact, "resourceTemplates", CACHE_KEYS_PREFIX + "-templates");
+         if (templates != null && templates.isObject()) {
+            Iterator<String> uriTemplates = templates.fieldNames();
+            while (uriTemplates.hasNext()) {
+               if (matchesUriTemplate(uriTemplates.next(), uri)) {
+                  return artifact;
+               }
+            }
+         }
+      }
+      return null;
+   }
+
+   private static boolean matchesUriTemplate(String uriTemplate, String uri) {
+      String uriPattern = uriTemplate.replace("/", "\\/")   // Escape slashes.
+            .replace("?", "\\?")                            // Escape query parameters marker.
+            .replaceAll("\\{(.*)\\}", "(.*)");              // Prepare groups for extraction.
+      return uri.matches(uriPattern);
    }
 
    /**

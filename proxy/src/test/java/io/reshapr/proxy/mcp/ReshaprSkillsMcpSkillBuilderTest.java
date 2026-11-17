@@ -15,11 +15,13 @@
  */
 package io.reshapr.proxy.mcp;
 
+import io.reshapr.proxy.TestResources;
 import io.reshapr.proxy.proxy.BackendResponse;
 import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.registry.ArtifactEntry;
 import io.reshapr.proxy.registry.ArtifactEntryType;
 import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
 import io.reshapr.proxy.registry.ServiceEntry;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 
 /**
  * This is a unit test for the {@link ReshaprSkillsMcpSkillBuilder} class, which implements the {@link McpSkillBuilder} interface.
@@ -79,7 +82,7 @@ public class ReshaprSkillsMcpSkillBuilderTest {
             "http://skills.local/pdf-processing/references/FORMS.md", "# Forms",
             "http://skills.local/pdf-processing/scripts/extract.py", "print('x')",
             "http://skills.local/pdf-processing/scripts/lib/util.py", "pass");
-      Mockito.when(proxyService.callBackend(any(), any(URI.class), eq("GET"), any(), any())).thenAnswer(invocation -> {
+      Mockito.when(proxyService.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any())).thenAnswer(invocation -> {
          String content = remote.get(invocation.<URI>getArgument(1).toString());
          return content == null ? new BackendResponse(404, new byte[0], Map.of())
                : new BackendResponse(200, content.getBytes(StandardCharsets.UTF_8), Map.of());
@@ -134,5 +137,47 @@ public class ReshaprSkillsMcpSkillBuilderTest {
    @Test
    void testFrontmatterMismatchSkipsSkill() {
       assertNull(ReshaprSkillsMcpSkillBuilder.parseFrontmatter("# no frontmatter"));
+   }
+
+   @Test
+   void testRemoteSecretPassedToProxyServiceAndUnresolvedFallsBackToNull() {
+      String yaml = TestResources.readString("io/reshapr/proxy/mcp/skills-remote-secret.yaml");
+
+      SecretEntry skillsToken = new SecretEntry("skills-token", null, null, "tok-xyz", null, null, false, null);
+      SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "backend-tok", null, null, false, null);
+      ConfigurationEntry config = new ConfigurationEntry(
+            "cfg", "plan", "http://backend.local", null, List.of(), List.of(), null, null, backendSecret);
+
+      ProxyService mockProxy = Mockito.mock(ProxyService.class);
+      Mockito.when(mockProxy.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any())).thenAnswer(invocation -> {
+         String url = invocation.<URI>getArgument(1).toString();
+         String name = url.contains("pdf-processing") ? "pdf-processing"
+               : url.contains("public") ? "public-skill" : "broken-secret-skill";
+         String md = """
+               ---
+               name: %s
+               description: Test skill
+               ---
+               body
+               """.formatted(name);
+         return new BackendResponse(200, md.getBytes(StandardCharsets.UTF_8), Map.of());
+      });
+
+      ServiceEntry svc = new ServiceEntry("svc-sec", "org", "Test", "1.0", "REST", List.of());
+      ArtifactEntry artifact = new ArtifactEntry(
+            "art-sec", "skills", null, ArtifactEntryType.RESHAPR_SKILLS, false, yaml,
+            Map.of(skillsToken.name(), skillsToken));
+      ReshaprSkillsMcpSkillBuilder skillBuilder = new ReshaprSkillsMcpSkillBuilder(
+            svc, List.of(artifact), new WorkCache(100), mockProxy);
+
+      List<McpSchema.SkillEntry> skills = skillBuilder.listSkills(config);
+      assertEquals(3, skills.size());
+
+      Mockito.verify(mockProxy).callBackend(
+            eq(config), eq(URI.create("http://skills.local/pdf-processing/SKILL.md")), eq("GET"), any(), isNull(), eq(skillsToken));
+      Mockito.verify(mockProxy).callBackend(
+            eq(config), eq(URI.create("http://skills.local/public/SKILL.md")), eq("GET"), any(), isNull(), isNull());
+      Mockito.verify(mockProxy).callBackend(
+            eq(config), eq(URI.create("http://skills.local/broken/SKILL.md")), eq("GET"), any(), isNull(), isNull());
    }
 }

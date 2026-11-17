@@ -21,8 +21,9 @@
 	import { RESHAPR_DARK_THEME, defineReshaprDarkTheme } from '#lib/monaco/theme.js';
 	import { theme } from '#lib/stores/theme.svelte.js';
 	import { registerToolCompletion } from '#lib/monaco/toolCompletion.js';
+	import { registerSecretCompletion } from '#lib/monaco/secretCompletion.js';
 	import type { ReshaprArtifactKind } from '#lib/artifacts/types.js';
-	import type { ToolSuggestion } from '#lib/artifacts/validators.js';
+	import type { SecretSuggestion, ToolSuggestion } from '#lib/artifacts/validators.js';
 	import ScrollableCode from '#lib/components/ScrollableCode.svelte';
 	import type * as Monaco from 'monaco-editor';
 
@@ -43,6 +44,7 @@
 		warnings = [],
 		kind = undefined,
 		getToolSuggestions = undefined,
+		getSecretSuggestions = undefined,
 		onChange = undefined,
 		onValidationChange = undefined
 	}: {
@@ -56,6 +58,7 @@
 		/** Artifact kind and tool source, enabling tool-name completion. */
 		kind?: ReshaprArtifactKind;
 		getToolSuggestions?: () => Promise<ToolSuggestion[]>;
+		getSecretSuggestions?: () => Promise<SecretSuggestion[]>;
 		onChange?: (value: string) => void;
 		onValidationChange?: (markers: Monaco.editor.IMarker[]) => void;
 	} = $props();
@@ -99,6 +102,7 @@
 		let contentDisposable: Monaco.IDisposable | null = null;
 		let lineCountDisposable: Monaco.IDisposable | null = null;
 		let completionDisposable: Monaco.IDisposable | null = null;
+		let secretCompletionDisposable: Monaco.IDisposable | null = null;
 
 		void (async () => {
 			if (!container) return;
@@ -153,6 +157,14 @@
 				if (kind && getToolSuggestions && !readOnly) {
 					completionDisposable = registerToolCompletion(monaco, textModel, kind, getToolSuggestions);
 				}
+				if (kind && getSecretSuggestions && !readOnly) {
+					secretCompletionDisposable = registerSecretCompletion(
+						monaco,
+						textModel,
+						kind,
+						getSecretSuggestions
+					);
+				}
 
 				if (onChange) {
 					contentDisposable = textModel.onDidChangeContent(() => {
@@ -181,6 +193,7 @@
 			contentDisposable?.dispose();
 			lineCountDisposable?.dispose();
 			completionDisposable?.dispose();
+			secretCompletionDisposable?.dispose();
 			editor?.dispose();
 			model?.dispose();
 			editor = null;

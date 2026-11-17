@@ -15,7 +15,28 @@
  */
 package io.reshapr.proxy.mcp;
 
+import io.reshapr.json.ObjectMapperFactory;
+import io.reshapr.proxy.TestResources;
+import io.reshapr.proxy.proxy.BackendResponse;
+import io.reshapr.proxy.proxy.ProxyService;
+import io.reshapr.proxy.registry.ArtifactEntry;
+import io.reshapr.proxy.registry.ArtifactEntryType;
+import io.reshapr.proxy.registry.ConfigurationEntry;
+import io.reshapr.proxy.registry.SecretEntry;
+import io.reshapr.proxy.registry.ServiceEntry;
+
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 
 class ReshaprResourcesMcpResourceBuilderTest {
 
@@ -38,5 +59,47 @@ class ReshaprResourcesMcpResourceBuilderTest {
          String extractedPath = uri.replaceAll(uriPattern, "$1");
          System.err.println("extractedPath: " + extractedPath);
       }
+   }
+
+   @Test
+   void testRemoteContentUsesResolvedRemoteSecretOrFallsBackToUnauthenticated() {
+      String yaml = TestResources.readString("io/reshapr/proxy/mcp/resources-remote-secret.yaml");
+
+      SecretEntry uiSecret = new SecretEntry("ui-secret", null, null, "ui-tok", null, null, false, null);
+      SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "api-tok", null, null, false, null);
+
+      ProxyService proxyService = Mockito.mock(ProxyService.class);
+      Mockito.when(proxyService.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any()))
+            .thenReturn(new BackendResponse(200, "<html>ok</html>".getBytes(StandardCharsets.UTF_8), Map.of()));
+
+      ServiceEntry service = new ServiceEntry("svc-1", "org-1", "UI Service", "1.0", "REST", List.of());
+      ArtifactEntry artifact = new ArtifactEntry(
+            "art-res", "resources.yaml", null, ArtifactEntryType.RESHAPR_RESOURCES, false, yaml,
+            Map.of(uiSecret.name(), uiSecret));
+      ConfigurationEntry config = new ConfigurationEntry(
+            "cfg-1", "plan", "http://backend.local", null, List.of(), List.of(), null, null, backendSecret);
+
+      ReshaprResourcesMcpResourceBuilder builder = new ReshaprResourcesMcpResourceBuilder(
+            service, List.of(artifact), new WorkCache(100), ObjectMapperFactory.getYamlObjectMapper(), proxyService);
+
+      var protectedContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/protected"), config);
+      assertNotNull(protectedContents);
+      Mockito.verify(proxyService).callBackend(
+            eq(config), eq(URI.create("https://ui.internal.example/protected.html")), eq("GET"), any(), isNull(), eq(uiSecret));
+
+      var templateContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/items/42"), config);
+      assertNotNull(templateContents);
+      Mockito.verify(proxyService).callBackend(
+            eq(config), eq(URI.create("https://ui.internal.example/item.html")), eq("GET"), any(), isNull(), eq(uiSecret));
+
+      var publicContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/public"), config);
+      assertNotNull(publicContents);
+      Mockito.verify(proxyService).callBackend(
+            eq(config), eq(URI.create("https://ui.example.com/public.html")), eq("GET"), any(), isNull(), isNull());
+
+      var missingSecretContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/missing-secret"), config);
+      assertNotNull(missingSecretContents);
+      Mockito.verify(proxyService).callBackend(
+            eq(config), eq(URI.create("https://ui.internal.example/other.html")), eq("GET"), any(), isNull(), isNull());
    }
 }
