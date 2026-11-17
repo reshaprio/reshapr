@@ -53,6 +53,10 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
 
    private static final String CACHE_KEYS_PREFIX = "rrmcprb-";
 
+   private static final String TEXT_PLAIN_MIME_TYPE = "text/plain";
+   private static final String APPLICATION_OCTET_STREAM_MIME_TYPE = "application/octet-stream";
+   private static final String RESOURCE_MIME_TYPE = "mimeType";
+
    private static final ObjectMapper YAML_MAPPER = ObjectMapperFactory.getYamlObjectMapper();
 
    private final ServiceEntry service;
@@ -85,15 +89,15 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
 
          JsonNode resourceNode = resourcesNode.get(uri);
          Long size = resourceNode.has("size") ? resourceNode.get("size").asLong() : null;
-         var annotations = resourceNode.has("annotations") ?
-               YAML_MAPPER.convertValue(resourceNode.get("annotations"), McpSchema.Annotations.class) : null;
-         var meta = resourceNode.has("_meta") ?
-               YAML_MAPPER.convertValue(resourceNode.get("_meta"), new TypeReference<Map<String, Object>>() {}) : null;
+         var annotations = resourceNode.has(McpSchema.ATTR_ANNOTATIONS) ?
+               YAML_MAPPER.convertValue(resourceNode.get(McpSchema.ATTR_ANNOTATIONS), McpSchema.Annotations.class) : null;
+         var meta = resourceNode.has(McpSchema.ATTR_META) ?
+               YAML_MAPPER.convertValue(resourceNode.get(McpSchema.ATTR_META), new TypeReference<Map<String, Object>>() {}) : null;
          resources.add(new McpSchema.Resource(uri,
                resourceNode.path("name").asText(null),
                resourceNode.path("title").asText(null),
                resourceNode.path("description").asText(null),
-               resourceNode.path("mimeType").asText(null),
+               resourceNode.path(RESOURCE_MIME_TYPE).asText(null),
                size, annotations, meta));
       }
       return resources;
@@ -115,13 +119,13 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
          String uriTemplate = uriTemplatesIterator.next();
 
          JsonNode templateNode = templatesNode.get(uriTemplate);
-         var annotations = templatesNode.has("annotations") ?
-               YAML_MAPPER.convertValue(templatesNode.get("annotations"), McpSchema.Annotations.class) : null;
+         var annotations = templatesNode.has(McpSchema.ATTR_ANNOTATIONS) ?
+               YAML_MAPPER.convertValue(templatesNode.get(McpSchema.ATTR_ANNOTATIONS), McpSchema.Annotations.class) : null;
          templates.add(new McpSchema.ResourceTemplate(uriTemplate,
                templateNode.path("name").asText(null),
                templateNode.path("title").asText(null),
                templateNode.path("description").asText(null),
-               templateNode.path("mimeType").asText(null),
+               templateNode.path(RESOURCE_MIME_TYPE).asText(null),
                annotations));
       }
       return templates;
@@ -172,60 +176,70 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
       // It may be directly specified in the artifact as text or blob.
       if (resourceNode.has("text")) {
          results.add(new McpSchema.TextResourceContents(request.uri(),
-               resourceNode.path("mimeType").asText("text/plain"),
+               resourceNode.path(RESOURCE_MIME_TYPE).asText(TEXT_PLAIN_MIME_TYPE),
                resourceNode.get("text").asText()));
       } else if (resourceNode.has("blob")) {
          results.add(new McpSchema.BlobResourceContents(request.uri(),
-               resourceNode.path("mimeType").asText("application/octet-stream"),
+               resourceNode.path(RESOURCE_MIME_TYPE).asText(APPLICATION_OCTET_STREAM_MIME_TYPE),
                resourceNode.get("blob").asText()));
       } else {
-         // We need to fetch the resource content from a backend URI.
-         if (request.uri().startsWith("file:///")) {
-            String backendUrl = configuration.backendEndpoint() + request.uri().substring("file://".length());
-
-            BackendResponse fetchResponse = proxyService.callBackend(configuration, URI.create(backendUrl),
-                  "GET", Collections.emptyMap(), null);
-
-            // Check it's text or blob based on mime type.
-            String contentType = fetchResponse.headers().getOrDefault(HttpHeaders.CONTENT_TYPE, List.of()).stream().findFirst().orElse(null);
-            if (contentType == null) {
-               contentType = resourceNode.path("mimeType").asText("application/octet-stream");
-            }
-            if (contentType.startsWith("text/") || contentType.contains("json") || contentType.contains("yaml") || contentType.contains("xml") ) {
-               String fetchedContent = null;
-               try {
-                  fetchedContent = ContentUtil.extractResponseContent(fetchResponse);
-               } catch (Exception e) {
-                  logger.errorf(e, "Cannot extract text content for resource '%s' from backend", request.uri());
-                  results.add(new McpSchema.TextResourceContents(request.uri(), "text/plain",
-                        "Error extracting resource content: " + e.getMessage()));
-               }
-               results.add(new McpSchema.TextResourceContents(request.uri(), contentType, fetchedContent));
-            } else {
-               results.add(new McpSchema.BlobResourceContents(request.uri(), contentType, Base64.encode(fetchResponse.content())));
-            }
-         } else if (request.uri().startsWith("ui://") && resourceNode.has("remoteContent")) {
-            // Special handling for ui:// resources - they are supposed to be served from another server found in the remoteResource property.
-            String remoteResourceUrl = resourceNode.path("remoteContent").asText(null);
-            if (remoteResourceUrl == null) {
-               logger.debugf("No remoteResource property found for ui:// resource '%s' for service '%s'", request.uri(), service.id());
-               results.add(new McpSchema.TextResourceContents(request.uri(), "text/plain",
-                     "No remoteResource property found for ui:// resource '" + request.uri() + "'."));
-            } else {
-               // Fetch from remoteResource URL using declared remoteSecret (or unauthenticated when absent/unresolved).
-               SecretEntry remoteSecret = resolveRemoteSecret(request.uri(), resourceNode);
-               BackendResponse fetchResponse = proxyService.callBackend(configuration, URI.create(remoteResourceUrl),
-                     "GET", Collections.emptyMap(), null, remoteSecret);
-
-               Map<String, Object> meta = resourceNode.has("_meta") ?
-                     YAML_MAPPER.convertValue(resourceNode.get("_meta"), new TypeReference<Map<String, Object>>() {}) : null;
-               results.add(new McpSchema.TextResourceContents(request.uri(), "text/html;profile=mcp-app",
-                     new String(fetchResponse.content(), StandardCharsets.UTF_8), meta));
-            }
-         }
+         fetchResource(request, configuration, resourceNode, results);
       }
 
       return results;
+   }
+
+   /** Fetch the resource content from the backend URI, either a file:// or ui:// resource. */
+   private void fetchResource(McpSchema.ReadResourceRequest request, ConfigurationEntry configuration, JsonNode resourceNode, List<McpSchema.ResourceContents> results) {
+      // We need to fetch the resource content from a backend URI.
+      if (request.uri().startsWith("file:///")) {
+         String backendUrl = configuration.backendEndpoint() + request.uri().substring("file://".length());
+
+         BackendResponse fetchResponse = proxyService.callBackend(configuration, URI.create(backendUrl),
+               "GET", Collections.emptyMap(), null);
+
+         // Check it's text or blob based on mime type.
+         String contentType = fetchResponse.headers().getOrDefault(HttpHeaders.CONTENT_TYPE, List.of()).stream().findFirst().orElse(null);
+         if (contentType == null) {
+            contentType = resourceNode.path(RESOURCE_MIME_TYPE).asText(APPLICATION_OCTET_STREAM_MIME_TYPE);
+         }
+         if (contentType.startsWith("text/") || contentType.contains("json") || contentType.contains("yaml") || contentType.contains("xml") ) {
+            String fetchedContent = null;
+            try {
+               fetchedContent = ContentUtil.extractResponseContent(fetchResponse);
+            } catch (Exception e) {
+               logger.errorf(e, "Cannot extract text content for resource '%s' from backend", request.uri());
+               results.add(new McpSchema.TextResourceContents(request.uri(), TEXT_PLAIN_MIME_TYPE,
+                     "Error extracting resource content: " + e.getMessage()));
+            }
+            results.add(new McpSchema.TextResourceContents(request.uri(), contentType, fetchedContent));
+         } else {
+            results.add(new McpSchema.BlobResourceContents(request.uri(), contentType, Base64.encode(fetchResponse.content())));
+         }
+      } else if (request.uri().startsWith("ui://") && resourceNode.has("remoteContent")) {
+         fetchRemoteContent(request, configuration, resourceNode, results);
+      }
+   }
+
+   /** Fetch the resource content from a different backend URI found into remoteContent. */
+   private void fetchRemoteContent(McpSchema.ReadResourceRequest request, ConfigurationEntry configuration, JsonNode resourceNode, List<McpSchema.ResourceContents> results) {
+      // Special handling for ui:// resources - they are supposed to be served from another server found in the remoteResource property.
+      String remoteResourceUrl = resourceNode.path("remoteContent").asText(null);
+      if (remoteResourceUrl == null) {
+         logger.debugf("No remoteContent property found for ui:// resource '%s' for service '%s'", request.uri(), service.id());
+         results.add(new McpSchema.TextResourceContents(request.uri(), TEXT_PLAIN_MIME_TYPE,
+               "No remoteContent property found for ui:// resource '" + request.uri() + "'."));
+      } else {
+         // Fetch from remoteContent URL using declared remoteSecret (or unauthenticated when absent/unresolved).
+         SecretEntry remoteSecret = resolveRemoteSecret(request.uri(), resourceNode);
+         BackendResponse fetchResponse = proxyService.callBackend(configuration, remoteSecret, URI.create(remoteResourceUrl),
+               "GET", Collections.emptyMap(), null);
+
+         Map<String, Object> meta = resourceNode.has(McpSchema.ATTR_META) ?
+               YAML_MAPPER.convertValue(resourceNode.get(McpSchema.ATTR_META), new TypeReference<Map<String, Object>>() {}) : null;
+         results.add(new McpSchema.TextResourceContents(request.uri(), "text/html;profile=mcp-app",
+               new String(fetchResponse.content(), StandardCharsets.UTF_8), meta));
+      }
    }
 
    private @Nullable JsonNode getResourcesNode() {
@@ -244,48 +258,20 @@ public class ReshaprResourcesMcpResourceBuilder implements McpResourceBuilder {
     */
    private @Nullable SecretEntry resolveRemoteSecret(String uri, JsonNode resourceNode) {
       String remoteSecretName = resourceNode.path("remoteSecret").asText(null);
-      if (remoteSecretName == null || remoteSecretName.isBlank()) {
+      if (remoteSecretName == null || remoteSecretName.isBlank() || attachedArtifacts == null) {
          return null;
       }
-      ArtifactEntry owner = findOwningArtifact(uri);
-      if (owner != null) {
-         SecretEntry resolved = owner.findRelatedSecret(remoteSecretName);
-         if (resolved != null) {
-            return resolved;
+      for (ArtifactEntry artifact : attachedArtifacts) {
+         if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
+            continue;
+         }
+         SecretEntry secret = artifact.relatedSecrets().get(remoteSecretName);
+         if (secret != null) {
+            return secret;
          }
       }
       logger.warnf("Remote secret '%s' referenced by resource '%s' of service '%s' could not be resolved; proceeding unauthenticated",
             remoteSecretName, uri, service.id());
-      return null;
-   }
-
-   private @Nullable ArtifactEntry findOwningArtifact(String uri) {
-      if (attachedArtifacts == null) {
-         return null;
-      }
-      for (ArtifactEntry artifact : attachedArtifacts) {
-         if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
-            continue;
-         }
-         JsonNode resources = getSubNodeForArtifact(artifact, "resources", CACHE_KEYS_PREFIX);
-         if (resources != null && resources.has(uri)) {
-            return artifact;
-         }
-      }
-      for (ArtifactEntry artifact : attachedArtifacts) {
-         if (!ArtifactEntryType.RESHAPR_RESOURCES.equals(artifact.type())) {
-            continue;
-         }
-         JsonNode templates = getSubNodeForArtifact(artifact, "resourceTemplates", CACHE_KEYS_PREFIX + "-templates");
-         if (templates != null && templates.isObject()) {
-            Iterator<String> uriTemplates = templates.fieldNames();
-            while (uriTemplates.hasNext()) {
-               if (matchesUriTemplate(uriTemplates.next(), uri)) {
-                  return artifact;
-               }
-            }
-         }
-      }
       return null;
    }
 

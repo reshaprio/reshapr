@@ -71,6 +71,18 @@ public record ConfigurationEntry(
             + ", audit=" + audit + ", apiKey=" +  apiKeyString() + "]";
    }
 
+   /**
+    * Returns a copy of this configuration entry with a different backend secret. Used when fetching remote
+    * content (e.g. Resources/Skills {@code remoteContent}) referencing its own {@code backendSecret}, distinct
+    * from the configuration plan's backend secret.
+    * @param backendSecret The secret to use instead of this entry's own {@link #backendSecret()}.
+    * @return A new {@link ConfigurationEntry} identical to this one except for its backend secret.
+    */
+   public ConfigurationEntry withBackendSecret(SecretEntry backendSecret) {
+      return new ConfigurationEntry(id, name, backendEndpoint, backendTimeout, excludedOperations, includedOperations,
+            apiKey, oauth2Configuration, backendSecret, audit, cachePolicy, headerPolicy, toolExposureMode);
+   }
+
    private String apiKeyString() {
       return (apiKey != null ? "*******" : "null");
    }

@@ -82,8 +82,8 @@ public class ReshaprSkillsMcpSkillBuilderTest {
             "http://skills.local/pdf-processing/references/FORMS.md", "# Forms",
             "http://skills.local/pdf-processing/scripts/extract.py", "print('x')",
             "http://skills.local/pdf-processing/scripts/lib/util.py", "pass");
-      Mockito.when(proxyService.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any())).thenAnswer(invocation -> {
-         String content = remote.get(invocation.<URI>getArgument(1).toString());
+      Mockito.when(proxyService.callBackend(any(), any(), any(URI.class), eq("GET"), any(), any())).thenAnswer(invocation -> {
+         String content = remote.get(invocation.<URI>getArgument(2).toString());
          return content == null ? new BackendResponse(404, new byte[0], Map.of())
                : new BackendResponse(200, content.getBytes(StandardCharsets.UTF_8), Map.of());
       });
@@ -149,8 +149,8 @@ public class ReshaprSkillsMcpSkillBuilderTest {
             "cfg", "plan", "http://backend.local", null, List.of(), List.of(), null, null, backendSecret);
 
       ProxyService mockProxy = Mockito.mock(ProxyService.class);
-      Mockito.when(mockProxy.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any())).thenAnswer(invocation -> {
-         String url = invocation.<URI>getArgument(1).toString();
+      Mockito.when(mockProxy.callBackend(any(), any(), any(URI.class), eq("GET"), any(), any())).thenAnswer(invocation -> {
+         String url = invocation.<URI>getArgument(2).toString();
          String name = url.contains("pdf-processing") ? "pdf-processing"
                : url.contains("public") ? "public-skill" : "broken-secret-skill";
          String md = """
@@ -174,10 +174,10 @@ public class ReshaprSkillsMcpSkillBuilderTest {
       assertEquals(3, skills.size());
 
       Mockito.verify(mockProxy).callBackend(
-            eq(config), eq(URI.create("http://skills.local/pdf-processing/SKILL.md")), eq("GET"), any(), isNull(), eq(skillsToken));
+            eq(config), eq(skillsToken), eq(URI.create("http://skills.local/pdf-processing/SKILL.md")), eq("GET"), any(), isNull());
       Mockito.verify(mockProxy).callBackend(
-            eq(config), eq(URI.create("http://skills.local/public/SKILL.md")), eq("GET"), any(), isNull(), isNull());
+            eq(config), isNull(), eq(URI.create("http://skills.local/public/SKILL.md")), eq("GET"), any(), isNull());
       Mockito.verify(mockProxy).callBackend(
-            eq(config), eq(URI.create("http://skills.local/broken/SKILL.md")), eq("GET"), any(), isNull(), isNull());
+            eq(config), isNull(), eq(URI.create("http://skills.local/broken/SKILL.md")), eq("GET"), any(), isNull());
    }
 }

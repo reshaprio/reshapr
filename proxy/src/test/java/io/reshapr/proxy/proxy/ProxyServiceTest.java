@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.reshapr.proxy.proxy;
 
 import io.reshapr.proxy.context.MethodHandlingContext;
@@ -174,13 +173,13 @@ class ProxyServiceTest {
       MethodHandlingInfo info = new MethodHandlingInfo("127.0.0.1", null, null, null, null);
       ScopedValue.where(MethodHandlingContext.METHOD_HANDLING_INFO, info).run(() -> {
          // Explicit secret overrides configuration.backendSecret().
-         proxyService.callBackend(config, URI.create("http://remote.example.com"), "GET", Map.of(), null, remoteSecret);
+         proxyService.callBackend(config, remoteSecret, URI.create("http://remote.example.com"), "GET", Map.of(), null);
          assertEquals(List.of("remote-tok"), capturedHeaders.get("X-Remote-Auth"));
          assertFalse(capturedHeaders.containsKey("Authorization"));
 
-         // Explicit null secret performs an unauthenticated call and does not fall back to backendSecret.
-         proxyService.callBackend(config, URI.create("http://remote.example.com"), "GET", Map.of(), null, null);
-         assertFalse(capturedHeaders.containsKey("Authorization"));
+         // Explicit null secret falls back to backendSecret.
+         proxyService.callBackend(config, null, URI.create("http://remote.example.com"), "GET", Map.of(), null);
+         assertTrue(capturedHeaders.containsKey("Authorization"));
          assertFalse(capturedHeaders.containsKey("X-Remote-Auth"));
       });
    }

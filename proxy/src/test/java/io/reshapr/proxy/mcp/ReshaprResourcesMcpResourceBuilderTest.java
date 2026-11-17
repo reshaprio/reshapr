@@ -38,6 +38,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 
+/**
+ * This is a unit test for the {@link ReshaprResourcesMcpResourceBuilder} class, which implements the {@link McpResourceBuilder} interface.
+ * @author vaishnav
+ */
 class ReshaprResourcesMcpResourceBuilderTest {
 
    @Test
@@ -69,7 +73,7 @@ class ReshaprResourcesMcpResourceBuilderTest {
       SecretEntry backendSecret = new SecretEntry("backend-secret", null, null, "api-tok", null, null, false, null);
 
       ProxyService proxyService = Mockito.mock(ProxyService.class);
-      Mockito.when(proxyService.callBackend(any(), any(URI.class), eq("GET"), any(), any(), any()))
+      Mockito.when(proxyService.callBackend(any(), any(), any(URI.class), eq("GET"), any(), any()))
             .thenReturn(new BackendResponse(200, "<html>ok</html>".getBytes(StandardCharsets.UTF_8), Map.of()));
 
       ServiceEntry service = new ServiceEntry("svc-1", "org-1", "UI Service", "1.0", "REST", List.of());
@@ -85,21 +89,21 @@ class ReshaprResourcesMcpResourceBuilderTest {
       var protectedContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/protected"), config);
       assertNotNull(protectedContents);
       Mockito.verify(proxyService).callBackend(
-            eq(config), eq(URI.create("https://ui.internal.example/protected.html")), eq("GET"), any(), isNull(), eq(uiSecret));
+            eq(config), eq(uiSecret), eq(URI.create("https://ui.internal.example/protected.html")), eq("GET"), any(), isNull());
 
       var templateContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/items/42"), config);
       assertNotNull(templateContents);
       Mockito.verify(proxyService).callBackend(
-            eq(config), eq(URI.create("https://ui.internal.example/item.html")), eq("GET"), any(), isNull(), eq(uiSecret));
+            eq(config), eq(uiSecret), eq(URI.create("https://ui.internal.example/item.html")), eq("GET"), any(), isNull());
 
       var publicContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/public"), config);
       assertNotNull(publicContents);
       Mockito.verify(proxyService).callBackend(
-            eq(config), eq(URI.create("https://ui.example.com/public.html")), eq("GET"), any(), isNull(), isNull());
+            eq(config), isNull(), eq(URI.create("https://ui.example.com/public.html")), eq("GET"), any(), isNull());
 
       var missingSecretContents = builder.readResource(new McpSchema.ReadResourceRequest("ui://app/missing-secret"), config);
       assertNotNull(missingSecretContents);
       Mockito.verify(proxyService).callBackend(
-            eq(config), eq(URI.create("https://ui.internal.example/other.html")), eq("GET"), any(), isNull(), isNull());
+            eq(config), isNull(), eq(URI.create("https://ui.internal.example/other.html")), eq("GET"), any(), isNull());
    }
 }

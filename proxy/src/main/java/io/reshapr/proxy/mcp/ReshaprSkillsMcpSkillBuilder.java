@@ -338,8 +338,8 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
    private BackendResponse fetch(SkillDefinition definition, String relativePath, ConfigurationEntry configuration) {
       try {
          SecretEntry remoteSecret = resolveRemoteSecret(definition);
-         BackendResponse response = proxyService.callBackend(configuration,
-               URI.create(definition.remoteUrl(relativePath)), "GET", Collections.emptyMap(), null, remoteSecret);
+         BackendResponse response = proxyService.callBackend(configuration, remoteSecret,
+               URI.create(definition.remoteUrl(relativePath)), "GET", Collections.emptyMap(), null);
          if (response == null || response.status() < 200 || response.status() >= 300) {
             logger.warnf("Skill '%s' of service '%s': remote file '%s' returned HTTP status %s",
                   definition.name(), service.id(), definition.remoteUrl(relativePath),
@@ -362,17 +362,14 @@ public class ReshaprSkillsMcpSkillBuilder implements McpSkillBuilder {
    @Nullable
    private SecretEntry resolveRemoteSecret(SkillDefinition definition) {
       String remoteSecretName = definition.remoteSecret();
-      if (remoteSecretName == null || remoteSecretName.isBlank()) {
+      if (remoteSecretName == null || remoteSecretName.isBlank() || attachedArtifacts == null) {
          return null;
       }
-      if (attachedArtifacts != null) {
-         for (ArtifactEntry artifact : attachedArtifacts) {
-            if (definition.artifactId().equals(artifact.id())) {
-               SecretEntry resolved = artifact.findRelatedSecret(remoteSecretName);
-               if (resolved != null) {
-                  return resolved;
-               }
-               break;
+      for (ArtifactEntry artifact : attachedArtifacts) {
+         if (definition.artifactId().equals(artifact.id())) {
+            SecretEntry secret = artifact.relatedSecrets().get(remoteSecretName);
+            if (secret != null) {
+               return secret;
             }
          }
       }

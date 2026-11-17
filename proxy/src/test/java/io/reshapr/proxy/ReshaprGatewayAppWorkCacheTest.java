@@ -138,6 +138,57 @@ class ReshaprGatewayAppWorkCacheTest {
       assertNotNull(cache.get("main", MINOR), "DELETE must not invalidate shared artifact caches");
    }
 
+   /** Updating one exposition must not evict cache entries of an artifact shared with another exposition. */
+   @Test
+   void testSharedArtifactPreservedAcrossExpositions() {
+      GatewayRegistry registry = new GatewayRegistry();
+      WorkCache cache = new WorkCache(1000);
+      ReshaprGatewayApp app = app(registry, cache);
+
+      ExpositionEntry e1 = new ExpositionEntry("e1", null, service(), config(),
+            artifact("main1", "m1-v1"), List.of(attached("shared", "s-v1")));
+      ExpositionEntry e2 = new ExpositionEntry("e2", null, service(), config(),
+            artifact("main2", "m2-v1"), List.of(attached("shared", "s-v1")));
+      registry.addExposition(e1);
+      registry.addExposition(e2);
+
+      cache.set("main1", MINOR, new Object());
+      cache.set("main2", MINOR, new Object());
+      cache.set("shared", MINOR, new Object());
+
+      // e1 is updated: only its own main changes, the shared attached artifact is identical.
+      app.invalidateChangedArtifacts(registry.getExpositionById("e1"),
+            artifact("main1", "m1-v2"), List.of(attached("shared", "s-v1")));
+
+      assertNull(cache.get("main1", MINOR), "e1's changed main must be invalidated");
+      assertNotNull(cache.get("main2", MINOR), "e2's own artifact must be preserved");
+      assertNotNull(cache.get("shared", MINOR), "shared unchanged artifact must be preserved for e2");
+   }
+
+   /** When the shared artifact itself changes, its cache is invalidated but e2's own artifacts are kept. */
+   @Test
+   void testSharedArtifactChangeInvalidatesOnlyShared() {
+      GatewayRegistry registry = new GatewayRegistry();
+      WorkCache cache = new WorkCache(1000);
+      ReshaprGatewayApp app = app(registry, cache);
+
+      registry.addExposition(new ExpositionEntry("e1", null, service(), config(),
+            artifact("main1", "m1-v1"), List.of(attached("shared", "s-v1"))));
+      registry.addExposition(new ExpositionEntry("e2", null, service(), config(),
+            artifact("main2", "m2-v1"), List.of(attached("shared", "s-v1"))));
+
+      cache.set("main1", MINOR, new Object());
+      cache.set("main2", MINOR, new Object());
+      cache.set("shared", MINOR, new Object());
+
+      app.invalidateChangedArtifacts(registry.getExpositionById("e1"),
+            artifact("main1", "m1-v1"), List.of(attached("shared", "s-v2")));
+
+      assertNull(cache.get("shared", MINOR), "changed shared artifact must be invalidated");
+      assertNotNull(cache.get("main1", MINOR), "unchanged main1 must be preserved");
+      assertNotNull(cache.get("main2", MINOR), "e2's own artifact must be preserved");
+   }
+
    /** A related-secret value change invalidates that artifact's cache even when YAML content is unchanged. */
    @Test
    void testRelatedSecretsChangeInvalidatesOnlyChangedArtifact() {

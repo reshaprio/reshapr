@@ -15,8 +15,6 @@
  */
 package io.reshapr.proxy.registry;
 
-import jakarta.annotation.Nullable;
-
 import java.util.Map;
 
 public record ArtifactEntry(
@@ -32,20 +30,9 @@ public record ArtifactEntry(
       relatedSecrets = relatedSecrets != null ? Map.copyOf(relatedSecrets) : Map.of();
    }
 
+   /** Backward-compatible constructor for artifacts that reference no secret. */
    public ArtifactEntry(String id, String name, String path, ArtifactEntryType type,
                         boolean mainArtifact, String content) {
       this(id, name, path, type, mainArtifact, content, Map.of());
-   }
-
-   /**
-    * Find a resolved secret attached to this artifact by its name.
-    * @param secretName The secret name declared in the artifact content.
-    * @return The matching {@link SecretEntry}, or {@code null} if not present.
-    */
-   public @Nullable SecretEntry findRelatedSecret(@Nullable String secretName) {
-      if (secretName == null || secretName.isBlank()) {
-         return null;
-      }
-      return relatedSecrets.get(secretName);
    }
 }

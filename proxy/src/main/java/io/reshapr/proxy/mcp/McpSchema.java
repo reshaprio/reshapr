@@ -91,6 +91,14 @@ public class McpSchema {
    public static final String META_KEY_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
 
    // ---------------------------
+   // Common Attributes Names
+   // ---------------------------
+
+   public static final String ATTR_META = "_meta";
+   public static final String ATTR_ANNOTATIONS = "annotations";
+
+
+   // ---------------------------
    // Method Names
    // ---------------------------
 
