@@ -18,7 +18,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
-import { parseComposeServices, parseContainerList, replaceServiceNames, toPublishArg } from '../src/utils/apple-container.js';
+import { parseComposeServices, parseContainerList, replaceServiceNames, toPublishArg, waitFor } from '../src/utils/apple-container.js';
 
 function writeCompose(content: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'compose-'));
@@ -95,5 +95,20 @@ services:
   it('restricts published ports to loopback', () => {
     expect(toPublishArg('5555:5555')).toBe('127.0.0.1:5555:5555');
     expect(toPublishArg('0.0.0.0:80:80')).toBe('0.0.0.0:80:80');
+  });
+});
+
+describe('waiting for a container', () => {
+  it('returns as soon as the check passes', async () => {
+    await expect(waitFor('gateway', 5, () => true, () => true)).resolves.toBeUndefined();
+  });
+
+  it('fails right away when the container exited instead of waiting for the timeout', async () => {
+    const check = (): boolean => {
+      throw new Error('container is not running');
+    };
+
+    await expect(waitFor('reshapr-gateway-01', 180, check, () => false))
+      .rejects.toThrow('reshapr-gateway-01 exited before becoming ready');
   });
 });

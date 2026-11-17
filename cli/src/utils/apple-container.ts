@@ -27,7 +27,8 @@ import { Logger } from './logger.js';
  * and the healthchecks (or `pg_isready` for postgres) are replayed inside the containers.
  * Containers are wired by IP because name resolution between containers needs a sudo host resolver
  * (`container system dns create`), so service names found in environment values are replaced by IPs.
- * `restart`, `extra_hosts` and `volumes` are not supported and are ignored.
+ * `restart`, `extra_hosts` and `volumes` are not supported and are ignored. A container that exits while
+ * the stack starts fails the run with its last logs, and the containers started so far are removed.
  */
 
 export interface ComposeService {
@@ -59,7 +60,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function waitFor(description: string, timeoutSeconds: number, check: () => boolean): Promise<void> {
+/**
+ * Wait until `check` succeeds. When `isRunning` is given and reports a stopped container, fail right away
+ * instead of waiting for the timeout: a container that exited at startup will never become ready.
+ */
+export async function waitFor(
+  description: string,
+  timeoutSeconds: number,
+  check: () => boolean,
+  isRunning?: () => boolean,
+): Promise<void> {
   for (let i = 0; i < timeoutSeconds; i++) {
     try {
       if (check()) {
@@ -67,6 +77,9 @@ async function waitFor(description: string, timeoutSeconds: number, check: () =>
       }
     } catch {
       // not ready yet
+    }
+    if (isRunning && !isRunning()) {
+      throw new Error(`${description} exited before becoming ready`);
     }
     await sleep(1000);
   }
@@ -192,6 +205,31 @@ function readinessCheck(service: ComposeService): (() => boolean) | undefined {
   return undefined;
 }
 
+function isRunning(name: string): boolean {
+  return parseContainerList(container(['ls', '-a'])).some(c => c.id === name && c.state === 'running');
+}
+
+/** Last lines of the container logs, to explain why a container failed to start. */
+function recentLogs(name: string, lines = 20): string {
+  try {
+    return container(['logs', name]).trim().split('\n').slice(-lines).join('\n');
+  } catch {
+    return '';
+  }
+}
+
+function removeContainers(names: string[]): void {
+  for (const name of names) {
+    for (const verb of ['stop', 'delete']) {
+      try {
+        container([verb, name]);
+      } catch {
+        // already stopped or absent
+      }
+    }
+  }
+}
+
 export async function startAppleContainerStack(composeFiles: string[]): Promise<void> {
   const services = parseComposeServices(composeFiles);
 
@@ -206,39 +244,43 @@ export async function startAppleContainerStack(composeFiles: string[]): Promise<
   }
 
   const ips = new Map<string, string>();
-  for (const service of services) {
-    Logger.info(`Starting ${service.containerName}...`);
-    const args = ['run', '-d', '--name', service.containerName];
-    service.ports.forEach(port => args.push('-p', toPublishArg(port)));
-    for (const [name, value] of service.env) {
-      if (value.includes('host.docker.internal')) {
-        Logger.warn(`${name} refers to host.docker.internal, which is not available on apple/container.`);
+  const started: string[] = [];
+  let current = '';
+  try {
+    for (const service of services) {
+      current = service.containerName;
+      Logger.info(`Starting ${service.containerName}...`);
+      const args = ['run', '-d', '--name', service.containerName];
+      service.ports.forEach(port => args.push('-p', toPublishArg(port)));
+      for (const [name, value] of service.env) {
+        if (value.includes('host.docker.internal')) {
+          Logger.warn(`${name} refers to host.docker.internal, which is not available on apple/container.`);
+        }
+        args.push('-e', `${name}=${replaceServiceNames(value, ips)}`);
       }
-      args.push('-e', `${name}=${replaceServiceNames(value, ips)}`);
-    }
-    args.push(service.image);
-    container(args);
+      args.push(service.image);
+      started.push(service.containerName);
+      container(args);
 
-    const ready = readinessCheck(service);
-    if (ready) {
-      await waitFor(service.containerName, 180, ready);
+      const ready = readinessCheck(service);
+      if (ready) {
+        await waitFor(service.containerName, 180, ready, () => isRunning(service.containerName));
+      }
+      const ip = ipOf(service.containerName);
+      ips.set(service.key, ip);
+      ips.set(service.containerName, ip);
     }
-    const ip = ipOf(service.containerName);
-    ips.set(service.key, ip);
-    ips.set(service.containerName, ip);
+  } catch (err) {
+    // Without Compose there is no `restart: on-failure`: report the failure and do not leave a partial stack behind.
+    const logs = recentLogs(current);
+    removeContainers(started.reverse());
+    const reason = (err as Error).message;
+    throw new Error(logs ? `${reason}. Last logs of ${current}:\n${logs}` : reason, { cause: err });
   }
 }
 
 export function stopAppleContainerStack(composeFiles: string[]): void {
-  for (const service of parseComposeServices(composeFiles).reverse()) {
-    for (const verb of ['stop', 'delete']) {
-      try {
-        container([verb, service.containerName]);
-      } catch {
-        // already stopped or absent
-      }
-    }
-  }
+  removeContainers(parseComposeServices(composeFiles).reverse().map(s => s.containerName));
 }
 
 export function appleContainerStatus(composeFiles: string[]): string {
