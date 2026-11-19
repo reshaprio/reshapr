@@ -31,8 +31,26 @@ program
   .version(CLI_VERSION)
   .hook('preAction', (thisCommand, actionCommand) => {
     ConfigUtil.readConfig();
-    const noAuthCommands = ['login', 'logout', 'run', 'status', 'stop', 'completion', 'complete'];
     const isAdminCommand = belongsToCommand(actionCommand, 'admin');
+    // Saved insecure setting only applies to the saved login server, not to an admin --server override.
+    const globalOpts = actionCommand.optsWithGlobals();
+    const insecure = actionCommand.name() === 'login' ? globalOpts.insecure
+      : isAdminCommand ? (globalOpts.insecure || (!globalOpts.server && ConfigUtil.config?.insecure))
+      : ConfigUtil.config?.insecure;
+    if (insecure) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+      // Insecure mode was explicitly requested by the user: silence Node's redundant warning.
+      const emitWarning = process.emitWarning.bind(process);
+      process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
+        const message = typeof warning === 'string' ? warning : warning.message;
+        if (message.includes('NODE_TLS_REJECT_UNAUTHORIZED')) {
+          return;
+        }
+        return (emitWarning as (...a: unknown[]) => void)(warning, ...args);
+      }) as typeof process.emitWarning;
+      Logger.warn('Insecure mode: TLS certificate verification is disabled.');
+    }
+    const noAuthCommands = ['login', 'logout', 'run', 'status', 'stop', 'completion', 'complete'];
     if (!noAuthCommands.includes(actionCommand.name()) && !isAdminCommand) {
       if (!ConfigUtil.config?.token) {
         Logger.warn(`You are not logged in. Please login first using the \`${CLI_NAME} login\` command.`);

@@ -26,6 +26,7 @@ export function createAdminCommand(): Command {
     .description('Manage the reShapr control plane')
     .option('--admin-api-key <key>', 'Admin API key (overrides RESHAPR_ADMIN_API_KEY)')
     .option('-s, --server <url>', 'Control-plane server URL (overrides the saved login server)')
+    .option('-k, --insecure', 'Skip SSL certificate validation')
     .addCommand(createAdminUserCommand())
     .addCommand(createAdminOrganizationCommand())
     .addCommand(createAdminQuotaCommand())

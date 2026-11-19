@@ -54,8 +54,8 @@ export const loginCommand = new Command('login')
     // First validate server URL and fetch server configuration.
     const configResponse = await fetch(`${options.server}/api/config`, {
       method: 'GET'
-    }).catch(() => {
-      Logger.error('Failed to connect to the server. Check URL.');
+    }).catch((err) => {
+      Logger.error(`Failed to connect to the server. Check URL. (${err?.cause?.code ?? err?.message})`);
       process.exit(1);
     });
 
