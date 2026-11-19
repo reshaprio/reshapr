@@ -29,6 +29,7 @@ describe('admin commands', () => {
   const fetchMock = vi.fn<typeof fetch>();
 
   beforeEach(() => {
+    fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     ConfigUtil.config = {
       username: 'user',
@@ -203,6 +204,135 @@ describe('admin commands', () => {
       }
     );
   });
+
+  it('lists service accounts', async () => {
+    const serviceAccounts = [serviceAccountFixture()];
+    fetchMock.mockResolvedValue(jsonResponse(serviceAccounts));
+    vi.spyOn(Logger, 'log').mockImplementation(() => {});
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'list'
+    ], { from: 'user' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://saved.example/api/admin/serviceAccounts',
+      expect.objectContaining({ method: 'GET', body: undefined })
+    );
+    expect(Context.get('serviceAccounts')).toEqual(serviceAccounts);
+  });
+
+  it('updates a service account by id, keeping omitted fields', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([serviceAccountFixture()]))
+      .mockResolvedValueOnce(jsonResponse(serviceAccountFixture({ k8sSubject: 'reshapr-system:reshapr-operator' })));
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'update', 'sa-id',
+      '--k8s-subject', 'reshapr-system:reshapr-operator',
+      '--validity-days', '30'
+    ], { from: 'user' });
+
+    expectRequest(
+      'https://saved.example/api/admin/serviceAccounts/sa-id',
+      'PUT',
+      {
+        name: 'operator',
+        description: 'Operator',
+        k8sSubject: 'reshapr-system:reshapr-operator',
+        allowedOrganizations: ['reshapr'],
+        validityDays: 30
+      }
+    );
+  });
+
+  it('keeps the remaining validity when updating without --validity-days', async () => {
+    const validUntil = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([serviceAccountFixture({ validUntil })]))
+      .mockResolvedValueOnce(jsonResponse(serviceAccountFixture()));
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'update', 'sa-id',
+      '--allowed-organizations', '["*"]'
+    ], { from: 'user' });
+
+    expectRequest(
+      'https://saved.example/api/admin/serviceAccounts/sa-id',
+      'PUT',
+      {
+        name: 'operator',
+        description: 'Operator',
+        k8sSubject: 'reshapr-system:operator',
+        allowedOrganizations: ['*'],
+        validityDays: 10
+      }
+    );
+  });
+
+  it('refuses to update an expired service account without --validity-days', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([
+      serviceAccountFixture({ validUntil: new Date(Date.now() - 1000).toISOString() })
+    ]));
+    const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'update', 'sa-id',
+      '--k8s-subject', 'reshapr-system:other'
+    ], { from: 'user' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Service account 'operator' has expired. Use --validity-days to renew it."
+    );
+  });
+
+  it('deletes a service account by id using the --force flag', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'delete', 'sa-id',
+      '--force'
+    ], { from: 'user' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://saved.example/api/admin/serviceAccounts/sa-id',
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
+
+  it('reports an unknown service account on update', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([]));
+    const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+    await createAdminCommand().parseAsync([
+      '--admin-api-key', 'key',
+      'service-account', 'update', 'missing',
+      '--validity-days', '30'
+    ], { from: 'user' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("Service account 'missing' not found.");
+  });
+
+  function serviceAccountFixture(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'sa-id',
+      name: 'operator',
+      description: 'Operator',
+      k8sSubject: 'reshapr-system:operator',
+      allowedOrganizations: ['reshapr'],
+      validUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      ...overrides
+    };
+  }
 
   it('reports API errors without treating them as successful output', async () => {
     fetchMock.mockResolvedValue(new Response('User already exists', {

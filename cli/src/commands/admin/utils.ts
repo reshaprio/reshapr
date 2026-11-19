@@ -67,8 +67,8 @@ export function resolveAdminConnection(options: AdminConnectionOptions): AdminCo
 export async function adminRequest<T>(
   path: string,
   options: AdminConnectionOptions,
-  method: 'POST' | 'PUT',
-  body: unknown
+  method: 'GET' | 'POST' | 'PUT',
+  body?: unknown
 ): Promise<T> {
   const connection = resolveAdminConnection(options);
   let response: Response;
@@ -79,7 +79,7 @@ export async function adminRequest<T>(
         'Content-Type': 'application/json',
         'x-reshapr-api-key': connection.adminApiKey
       },
-      body: JSON.stringify(body)
+      body: body === undefined ? undefined : JSON.stringify(body)
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

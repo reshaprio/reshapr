@@ -127,6 +127,12 @@ reshapr admin membership set jdoe --organizations '["acme","shared"]'
 reshapr admin service-account create reshapr-system-operator \
   --k8s-subject 'reshapr-system:reshapr-operator' \
   --allowed-organizations '["*"]' --validity-days 90
+
+# List, update (omitted options are kept) and delete service accounts by ID
+reshapr admin service-account list
+reshapr admin service-account update <service-account-id> \
+  --k8s-subject 'reshapr-system:reshapr-operator'
+reshapr admin service-account delete <service-account-id> --force
 ```
 
 The `--quotas`, `--organizations`, and `--allowed-organizations` values are

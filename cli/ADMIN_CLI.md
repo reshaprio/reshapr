@@ -20,6 +20,9 @@ Admin commands use the server saved by `reshapr login`. Override it when needed:
 reshapr admin --server http://localhost:5555 <command>
 ```
 
+Add `-k, --insecure` after `reshapr admin` to skip TLS certificate validation
+(for example with a self-signed certificate in a local cluster).
+
 ## Organizations
 
 Create new organization:
@@ -109,6 +112,29 @@ reshapr admin service-account create reshapr-system-operator \
 ```
 
 Replace `["*"]` with a JSON array of organization names to restrict access.
+
+List service accounts:
+
+```shell
+reshapr admin service-account list
+```
+
+Update a service account by ID (as shown by `list`). Omitted options keep their current value;
+without `--validity-days`, the remaining validity is preserved (an expired
+service account requires `--validity-days` to be renewed):
+
+```shell
+reshapr admin service-account update <service-account-id> \
+  --k8s-subject reshapr-system:reshapr-operator \
+  --validity-days 90
+```
+
+Delete a service account by ID. Workloads using it can no longer authenticate.
+Add `-f, --force` to skip the interactive confirmation prompt:
+
+```shell
+reshapr admin service-account delete <service-account-id> --force
+```
 
 ## Encryption keys
 
