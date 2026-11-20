@@ -1,0 +1,41 @@
+// Production entrypoint wrapping the adapter-node handler.
+//
+// SvelteKit 3 / adapter-node 6 no longer honour the ORIGIN environment variable (it was replaced by
+// the build-time `paths.origin` option). Without it the request origin is derived from the Host header
+// with an `https` default, which makes the CSRF check reject form/multipart POSTs (e.g. file uploads)
+// served over plain http. To keep ORIGIN working at runtime, we translate it into forwarded headers
+// that the adapter understands.
+import { createServer } from 'node:http';
+
+const publicOrigin = process.env.ORIGIN ? new URL(process.env.ORIGIN) : null;
+
+const protocolHeader = (process.env.PROTOCOL_HEADER || 'x-forwarded-proto').toLowerCase();
+const portHeader = (process.env.PORT_HEADER || '').toLowerCase();
+const hostHeader = (process.env.HOST_HEADER || 'x-forwarded-host').toLowerCase();
+
+if (publicOrigin) {
+  process.env.PROTOCOL_HEADER = protocolHeader;
+  process.env.HOST_HEADER = hostHeader;
+}
+
+const { handler } = await import('./build/handler.js');
+
+const server = createServer((req, res) => {
+  if (publicOrigin) {
+    req.headers[protocolHeader] = publicOrigin.protocol.replace(':', '');
+    req.headers[hostHeader] = publicOrigin.host;
+    // the port is already part of publicOrigin.host
+    if (portHeader) delete req.headers[portHeader];
+  }
+  handler(req, res);
+});
+
+const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
+server.listen(port, host, () => {
+  console.log(`Listening on http://${host}:${port}${publicOrigin ? ` (public origin ${publicOrigin.origin})` : ''}`);
+});
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => server.close(() => process.exit(0)));
+}
