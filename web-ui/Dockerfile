@@ -1,5 +1,6 @@
-# Build stage: use Node.js to build the SvelteKit app
-FROM node:25-alpine AS build
+# Build stage: run on the native builder platform since SvelteKit output is arch-independent
+# and running vite build under linux/arm64 QEMU emulation intermittently hangs with SIGILL.
+FROM --platform=$BUILDPLATFORM node:25-alpine AS build
 
 WORKDIR /app
 
@@ -11,11 +12,14 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Prune dev dependencies for a leaner production image
+# Prune dev dependencies and build-time native addons for a leaner, arch-independent production image
 RUN npm prune --omit=dev \
     && rm -rf /app/node_modules/.vite \
     && rm -rf /app/node_modules/@hugeicons \
-    && rm -rf /app/node_modules/@rolldown
+    && rm -rf /app/node_modules/@rolldown \
+    && rm -rf /app/node_modules/lightningcss* \
+    && rm -rf /app/node_modules/vite/node_modules/lightningcss* \
+    && rm -rf /app/node_modules/@tailwindcss/oxide*
 
 # -----------------------------------------------------------
 # Production stage: Red Hat UBI9 minimal
