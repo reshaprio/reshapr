@@ -31,7 +31,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ValueMapping;
-import org.mapstruct.ValueMappings;
 
 /**
  * Mapper interface to map gRPC DTOs to registry entries and vice versa in the Reshapr gateway.
@@ -101,7 +100,7 @@ public interface Mappers {
       if (secrets == null || secrets.isEmpty()) {
          return java.util.Map.of();
       }
-      java.util.Map<String, SecretEntry> map = new java.util.HashMap<>(secrets.size());
+      java.util.Map<String, SecretEntry> map = java.util.HashMap.newHashMap(secrets.size());
       for (Secret secret : secrets) {
          if (secret != null && !secret.getName().isBlank()) {
             map.putIfAbsent(secret.getName(), toSecret(secret));
@@ -110,19 +109,18 @@ public interface Mappers {
       return java.util.Collections.unmodifiableMap(map);
    }
 
-   @ValueMappings({
-         @ValueMapping(source = "OPEN_API_SPEC", target = "OPEN_API_SPEC"),
-         @ValueMapping(source = "GRAPHQL_SCHEMA", target = "GRAPHQL_SCHEMA"),
-         @ValueMapping(source = "PROTOBUF_SCHEMA", target = "PROTOBUF_SCHEMA"),
-         @ValueMapping(source = "PROTOBUF_DESCRIPTOR", target = "PROTOBUF_DESCRIPTOR"),
-         @ValueMapping(source = "JSON_SCHEMA", target = "JSON_SCHEMA"),
-         @ValueMapping(source = "JSON_FRAGMENT", target = "JSON_FRAGMENT"),
-         @ValueMapping(source = "RESHAPR_PROMPTS", target = "RESHAPR_PROMPTS"),
-         @ValueMapping(source = "RESHAPR_CUSTOM_TOOLS", target = "RESHAPR_CUSTOM_TOOLS"),
-         @ValueMapping(source = "RESHAPR_RESOURCES", target = "RESHAPR_RESOURCES"),
-         @ValueMapping(source = "RESHAPR_TOOLS_OUTPUT_FILTERS", target = "RESHAPR_TOOLS_OUTPUT_FILTERS"),
-         @ValueMapping(source = "RESHAPR_SKILLS", target = "RESHAPR_SKILLS"),
-         @ValueMapping(source = "UNRECOGNIZED", target = "JSON_FRAGMENT")
-   })
+   @ValueMapping(source = "OPEN_API_SPEC", target = "OPEN_API_SPEC")
+   @ValueMapping(source = "GRAPHQL_SCHEMA", target = "GRAPHQL_SCHEMA")
+   @ValueMapping(source = "PROTOBUF_SCHEMA", target = "PROTOBUF_SCHEMA")
+   @ValueMapping(source = "PROTOBUF_DESCRIPTOR", target = "PROTOBUF_DESCRIPTOR")
+   @ValueMapping(source = "ASYNC_API_SPEC", target = "ASYNC_API_SPEC")
+   @ValueMapping(source = "JSON_SCHEMA", target = "JSON_SCHEMA")
+   @ValueMapping(source = "JSON_FRAGMENT", target = "JSON_FRAGMENT")
+   @ValueMapping(source = "RESHAPR_PROMPTS", target = "RESHAPR_PROMPTS")
+   @ValueMapping(source = "RESHAPR_CUSTOM_TOOLS", target = "RESHAPR_CUSTOM_TOOLS")
+   @ValueMapping(source = "RESHAPR_RESOURCES", target = "RESHAPR_RESOURCES")
+   @ValueMapping(source = "RESHAPR_TOOLS_OUTPUT_FILTERS", target = "RESHAPR_TOOLS_OUTPUT_FILTERS")
+   @ValueMapping(source = "RESHAPR_SKILLS", target = "RESHAPR_SKILLS")
+   @ValueMapping(source = "UNRECOGNIZED", target = "JSON_FRAGMENT")
    public ArtifactEntryType toArtifactEntryType(ArtifactType artifactType);
 }

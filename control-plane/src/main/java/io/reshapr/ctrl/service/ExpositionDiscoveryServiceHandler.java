@@ -68,10 +68,10 @@ import java.util.concurrent.Executors;
 @GrpcService
 public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServiceGrpc.ExpositionDiscoveryServiceImplBase {
 
-   /**
-    * Get a JBoss logging logger.
-    */
+   /** Get a JBoss logging logger. */
    private final Logger logger = Logger.getLogger(getClass());
+
+   private static final String EXECUTING_ON_THREAD = "Executing on thread: %s";
 
    private final Executor cancellationExecutor = Executors.newSingleThreadExecutor();
 
@@ -88,9 +88,9 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
    private final SecretRepository secretRepository;
 
    /**
-    * @param expositionManagerService
-    * @param artifactRepository
-    * @param secretRepository
+    * @param expositionManagerService The exposition manager service to use for exposition discovery.
+    * @param artifactRepository The artifact repository to use for artifact discovery.
+    * @param secretRepository The secret repository to use for resolving remoteSecret references in artifacts.
     */
    public ExpositionDiscoveryServiceHandler(ExpositionManagerService expositionManagerService,
                                             ArtifactRepository artifactRepository,
@@ -106,7 +106,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
    @ActivateRequestContext
    public void discoverExpositions(ExpositionDiscoveryRequest request, StreamObserver<ExpositionDiscoveryResponse> responseObserver) {
       logger.infof("Received ExpositionDiscoveryRequest for gatewayId: %s", request.getGatewayId());
-      logger.tracef("Executing on thread: %s", Thread.currentThread().getName());
+      logger.tracef(EXECUTING_ON_THREAD, Thread.currentThread().getName());
 
       ExpositionDiscoveryResponse.Builder builder = ExpositionDiscoveryResponse.newBuilder();
 
@@ -134,7 +134,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
    @ActivateRequestContext
    public void streamExpositionChanges(ExpositionDiscoveryRequest request, StreamObserver<ExpositionChangeEvent> responseObserver) {
       logger.infof("==> Subscribing to ExpositionChanges for gatewayId: %s", request.getGatewayId());
-      logger.tracef("Executing on thread: %s", Thread.currentThread().getName());
+      logger.tracef(EXECUTING_ON_THREAD, Thread.currentThread().getName());
       logger.tracef("Current tenant is '%s'", ReshaprTenantContext.getCurrentTenant());
 
       String organization = ReshaprTenantContext.getCurrentTenant();
@@ -195,7 +195,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
    @ActivateRequestContext
    public void fetchExposition(ExpositionFetchRequest request, StreamObserver<io.reshapr.discovery.exposition.v1.Exposition> responseObserver) {
       logger.infof("Received ExpositionFetchRequest for gatewayId: %s", request.getExpositionId());
-      logger.tracef("Executing on thread: %s", Thread.currentThread().getName());
+      logger.tracef(EXECUTING_ON_THREAD, Thread.currentThread().getName());
 
       Exposition exposition = expositionManagerService.getExposition(request.getExpositionId());
       if (exposition != null) {
@@ -222,7 +222,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
       }
 
       logger.infof("Received ArtifactsRequest for serviceId: %s", request.getServiceId());
-      logger.tracef("Executing on thread: %s", Thread.currentThread().getName());
+      logger.tracef(EXECUTING_ON_THREAD, Thread.currentThread().getName());
 
       ArtifactsResponse.Builder builder = ArtifactsResponse.newBuilder()
             .setServiceId(request.getServiceId());
@@ -245,7 +245,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
     */
    private void fetchArtifactsForExposition(String expositionId, StreamObserver<ArtifactsResponse> responseObserver) {
       logger.infof("Received ArtifactsRequest for expositionId: %s", expositionId);
-      logger.tracef("Executing on thread: %s", Thread.currentThread().getName());
+      logger.tracef(EXECUTING_ON_THREAD, Thread.currentThread().getName());
 
       Exposition exposition = expositionManagerService.getExposition(expositionId);
       if (exposition == null) {
@@ -356,7 +356,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
                   if (observer.observer != null) {
                      try {
                         observer.observer.onNext(event);
-                     } catch (Exception e) {
+                     } catch (Exception _) {
                         logger.errorf("Error sending ExpositionChangeEvent to observer for gatewayId '%s'", observer.gatewayId);
                         observers.remove(observer);
                      }
@@ -631,6 +631,7 @@ public class ExpositionDiscoveryServiceHandler extends ExpositionDiscoveryServic
          case GRAPHQL_SCHEMA -> io.reshapr.discovery.exposition.v1.ArtifactType.GRAPHQL_SCHEMA;
          case PROTOBUF_SCHEMA -> io.reshapr.discovery.exposition.v1.ArtifactType.PROTOBUF_SCHEMA;
          case PROTOBUF_DESCRIPTOR -> io.reshapr.discovery.exposition.v1.ArtifactType.PROTOBUF_DESCRIPTOR;
+         case ASYNC_API_SPEC -> io.reshapr.discovery.exposition.v1.ArtifactType.ASYNC_API_SPEC;
          case JSON_SCHEMA -> io.reshapr.discovery.exposition.v1.ArtifactType.JSON_SCHEMA;
          case RESHAPR_PROMPTS -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_PROMPTS;
          case RESHAPR_CUSTOM_TOOLS -> io.reshapr.discovery.exposition.v1.ArtifactType.RESHAPR_CUSTOM_TOOLS;

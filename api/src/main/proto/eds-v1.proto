@@ -164,6 +164,7 @@ enum ArtifactType {
   RESHAPR_RESOURCES = 8; // Reshapr resources
   RESHAPR_TOOLS_OUTPUT_FILTERS = 9; // Reshapr tools output filters
   RESHAPR_SKILLS = 10; // Reshapr skills (Skills over MCP)
+  ASYNC_API_SPEC = 11; // AsyncAPI specification
 }
 
 // Artifact represents an artifact associated with a service.
