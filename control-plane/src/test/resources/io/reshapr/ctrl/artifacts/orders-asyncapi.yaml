@@ -1,0 +1,58 @@
+asyncapi: 3.0.0
+info:
+  title: Orders Events API
+  version: 1.0.0
+  description: Order lifecycle events published on Kafka
+servers:
+  production:
+    host: kafka.example.com:9092
+    protocol: kafka
+channels:
+  orderCreated:
+    address: orders.created
+    messages:
+      OrderCreated:
+        $ref: '#/components/messages/OrderCreated'
+  createOrderCommand:
+    address: orders.commands.create
+    messages:
+      CreateOrder:
+        $ref: '#/components/messages/CreateOrder'
+operations:
+  onOrderCreated:
+    action: send
+    summary: Be notified when an order is created
+    channel:
+      $ref: '#/channels/orderCreated'
+    messages:
+      - $ref: '#/channels/orderCreated/messages/OrderCreated'
+  createOrder:
+    action: receive
+    summary: Ask for the creation of an order
+    channel:
+      $ref: '#/channels/createOrderCommand'
+    messages:
+      - $ref: '#/channels/createOrderCommand/messages/CreateOrder'
+components:
+  messages:
+    OrderCreated:
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          orderId:
+            type: string
+          org:
+            type: string
+          amount:
+            type: number
+    CreateOrder:
+      contentType: application/json
+      payload:
+        type: object
+        required: [customerId]
+        properties:
+          customerId:
+            type: string
+          amount:
+            type: number

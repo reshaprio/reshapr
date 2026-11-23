@@ -37,6 +37,9 @@ public class ArtifactImporterFactory {
    /** A RegExp for detecting a line containing the openapi: 3 pragma. */
    public static final String OPENAPI_3_REGEXP = ".*['\\\"]?openapi['\\\"]?\\s*:\\s*['\\\"]?[3\\.].*";
 
+   /** A RegExp for detecting a line containing the asyncapi: 3 pragma. */
+   public static final String ASYNCAPI_3_REGEXP = ".*['\\\"]?asyncapi['\\\"]?\\s*:\\s*['\\\"]?3\\..*";
+
    private ArtifactImporterFactory() {
       // Private constructor to hide the implicit one as it's a utility class.
    }
@@ -77,7 +80,10 @@ public class ArtifactImporterFactory {
    }
 
    private static ArtifactImporter checkOtherImporters(String line, File artifactFile, ReferenceResolver referenceResolver) throws IOException {
-      if (line.startsWith("syntax = \"proto3\";") || line.startsWith("syntax=\"proto3\";")) {
+      if (line.matches(ASYNCAPI_3_REGEXP)) {
+         log.info("Found an asyncapi: 3 pragma in file so assuming it's an AsyncAPI spec to import");
+         return new AsyncAPIImporter(artifactFile.getPath(), referenceResolver);
+      } else if (line.startsWith("syntax = \"proto3\";") || line.startsWith("syntax=\"proto3\";")) {
          log.info("Found a syntax = proto3 pragma in file so assuming it's a GRPC Protobuf spec to import");
          return new ProtobufImporter(artifactFile.getPath(), referenceResolver);
       } else if (line.startsWith("schema {") || line.contains("type Query {")

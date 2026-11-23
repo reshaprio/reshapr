@@ -22,5 +22,6 @@ package io.reshapr.ctrl.model;
 public enum ServiceType {
    REST,
    GRAPHQL,
-   GRPC
+   GRPC,
+   ASYNC
 }

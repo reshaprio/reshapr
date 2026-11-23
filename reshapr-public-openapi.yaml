@@ -963,6 +963,7 @@ components:
       - GRAPHQL_SCHEMA
       - PROTOBUF_SCHEMA
       - PROTOBUF_DESCRIPTOR
+      - ASYNC_API_SPEC
       - JSON_FRAGMENT
       - RESHAPR_PROMPTS
       - RESHAPR_CUSTOM_TOOLS
@@ -1103,6 +1104,7 @@ components:
       - REST
       - GRAPHQL
       - GRPC
+      - ASYNC
       type: string
     ValidityPeriod:
       description: 'The available duration that representation a validity period in reShapr'

@@ -1,3 +1,4 @@
+
 /*
  * Copyright The Reshapr Authors.
  *
@@ -25,6 +26,7 @@ public enum ArtifactType {
    GRAPHQL_SCHEMA,
    PROTOBUF_SCHEMA,
    PROTOBUF_DESCRIPTOR,
+   ASYNC_API_SPEC,
    JSON_FRAGMENT,
    RESHAPR_PROMPTS,
    RESHAPR_CUSTOM_TOOLS,

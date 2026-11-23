@@ -17,11 +17,11 @@
 /**
  * Mirrors the server-side `McpToolConverter.getToolName` implementations (proxy module):
  * REST/OpenAPI operations (e.g. `GET /v1/forecast`) are converted to `get_v1_forecast`, while
- * GraphQL and gRPC operation names are used as-is.
+ * GraphQL, gRPC, and ASYNC operation names are used as-is.
  */
 export function toolNameForOperation(serviceType: string | null | undefined, operationName: string): string {
 	const type = (serviceType ?? '').toUpperCase();
-	if (type === 'GRAPHQL' || type === 'GRPC') return operationName;
+	if (type === 'GRAPHQL' || type === 'GRPC' || type === 'ASYNC') return operationName;
 	return operationName
 		.replaceAll(' ', '_')
 		.replaceAll('/', '_')

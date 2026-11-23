@@ -32,6 +32,8 @@
 				return 'background-color: #E10098; color: white;';
 			case 'GRPC':
 				return 'background-color: #c0a16b; color: white;';
+			case 'ASYNC':
+				return 'background-color: #7c4dcc; color: white;';
 			default:
 				return '';
 		}

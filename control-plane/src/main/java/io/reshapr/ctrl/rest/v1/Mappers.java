@@ -127,30 +127,24 @@ public interface Mappers {
 
    Secret fromResource(SecretDTO secretDTO);
 
-   @ValueMappings({
-         @ValueMapping(source = "ARTIFACT", target = "ARTIFACT"),
-         @ValueMapping(source = "ENDPOINT", target = "ENDPOINT")
-   })
+   @ValueMapping(source = "ARTIFACT", target = "ARTIFACT")
+   @ValueMapping(source = "ENDPOINT", target = "ENDPOINT")
    SecretTypeEnum toResource(SecretType secretType);
 
-   @ValueMappings({
-         @ValueMapping(source = "ARTIFACT", target = "ARTIFACT"),
-         @ValueMapping(source = "ENDPOINT", target = "ENDPOINT")
-   })
+   @ValueMapping(source = "ARTIFACT", target = "ARTIFACT")
+   @ValueMapping(source = "ENDPOINT", target = "ENDPOINT")
    SecretType fromResource(SecretTypeEnum secretType);
 
-   @ValueMappings({
-         @ValueMapping(source = "REST", target = "REST"),
-         @ValueMapping(source = "GRAPHQL", target = "GRAPHQL"),
-         @ValueMapping(source = "GRPC", target = "GRPC")
-   })
+   @ValueMapping(source = "REST", target = "REST")
+   @ValueMapping(source = "GRAPHQL", target = "GRAPHQL")
+   @ValueMapping(source = "GRPC", target = "GRPC")
+   @ValueMapping(source = "ASYNC", target = "ASYNC")
    ServiceTypeEnum toResource(ServiceType serviceType);
 
-   @ValueMappings({
-         @ValueMapping(source = "REST", target = "REST"),
-         @ValueMapping(source = "GRAPHQL", target = "GRAPHQL"),
-         @ValueMapping(source = "GRPC", target = "GRPC")
-   })
+   @ValueMapping(source = "REST", target = "REST")
+   @ValueMapping(source = "GRAPHQL", target = "GRAPHQL")
+   @ValueMapping(source = "GRPC", target = "GRPC")
+   @ValueMapping(source = "ASYNC", target = "ASYNC")
    ServiceType fromResource(ServiceTypeEnum serviceTypeEnum);
 
    ServiceViewDTO toResource(Service service);
