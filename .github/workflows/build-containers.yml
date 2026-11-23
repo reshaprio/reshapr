@@ -11,6 +11,7 @@ jobs:
   build-containers:
     if: github.repository_owner == 'reshaprio' && inputs.image-tag != ''
     runs-on: ubuntu-26.04
+    timeout-minutes: 30
     environment: Build
     permissions:
       contents: read
