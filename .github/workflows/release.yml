@@ -47,16 +47,13 @@ jobs:
           architecture: x64
           cache: maven
 
-      - name: Set Node.js 22.x
+      - name: Set Node.js 24.x  # Includes npm 11.19+ (>= 11.5.1 required for trusted publishing)
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22.22.1
+          node-version: 24.22.3
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           cache-dependency-path: 'cli/package-lock.json'
-
-      - name: Update npm to latest version  # Ensure npm 11.5.1 or later for trusted publishing
-        run: npm install -g --ignore-scripts npm@11.18.0
 
       - name: Set release version for Java components
         run: mvn -B -q versions:set -DnewVersion=${{ github.event.inputs.version }}
@@ -112,7 +109,7 @@ jobs:
       # Persist logs
       - name: JReleaser release output
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jreleaser-release
           path: |
