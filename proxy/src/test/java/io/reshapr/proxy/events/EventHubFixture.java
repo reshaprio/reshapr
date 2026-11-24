@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * Hub wired on a fake broker with an ASYNC exposition, shared by the events and MCP tests.
@@ -123,7 +124,7 @@ public class EventHubFixture {
          }
 
          @Override
-         public EventBroker create(EventEndpoint endpoint, SecretEntry secret, java.util.function.Function<String, String> resolver) {
+         public EventBroker create(EventEndpoint endpoint, SecretEntry secret, UnaryOperator<String> resolver) {
             return broker;
          }
       }), v -> v), catalog);

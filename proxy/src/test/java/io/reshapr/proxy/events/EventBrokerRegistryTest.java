@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -70,7 +70,7 @@ class EventBrokerRegistryTest {
       }
 
       @Override
-      public EventBroker create(EventEndpoint endpoint, SecretEntry secret, Function<String, String> resolver) {
+      public EventBroker create(EventEndpoint endpoint, SecretEntry secret, UnaryOperator<String> resolver) {
          CountingBroker broker = new CountingBroker();
          created.add(broker);
          return broker;

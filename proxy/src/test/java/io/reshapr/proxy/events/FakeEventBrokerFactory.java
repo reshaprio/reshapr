@@ -19,7 +19,7 @@ import io.reshapr.proxy.registry.SecretEntry;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Test factory overriding the Kafka one for the {@code kafka} protocol.
@@ -39,7 +39,7 @@ public class FakeEventBrokerFactory implements EventBrokerFactory {
    }
 
    @Override
-   public EventBroker create(EventEndpoint endpoint, SecretEntry secret, Function<String, String> secretResolver) {
+   public EventBroker create(EventEndpoint endpoint, SecretEntry secret, UnaryOperator<String> secretResolver) {
       return new FakeEventBroker();
    }
 }

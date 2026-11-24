@@ -32,7 +32,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Resolves the {@link EventBroker} of an exposition from its endpoint, creating it lazily on first use.
@@ -47,43 +47,28 @@ public class EventBrokerRegistry {
 
    private static final Logger logger = Logger.getLogger(EventBrokerRegistry.class);
 
-   /** Identity of a connection. Holds the secret: never log it. */
-   record ConnectionKey(String protocol, String server, Map<String, String> options,
-                        @Nullable SecretEntry secret) {
-      @Override
-      public String toString() {
-         return protocol + "://" + server;
-      }
-   }
-
-   private static final class Entry {
-      final EventBroker broker;
-      final Set<String> expositions = new HashSet<>();
-      EventBroker.EventProducer producer;
-
-      Entry(EventBroker broker) {
-         this.broker = broker;
-      }
-
-      void close() {
-         if (producer != null) {
-            producer.close();
-         }
-         broker.close();
-      }
-   }
-
    private final Map<String, EventBrokerFactory> factories = new HashMap<>();
-   private final Function<String, String> secretResolver;
    private final Map<ConnectionKey, Entry> entries = new HashMap<>();
 
+   private final UnaryOperator<String> secretResolver;
+
+   /**
+    * Build a new EventBrokerRegistry
+    * @param beans CDI beans of factories overriding the ones found by {@link ServiceLoader} for the same protocol.
+    * @param resolver Resolves secret references held by the secret to actual values.
+    */
    @Inject
    public EventBrokerRegistry(Instance<EventBrokerFactory> beans, SecretReferenceResolver resolver) {
       this(beans.stream().toList(), resolver::resolve);
    }
 
-   /** Factories found by {@link ServiceLoader} are overridden by the given ones for the same protocol. */
-   public EventBrokerRegistry(Collection<EventBrokerFactory> overrides, Function<String, String> secretResolver) {
+   /**
+    * Build a new EventBrokerRegistry. Factories found by {@link ServiceLoader} are overridden by the given ones
+    * for the same protocol.
+    * @param overrides Factories to use instead of the ones found by {@link ServiceLoader} for the same protocol.
+    * @param secretResolver Function to resolve secrets by their reference.
+    */
+   public EventBrokerRegistry(Collection<EventBrokerFactory> overrides, UnaryOperator<String> secretResolver) {
       this.secretResolver = secretResolver;
       for (EventBrokerFactory factory : ServiceLoader.load(EventBrokerFactory.class)) {
          factories.put(factory.protocol(), factory);
@@ -162,6 +147,32 @@ public class EventBrokerRegistry {
             candidate.getValue().close();
             it.remove();
          }
+      }
+   }
+
+   /** Identity of a connection. Holds the secret: never log it. */
+   record ConnectionKey(String protocol, String server, Map<String, String> options,
+                        @Nullable SecretEntry secret) {
+      @Override
+      public String toString() {
+         return protocol + "://" + server;
+      }
+   }
+
+   private static final class Entry {
+      final EventBroker broker;
+      final Set<String> expositions = new HashSet<>();
+      EventBroker.EventProducer producer;
+
+      Entry(EventBroker broker) {
+         this.broker = broker;
+      }
+
+      void close() {
+         if (producer != null) {
+            producer.close();
+         }
+         broker.close();
       }
    }
 }
