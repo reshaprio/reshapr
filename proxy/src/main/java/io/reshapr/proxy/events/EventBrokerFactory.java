@@ -1,0 +1,51 @@
+/*
+ * Copyright The Reshapr Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.reshapr.proxy.events;
+
+import jakarta.annotation.Nullable;
+import io.reshapr.proxy.registry.SecretEntry;
+
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
+/**
+ * Entry point of a broker technology, discovered with {@link java.util.ServiceLoader} (or as a CDI bean, which
+ * overrides a {@code ServiceLoader} factory of the same protocol). A factory is stateless and never connects:
+ * it declares the capabilities of the technology and creates connection-bound {@link EventBroker}s on demand.
+ * @author laurent
+ */
+public interface EventBrokerFactory {
+
+   /** The endpoint scheme handled, lower case (e.g. {@code kafka}). */
+   String protocol();
+
+   /** Capabilities of the technology, known without any connection. */
+   BrokerCapabilities capabilities();
+
+   /**
+    * The destination (topic, queue, path...) a channel maps to on this technology. Defaults to the channel address;
+    * implementations interpret their own protocol bindings here.
+    */
+   default String destination(ChannelInfo channel) {
+      return channel.address();
+   }
+
+   /**
+    * Create a broker for the connection described by the endpoint. Implementations must connect lazily.
+    * @param secretResolver Resolves secret references held by the secret to actual values.
+    */
+   EventBroker create(EventEndpoint endpoint, @Nullable SecretEntry secret, UnaryOperator<String> secretResolver);
+}

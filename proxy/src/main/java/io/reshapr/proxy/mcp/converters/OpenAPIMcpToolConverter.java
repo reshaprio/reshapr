@@ -213,7 +213,7 @@ public class OpenAPIMcpToolConverter extends McpToolConverter {
 
    /** Get the root schema node for the OpenAPI artifact. */
    private JsonNode getSchemaNode() throws Exception {
-     String major = artifact.id();
+      String major = artifact.id();
       String minor = CACHE_KEYS_PREFIX + "schema";
       Object value = workCache.get(major, minor);
       if (value instanceof JsonNode schemaNode) {
