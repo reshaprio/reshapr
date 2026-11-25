@@ -104,7 +104,9 @@ public class McpSchema {
 
    // Lifecycle Methods
    public static final String METHOD_INITIALIZE = "initialize";
+   public static final String NOTIFICATION_METHOD_PREFIX = "notifications/";
    public static final String METHOD_NOTIFICATION_INITIALIZED = "notifications/initialized";
+   public static final String METHOD_NOTIFICATION_CANCELLED = "notifications/cancelled";
    public static final String METHOD_PING = "ping";
    public static final String METHOD_SERVER_DISCOVER = "server/discover";
 
@@ -121,6 +123,12 @@ public class McpSchema {
    public static final String METHOD_RESOURCES_SUBSCRIBE = "resources/subscribe";
    public static final String METHOD_RESOURCES_UNSUBSCRIBE = "resources/unsubscribe";
    public static final String METHOD_RESOURCES_DIRECTORY_READ = "resources/directory/read";
+
+   // Subscriptions (2026-07-28 and later)
+   public static final String METHOD_SUBSCRIPTIONS_LISTEN = "subscriptions/listen";
+   public static final String METHOD_NOTIFICATION_SUBSCRIPTIONS_ACKNOWLEDGED = "notifications/subscriptions/acknowledged";
+   public static final String METHOD_NOTIFICATION_RESOURCES_UPDATED = "notifications/resources/updated";
+   public static final String META_KEY_SUBSCRIPTION_ID = "io.modelcontextprotocol/subscriptionId";
 
    // Skills extension (SEP-2640).
    public static final String EXTENSION_SKILLS = "io.modelcontextprotocol/skills";

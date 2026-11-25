@@ -24,6 +24,7 @@ import io.reshapr.proxy.events.ChannelInfo;
 import io.reshapr.proxy.mcp.WorkCache;
 
 import jakarta.annotation.Nullable;
+import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,11 +36,14 @@ import java.util.List;
  */
 public final class AsyncAPIChannels {
 
+   /** Get a JBoss logging logger. */
+   private static final Logger logger = Logger.getLogger(AsyncAPIChannels.class);
+
    public static final String SEND = "SEND";
    public static final String RECEIVE = "RECEIVE";
    public static final String URI_PREFIX = "events://";
 
-   private static final String CACHE_KEY = "asyncapi";
+   private static final String CACHE_KEY = "aapichannels";
 
    private AsyncAPIChannels() {
    }
@@ -74,7 +78,7 @@ public final class AsyncAPIChannels {
          if (!exposition.configuration().exposesOperation(operation.name())) {
             continue;
          }
-         ChannelInfo info = document.getChannelForOperation(operation.name());
+         ChannelInfo info = getChannelForOperation(exposition, operation, document, workCache);
          if (info != null) {
             result.add(new Channel(operation.name(), RECEIVE.equalsIgnoreCase(operation.method()), info));
          }
@@ -85,5 +89,22 @@ public final class AsyncAPIChannels {
    /** Channels of the operations of the given kind that the configuration plan exposes. */
    public static List<Channel> channels(ExpositionEntry exposition, WorkCache workCache, boolean receive) {
       return channels(exposition, workCache).stream().filter(channel -> channel.receive() == receive).toList();
+   }
+
+   /** The channel of an operation, or null if the operation is unknown or not a channel. */
+   public static ChannelInfo getChannelForOperation(ExpositionEntry exposition, OperationEntry operation, AsyncAPIDocument document, WorkCache workCache) {
+      String major = exposition.mainArtifact().id();
+      String minor = CACHE_KEY + "-" + operation.name();
+      Object value = workCache.get(major, minor);
+      if (value instanceof ChannelInfo channel) {
+         logger.tracef("Got a cached value of ChannelInfo for service '%s' and operation '%s'", exposition.service().id(), operation.name());
+         return channel;
+      }
+
+      // Compute new value to cache.
+      logger.debugf("Need to build the ChannelInfo for service '%s' and operation '%s'", exposition.service().id(), operation.name());
+      ChannelInfo channel = document.getChannelForOperation(operation.name());
+      workCache.set(major, minor, channel);
+      return channel;
    }
 }

@@ -17,11 +17,15 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.audit.AuditEvent;
 import io.reshapr.proxy.audit.AuditLogger;
+import io.reshapr.proxy.events.EventHub;
 import io.reshapr.proxy.mcp.code.CodeModeDigest;
 import io.reshapr.proxy.mcp.code.CodeModeExecutor;
 import io.reshapr.proxy.mcp.code.CodeModeTools;
 import io.reshapr.proxy.mcp.converters.McpToolConverter;
 import io.reshapr.proxy.context.SessionInfo;
+import io.reshapr.proxy.mcp.events.AsyncAPIEventsMcpResourceBuilder;
+import io.reshapr.proxy.mcp.events.McpEventsHandler;
+import io.reshapr.proxy.mcp.events.McpEventsSchema;
 import io.reshapr.proxy.mcp.state.SessionStore;
 import io.reshapr.proxy.proxy.ProxyService;
 import io.reshapr.proxy.context.MethodHandlingInfo;
@@ -92,6 +96,8 @@ public class McpController {
    private final ProxyService proxyService;
    private final ToolCallExecutor toolCallExecutor;
    private final AuditLogger auditLogger;
+   private final EventHub eventHub;
+   private final McpEventsHandler eventsHandler;
 
    private final ObjectMapper mapper = new ObjectMapper();
 
@@ -103,16 +109,20 @@ public class McpController {
     * @param proxyService   The proxy service for handling HTTP proxying.
     * @param toolCallExecutor The executor centralizing tool call resolution and invocation.
     * @param auditLogger The audit logger for emitting structured audit events.
+    * @param eventHub The event hub for managing event subscriptions and deliveries.
+    * @param eventsHandler The events handler for processing MCP events.
     */
    public McpController(GatewayRegistry gatewayRegistry, SessionStore sessionStore,
                         WorkCache workCache, ProxyService proxyService, ToolCallExecutor toolCallExecutor,
-                        AuditLogger auditLogger) {
+                        AuditLogger auditLogger, EventHub eventHub, McpEventsHandler eventsHandler) {
       this.gatewayRegistry = gatewayRegistry;
       this.sessionStore = sessionStore;
       this.workCache = workCache;
       this.proxyService = proxyService;
       this.toolCallExecutor = toolCallExecutor;
       this.auditLogger = auditLogger;
+      this.eventHub = eventHub;
+      this.eventsHandler = eventsHandler;
    }
 
    @POST
@@ -228,6 +238,29 @@ public class McpController {
       // Extract userId and issuer from request context (set by SecureEndpointFilter after OAuth2 validation).
       String userId = (String) requestContext.getProperty(SecureEndpointFilter.USER_ID_PROPERTY);
       String issuer = (String) requestContext.getProperty(SecureEndpointFilter.ISSUER_PROPERTY);
+
+      // Client notifications (notifications/initialized, notifications/cancelled, ...) get no JSON-RPC answer: the
+      // spec asks for a bare 202 Accepted.
+      if (request.method() != null && request.method().startsWith(McpSchema.NOTIFICATION_METHOD_PREFIX)) {
+         logger.debugf("Acknowledging client notification '%s'", request.method());
+         if (McpSchema.METHOD_NOTIFICATION_CANCELLED.equals(request.method())
+               && request.params() instanceof Map<?, ?> params && params.get("requestId") != null) {
+            // Ends the events/stream or subscriptions/listen opened by that request, if it is still running.
+            eventHub.cancel(exposition.id(), userId != null ? userId : "anonymous",
+                  String.valueOf(params.get("requestId")));
+         }
+         return Response.accepted().build();
+      }
+
+      // subscriptions/listen opens a long-lived SSE stream, it does not go through the unary dispatch.
+      if (McpSchema.METHOD_SUBSCRIPTIONS_LISTEN.equals(request.method())) {
+         return handleSubscriptionsListen(exposition, request, headers, serverRequest, userId);
+      }
+
+      // events/stream is a long-lived SSE stream too.
+      if (McpEventsSchema.METHOD_EVENTS_STREAM.equals(request.method())) {
+         return handleEventsStream(exposition, request, headers, serverRequest, userId);
+      }
 
       AtomicReference<McpHandlerResult> resultRef = new AtomicReference<>();
       long startNanos = System.nanoTime();
@@ -501,6 +534,19 @@ public class McpController {
    }
 
    /**
+    * Read the Subscription ID. The {@code resources/read} says it belongs to, from {@code params._meta},
+    * if any. {@code null} when the request _meta carries no subscription ID.
+    */
+   @Nullable
+   private static String getRequestSubscriptionId(McpSchema.JSONRPCRequest request) {
+      if (request.params() instanceof Map<?, ?> params && params.get("_meta") instanceof Map<?, ?> meta
+            && meta.get(McpSchema.META_KEY_SUBSCRIPTION_ID) != null) {
+         return String.valueOf(meta.get(McpSchema.META_KEY_SUBSCRIPTION_ID));
+      }
+      return null;
+   }
+
+   /**
     * Handle the MCP request and return a JSONRPCResponse.
     * @param exposition The exposition for which the request is made.
     * @param request The JSONRPCRequest to handle.
@@ -544,6 +590,12 @@ public class McpController {
 
          case McpSchema.METHOD_SKILLS_GET ->
             result = handleSkillsGetRequest(request, exposition, resolveProtocolVersion(headers));
+
+         case McpEventsSchema.METHOD_EVENTS_LIST ->
+               result = handleEventsListRequest(request, exposition, headers);
+
+         case McpEventsSchema.METHOD_EVENTS_POLL ->
+               result = handleEventsPollRequest(request, exposition, headers);
 
          case McpSchema.METHOD_TOOLS_LIST ->
             result = handleToolsListRequest(request, exposition,
@@ -592,6 +644,20 @@ public class McpController {
          merged.putAll(extra);
          return new McpHandlerResult(message, merged);
       }
+   }
+
+   /**
+    * Resolve the protocol version negotiated for this call: the pinned version carried by the legacy
+    * session when present, otherwise the {@code MCP-Protocol-Version} header sent in stateless mode.
+    * Returns {@code null} when neither is available (dialect resolution then falls back to legacy).
+    */
+   @Nullable
+   private String resolveProtocolVersion(HttpHeaders headers) {
+      SessionInfo sessionInfo = getSessionInfo(headers);
+      if (sessionInfo != null && sessionInfo.getProtocolVersion() != null) {
+         return sessionInfo.getProtocolVersion();
+      }
+      return getProtocolVersionHeader(headers);
    }
 
    /** Handle the MCP server/discover request. */
@@ -663,10 +729,18 @@ public class McpController {
     */
    private McpSchema.ServerCapabilities buildServerCapabilities(ExpositionEntry exposition) {
       Map<String, Object> extensions = buildMcpSkillBuilder(exposition).hasSkills()
-            ? Map.of(McpSchema.EXTENSION_SKILLS, Map.of("directoryRead", true)) : null;
+            ? new HashMap<>(Map.of(McpSchema.EXTENSION_SKILLS, Map.of("directoryRead", true))) : null;
+      if (isAsync(exposition)) {
+         // Complete extensions map if existing, or create a new one if not.
+         if (extensions == null) {
+            extensions = new HashMap<>(Map.of(McpEventsSchema.EXTENSION_EVENTS, Map.of("listChanged", false)));
+         } else {
+            extensions.put(McpEventsSchema.EXTENSION_EVENTS, Map.of("listChanged", false));
+         }
+      }
       return new McpSchema.ServerCapabilities(null, null,
             new McpSchema.ServerCapabilities.PromptCapabilities(false),
-            new McpSchema.ServerCapabilities.ResourceCapabilities(false, false),
+            new McpSchema.ServerCapabilities.ResourceCapabilities(isAsync(exposition), false),
             new McpSchema.ServerCapabilities.ToolCapabilities(false), extensions);
    }
 
@@ -749,7 +823,7 @@ public class McpController {
       ConfigurationEntry configuration = exposition.configuration();
 
       // Build a MCP Resource Builder based on available elements in registry.
-      McpResourceBuilder builder = buildMcpResourceBuilder(exposition);
+      McpResourceBuilder builder = buildMcpResourceBuilder(exposition, getRequestSubscriptionId(request));
 
       // Skill files (skill:// URIs) are served by the Skills extension provider.
       List<McpSchema.ResourceContents> contents = null;
@@ -780,44 +854,6 @@ public class McpController {
       return toMcpHandlerResult(request, result);
    }
 
-   /** Handle the MCP skills/list request (Skills extension). Unsupported when no skills are attached. */
-   @Nullable
-   private McpHandlerResult handleSkillsListRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
-         @Nullable String protocolVersion) {
-      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
-      if (!skillBuilder.hasSkills()) {
-         return null;
-      }
-      ConfigurationEntry configuration = exposition.configuration();
-      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
-      return toMcpHandlerResult(request, new McpSchema.ListSkillsResult(
-            modern ? "complete" : null,
-            skillBuilder.listSkills(configuration), null,
-            modern ? getCacheTtlMs(configuration) : null,
-            modern ? getCacheScope(configuration) : null));
-   }
-
-   /** Handle the MCP skills/get request (Skills extension). Unsupported when no skills are attached. */
-   @Nullable
-   private McpHandlerResult handleSkillsGetRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
-         @Nullable String protocolVersion) {
-      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
-      if (!skillBuilder.hasSkills()) {
-         return null;
-      }
-      McpSchema.ReadResourceRequest getRequest = mapper.convertValue(request.params(),
-            new TypeReference<McpSchema.ReadResourceRequest>() {
-            });
-      McpSchema.SkillEntry skill = getRequest.uri() == null ? null
-            : skillBuilder.getSkill(getRequest.uri(), exposition.configuration());
-      if (skill == null) {
-         return toMcpHandlerResult(request, McpSchema.ErrorCodes.INVALID_PARAMS,
-               "Skill not found: " + getRequest.uri(), Map.of("uri", String.valueOf(getRequest.uri())));
-      }
-      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
-      return toMcpHandlerResult(request, new McpSchema.GetSkillResult(modern ? "complete" : null, skill));
-   }
-
    /** Handle the MCP resources/directory/read request (Skills extension, {@code directoryRead}). */
    @Nullable
    private McpHandlerResult handleDirectoryReadRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
@@ -839,18 +875,109 @@ public class McpController {
       return toMcpHandlerResult(request, new McpSchema.ReadDirectoryResult(modern ? "complete" : null, children, null));
    }
 
-   /**
-    * Resolve the protocol version negotiated for this call: the pinned version carried by the legacy
-    * session when present, otherwise the {@code MCP-Protocol-Version} header sent in stateless mode.
-    * Returns {@code null} when neither is available (dialect resolution then falls back to legacy).
-    */
+   /** Handle the MCP skills/list request (Skills extension). Unsupported when no skills are attached. */
    @Nullable
-   private String resolveProtocolVersion(HttpHeaders headers) {
-      SessionInfo sessionInfo = getSessionInfo(headers);
-      if (sessionInfo != null && sessionInfo.getProtocolVersion() != null) {
-         return sessionInfo.getProtocolVersion();
+   private McpHandlerResult handleSkillsListRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+                                                    @Nullable String protocolVersion) {
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (!skillBuilder.hasSkills()) {
+         return null;
       }
-      return getProtocolVersionHeader(headers);
+      ConfigurationEntry configuration = exposition.configuration();
+      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
+      return toMcpHandlerResult(request, new McpSchema.ListSkillsResult(
+            modern ? "complete" : null,
+            skillBuilder.listSkills(configuration), null,
+            modern ? getCacheTtlMs(configuration) : null,
+            modern ? getCacheScope(configuration) : null));
+   }
+
+   /** Handle the MCP skills/get request (Skills extension). Unsupported when no skills are attached. */
+   @Nullable
+   private McpHandlerResult handleSkillsGetRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+                                                   @Nullable String protocolVersion) {
+      McpSkillBuilder skillBuilder = buildMcpSkillBuilder(exposition);
+      if (!skillBuilder.hasSkills()) {
+         return null;
+      }
+      McpSchema.ReadResourceRequest getRequest = mapper.convertValue(request.params(),
+            new TypeReference<McpSchema.ReadResourceRequest>() {
+            });
+      McpSchema.SkillEntry skill = getRequest.uri() == null ? null
+            : skillBuilder.getSkill(getRequest.uri(), exposition.configuration());
+      if (skill == null) {
+         return toMcpHandlerResult(request, McpSchema.ErrorCodes.INVALID_PARAMS,
+               "Skill not found: " + getRequest.uri(), Map.of("uri", String.valueOf(getRequest.uri())));
+      }
+      boolean modern = McpSchema.isAtLeast(protocolVersion, McpSchema.PROTOCOL_VERSION_STATELESS);
+      return toMcpHandlerResult(request, new McpSchema.GetSkillResult(modern ? "complete" : null, skill));
+   }
+
+   /** Handle the MCP events/list request. Everywhere the extension is not offered, {@code null} yields a plain {@code -32601}. */
+   private McpHandlerResult handleEventsListRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+                                                    HttpHeaders headers) {
+      return isEventsRequest(request, exposition, headers)
+            ? new McpHandlerResult(eventsHandler.list(request, exposition), null) : null;
+   }
+
+   /** Handle the MCP events/poll request. Everywhere the extension is not offered, {@code null} yields a plain {@code -32601}. */
+   private McpHandlerResult handleEventsPollRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition,
+                                                    HttpHeaders headers) {
+      return isEventsRequest(request, exposition, headers)
+            ? new McpHandlerResult(eventsHandler.poll(request, exposition), null) : null;
+   }
+
+   /** Handle the MCP events/stream request. {@code events/stream} is a long-lived SSE stream: errors detected before it opens are plain JSON-RPC errors. */
+   private Response handleEventsStream(ExpositionEntry exposition, McpSchema.JSONRPCRequest request,
+                                       HttpHeaders headers, HttpServerRequest serverRequest,
+                                       @Nullable String userId) {
+      if (!isEventsRequest(request, exposition, headers)) {
+         return Response.status(Response.Status.NOT_FOUND)
+               .entity(buildJSONRPCError(request, McpSchema.ErrorCodes.METHOD_NOT_FOUND,
+                     "Method '" + request.method() + "' is not supported here", null)).build();
+      }
+      McpEventsHandler.StreamOpening opening = eventsHandler.stream(request, exposition, userId != null ? userId : "anonymous");
+      if (opening.error() != null) {
+         return Response.ok(opening.error()).build();
+      }
+      long startNanos = System.nanoTime();
+      emitAuditEvent(exposition, request, new McpHandlerResult(
+                  new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION, request.id(), Map.of(), null), null),
+            startNanos, serverRequest, userId);
+      return Response.ok(opening.output()).type("text/event-stream").header("Cache-Control", "no-cache").build();
+   }
+
+   /**
+    * Handle {@code subscriptions/listen} for an ASYNC exposition: an SSE stream that acknowledges the
+    * subscription, then pushes {@code notifications/resources/updated} each time a subscribed channel
+    * receives events, until the client disconnects or the exposition goes away.
+    * Only the modern (stateless) dialect supports it.
+    */
+   private Response handleSubscriptionsListen(ExpositionEntry exposition, McpSchema.JSONRPCRequest request,
+                                              HttpHeaders headers, HttpServerRequest serverRequest,
+                                              @Nullable String userId) {
+      if (!isModernRequest(request, headers) || hasSessionHeader(headers)) {
+         return Response.status(Response.Status.NOT_FOUND)
+               .entity(buildJSONRPCError(request, McpSchema.ErrorCodes.METHOD_NOT_FOUND,
+                     "Method '" + request.method() + "' requires protocol " + McpSchema.PROTOCOL_VERSION_STATELESS, null))
+               .build();
+      }
+      if (!isAsync(exposition)) {
+         return Response.ok(buildJSONRPCError(request, McpSchema.ErrorCodes.METHOD_NOT_FOUND,
+               "Method '" + request.method() + "' is not supported by this service", null)).build();
+      }
+
+      long startNanos = System.nanoTime();
+      McpEventsHandler.StreamOpening opening = eventsHandler.listen(request, exposition, userId != null ? userId : "anonymous");
+      if (opening.error() != null) {
+         return Response.ok(opening.error()).build();
+      }
+
+      // One audit entry when the subscription opens: metadata only, events are never audited.
+      emitAuditEvent(exposition, request, new McpHandlerResult(
+                  new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION, request.id(), Map.of(), null), null),
+            startNanos, serverRequest, userId);
+      return Response.ok(opening.output()).type("text/event-stream").header("Cache-Control", "no-cache").build();
    }
 
    /** Handle the MCP tools/list request. */
@@ -1026,8 +1153,18 @@ public class McpController {
    }
 
    private McpResourceBuilder buildMcpResourceBuilder(ExpositionEntry exposition) {
-      return new ReshaprResourcesMcpResourceBuilder(exposition.service(),
+      return buildMcpResourceBuilder(exposition, null);
+   }
+
+   private McpResourceBuilder buildMcpResourceBuilder(ExpositionEntry exposition, @Nullable String subscriptionId) {
+      McpResourceBuilder builder = new ReshaprResourcesMcpResourceBuilder(exposition.service(),
             exposition.attachedArtifacts(), workCache, mapper, proxyService);
+      if (isAsync(exposition)) {
+         String userId = MethodHandlingContext.getUserId();
+         return new AsyncAPIEventsMcpResourceBuilder(exposition, builder, workCache, mapper, eventHub,
+               userId != null ? userId : "anonymous", subscriptionId);
+      }
+      return builder;
    }
 
 
@@ -1144,5 +1281,14 @@ public class McpController {
          return null;
       }
       return new AuditEvent.CodeModeInfo(CodeModeDigest.of(code), code);
+   }
+
+   /** Whether a request is eligible for the MCP Events extension: ASYNC exposition, modern protocol, no session. */
+   private boolean isEventsRequest(McpSchema.JSONRPCRequest request, ExpositionEntry exposition, HttpHeaders headers) {
+      return isAsync(exposition) && isModernRequest(request, headers) && !hasSessionHeader(headers);
+   }
+
+   private static boolean isAsync(ExpositionEntry exposition) {
+      return "ASYNC".equals(exposition.service().type());
    }
 }

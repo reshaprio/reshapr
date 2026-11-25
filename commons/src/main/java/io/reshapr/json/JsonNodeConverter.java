@@ -23,7 +23,8 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
- * Utility methods for converting to Jackson JsonNoe
+ * Utility methods for converting to Jackson JsonNode.
+ * @author laurent
  */
 public class JsonNodeConverter {
 

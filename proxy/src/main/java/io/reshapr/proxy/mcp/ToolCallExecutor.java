@@ -17,9 +17,11 @@ package io.reshapr.proxy.mcp;
 
 import io.reshapr.proxy.context.MethodHandlingContext;
 import io.reshapr.proxy.context.SessionInfo;
+import io.reshapr.proxy.events.EventHub;
 import io.reshapr.proxy.mcp.code.CodeModeExecutor;
 import io.reshapr.proxy.mcp.code.CodeModeLimits;
 import io.reshapr.proxy.mcp.code.CodeModeTools;
+import io.reshapr.proxy.mcp.converters.AsyncAPIMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.CustomToolResolutionException;
 import io.reshapr.proxy.mcp.converters.GraphQLMcpToolConverter;
 import io.reshapr.proxy.mcp.converters.GrpcMcpToolConverter;
@@ -77,6 +79,7 @@ public class ToolCallExecutor {
    private final WorkCache workCache;
    private final ProxyService proxyService;
    private final GrpcProxyService grpcProxyService;
+   private final EventHub eventHub;
 
    private final ObjectMapper mapper = new ObjectMapper();
 
@@ -151,13 +154,14 @@ public class ToolCallExecutor {
     */
    public ToolCallExecutor(GatewayRegistry gatewayRegistry, ElicitationStore elicitationStore,
                            UserSecretStore userSecretStore, WorkCache workCache,
-                           ProxyService proxyService, GrpcProxyService grpcProxyService) {
+                           ProxyService proxyService, GrpcProxyService grpcProxyService, EventHub eventHub) {
       this.gatewayRegistry = gatewayRegistry;
       this.elicitationStore = elicitationStore;
       this.userSecretStore = userSecretStore;
       this.workCache = workCache;
       this.proxyService = proxyService;
       this.grpcProxyService = grpcProxyService;
+      this.eventHub = eventHub;
    }
 
    /**
@@ -573,6 +577,7 @@ public class ToolCallExecutor {
       switch (service.type()) {
          case "GRAPHQL" -> converter = new GraphQLMcpToolConverter(exposition, workCache, mapper, proxyService);
          case "GRPC" -> converter = new GrpcMcpToolConverter(exposition, workCache, mapper, grpcProxyService);
+         case "ASYNC" -> converter = new AsyncAPIMcpToolConverter(exposition, workCache, mapper, eventHub);
          default -> converter = new OpenAPIMcpToolConverter(exposition, workCache, mapper, proxyService);
       }
 

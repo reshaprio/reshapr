@@ -48,21 +48,26 @@ public final class EventStream implements AutoCloseable {
       void error(String message) throws IOException;
    }
 
+   private final BlockingQueue<EventBroker.ConsumedRecord> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+
+   private final String channelKey;
+   private final String ownerKey;
    private final String destination;
    private final EventFilter filter;
    private final Function<EventBroker.ReadRequest, EventBroker.ReadResult> reader;
    private final Function<String, EventPosition> positions;
    private final Runnable onClose;
    private EventPosition position;
-   private final BlockingQueue<EventBroker.ConsumedRecord> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
-   private final String channelKey;
+
    private volatile boolean closed;
+   private volatile boolean cancelled;
    private volatile boolean overflow;
 
-   EventStream(String channelKey, String destination, @Nullable EventFilter filter,
+   EventStream(String channelKey, String ownerKey, String destination, @Nullable EventFilter filter,
                Function<EventBroker.ReadRequest, EventBroker.ReadResult> reader,
                Function<String, EventPosition> positions, Runnable onClose) {
       this.channelKey = channelKey;
+      this.ownerKey = ownerKey;
       this.destination = destination;
       this.filter = filter;
       this.reader = reader;
@@ -72,6 +77,15 @@ public final class EventStream implements AutoCloseable {
 
    public String channelKey() {
       return channelKey;
+   }
+
+   public String ownerKey() {
+      return ownerKey;
+   }
+
+   /** True when the client cancelled the stream: nothing more must be written to it. */
+   public boolean isCancelled() {
+      return cancelled;
    }
 
    public boolean isClosed() {
@@ -182,6 +196,11 @@ public final class EventStream implements AutoCloseable {
          closed = true;
          onClose.run();
       }
+   }
+
+   /** Flag that the client abandoned the stream; the hub then closes it as usual. */
+   void markCancelled() {
+      cancelled = true;
    }
 
    /** Close without notifying the hub (it is already removing the stream). */

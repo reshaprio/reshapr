@@ -39,6 +39,8 @@ public class EventSubscription {
    private final Set<String> pending = new LinkedHashSet<>();
    private boolean closed = false;
 
+   private volatile boolean cancelled = false;
+
    EventSubscription(String key, String expositionId, String userId, Set<String> channelKeys) {
       this.key = key;
       this.expositionId = expositionId;
@@ -77,6 +79,16 @@ public class EventSubscription {
       } finally {
          lock.unlock();
       }
+   }
+
+   /** Flag that the client abandoned the subscription; the hub then closes it as usual. */
+   void markCancelled() {
+      cancelled = true;
+   }
+
+   /** True when the client cancelled the subscription: nothing more must be written to it. */
+   public boolean isCancelled() {
+      return cancelled;
    }
 
    void close() {

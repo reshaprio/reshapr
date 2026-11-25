@@ -66,8 +66,8 @@ public class AsyncAPIDocument {
       }
       JsonNode channel = root.path("channels").get(channelKey);
       String address = channel.path("address").asText(channelKey);
-      String description = operation.hasNonNull("summary") ? operation.get("summary").asText()
-            : operation.has("description") ? operation.get("description").asText()
+      String description = operation.hasNonNull("description") ? operation.get("description").asText()
+            : operation.has("summary") ? operation.get("summary").asText()
             : channel.has("description") ? channel.get("description").asText() : null;
 
       String messageName = null;
@@ -108,7 +108,7 @@ public class AsyncAPIDocument {
             return target.isMissingNode() ? node : resolve(target, depth + 1);
          }
          ObjectNode copy = JsonNodeFactory.instance.objectNode();
-         node.fields().forEachRemaining(e -> copy.set(e.getKey(), resolve(e.getValue(), depth + 1)));
+         node.properties().forEach(e -> copy.set(e.getKey(), resolve(e.getValue(), depth + 1)));
          return copy;
       }
       if (node.isArray()) {

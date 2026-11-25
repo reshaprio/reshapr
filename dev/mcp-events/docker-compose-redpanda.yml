@@ -1,0 +1,41 @@
+# Single-node Redpanda (Kafka API) for the MCP Events demo.
+#  - from the host (gateway started with ./mvnw quarkus:dev): localhost:19092
+#  - from containers on the "reshapr-events" network:          redpanda:29092
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
+    container_name: reshapr-demo-redpanda
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=512M
+      - --kafka-addr=internal://0.0.0.0:29092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:29092,external://localhost:19092
+    ports:
+      - "19092:19092"
+    networks:
+      reshapr-events:
+        aliases: [redpanda]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  console:
+    image: docker.redpanda.com/redpandadata/console:v2.8.4
+    container_name: reshapr-demo-console
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "8089:8080"
+    networks: [reshapr-events]
+
+networks:
+  reshapr-events:
+    name: reshapr-events

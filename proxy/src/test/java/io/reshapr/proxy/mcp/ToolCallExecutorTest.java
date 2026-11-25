@@ -59,7 +59,7 @@ class ToolCallExecutorTest {
 
    private static ToolCallExecutor newExecutor(GatewayRegistry registry, ElicitationStore store) {
       ToolCallExecutor executor = new ToolCallExecutor(registry, store, new UserSecretStore(null), new WorkCache(1000),
-            new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null);
+            new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null, null);
       executor.fqdns = List.of("localhost:7777");
       return executor;
    }

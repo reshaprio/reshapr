@@ -172,6 +172,33 @@ public class EventHub {
    }
 
    /**
+    * Cancel the stream or listen subscription opened by a request ({@code notifications/cancelled}).
+    * @return true when something was cancelled; unknown or already finished requests are ignored.
+    */
+   public synchronized boolean cancel(String expositionId, String userId, String requestId) {
+      ExpositionState state = states.get(expositionId);
+      if (state == null) {
+         return false;
+      }
+      String ownerKey = subscriberKey(userId, requestId);
+      boolean cancelled = false;
+      EventSubscription subscription = state.subscriptions.get(ownerKey);
+      if (subscription != null) {
+         subscription.markCancelled();
+         unsubscribe(subscription);
+         cancelled = true;
+      }
+      for (EventStream stream : new ArrayList<>(state.streams)) {
+         if (stream.ownerKey().equals(ownerKey)) {
+            stream.markCancelled();
+            stream.close();
+            cancelled = true;
+         }
+      }
+      return cancelled;
+   }
+
+   /**
     * Resolve which subscription a {@code resources/read} belongs to, in stateless mode: the explicit
     * subscription id when the client sent it, else the user's subscription on that channel.
     * @return The subscriber key or null if the caller is not subscribed.
@@ -208,7 +235,7 @@ public class EventHub {
     * @throws IllegalArgumentException for an unknown channel or a malformed cursor.
     * @throws IllegalStateException when the stream limit of the exposition is reached.
     */
-   public synchronized EventStream openStream(ExpositionEntry exposition, String channelKey,
+   public synchronized EventStream openStream(ExpositionEntry exposition, String channelKey, String userId, String requestId,
                                               @Nullable Map<?, ?> arguments, @Nullable String cursor) {
       List<Channel> channels = getSendChannels(exposition);
       ChannelInfo channel = channels.stream().map(Channel::info)
@@ -229,8 +256,8 @@ public class EventHub {
       ExpositionState owner = state;
       EventBroker broker = broker(exposition);
       EventStream[] holder = new EventStream[1];
-      holder[0] = new EventStream(channelKey, destination, EventFilter.and(endpoint.filter(), EventFilter.ofArguments(arguments)),
-            broker::read, broker::position,
+      holder[0] = new EventStream(channelKey, subscriberKey(userId, requestId), destination, EventFilter.and(endpoint.filter(), EventFilter.ofArguments(arguments)),
+            request -> broker.read(request), broker::position,
             () -> closeStream(owner, holder[0]));
       state.streams.add(holder[0]);
       state.ensureConsumer();

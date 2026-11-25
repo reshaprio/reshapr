@@ -62,7 +62,7 @@ class CustomToolScriptRunnerTest {
    /** An executor that echoes back the called tool and arguments as a JSON content. */
    private static ToolCallExecutor echoExecutor(GatewayRegistry registry) {
       return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000),
-            new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
+            new ProxyService(new SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null, null) {
          @Override
          public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
@@ -262,7 +262,7 @@ class CustomToolScriptRunnerTest {
 
    /** A simulated executor returning a GraphQL-shaped `user` response honoring the relation sizes. */
    private static ToolCallExecutor gitHubUserExecutor(GatewayRegistry registry) {
-      return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
+      return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null, null) {
          @Override
          public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
@@ -325,7 +325,7 @@ class CustomToolScriptRunnerTest {
 
    /** An executor that echoes back the current script nesting depth. */
    private static ToolCallExecutor depthProbeExecutor(GatewayRegistry registry) {
-      return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
+      return new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000), new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null, null) {
          @Override
          public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {
@@ -379,7 +379,7 @@ class CustomToolScriptRunnerTest {
 
       // An executor whose call blocks longer than the configured timeout.
       ToolCallExecutor slow = new ToolCallExecutor(registry, stubElicitationStore(), new UserSecretStore(null), new WorkCache(1000),
-            new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null) {
+            new ProxyService(new io.reshapr.proxy.secret.SecretReferenceResolver(java.util.List.of()), new UserSecretStore(null)), null, null) {
          @Override
          public ToolCallOutcome executeInternal(ExpositionEntry exp, String toolName, Map<String, Object> arguments,
                                         Map<String, List<String>> headers) {

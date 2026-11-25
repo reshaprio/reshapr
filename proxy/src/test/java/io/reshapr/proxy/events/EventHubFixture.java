@@ -74,6 +74,7 @@ public class EventHubFixture {
       public final List<String> published = new ArrayList<>();
       Consumer<ConsumedRecord> sink;
       public boolean closed;
+      public boolean failPublish;
 
       @Override
       public EventConsumer startConsumer(String consumerName, Set<String> destinations, Consumer<ConsumedRecord> sink) {
@@ -88,6 +89,9 @@ public class EventHubFixture {
          return new EventProducer() {
             @Override
             public PublishResult publish(String topic, String key, String payload, java.util.Map<String, String> headers) {
+               if (failPublish) {
+                  throw new IllegalStateException("broker down");
+               }
                published.add(topic + "=" + payload);
                return new PublishResult(topic, "0-42");
             }

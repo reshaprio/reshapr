@@ -104,7 +104,7 @@ class CodeModeExecutorTest {
    private static ToolCallExecutor echoExecutor(GatewayRegistry registry) {
       return new ToolCallExecutor(registry, new ElicitationStore(null), new UserSecretStore(null),
             new WorkCache(1000),
-            new ProxyService(new SecretReferenceResolver(List.of()), new UserSecretStore(null)), null) {
+            new ProxyService(new SecretReferenceResolver(List.of()), new UserSecretStore(null)), null, null) {
          @Override
          public ToolCallOutcome executeInternal(ExpositionEntry exposition, String toolName,
                                                 Map<String, Object> arguments, Map<String, List<String>> headers) {
