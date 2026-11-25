@@ -27,7 +27,9 @@ import { Logger } from './logger.js';
  * and the healthchecks (or `pg_isready` for postgres) are replayed inside the containers.
  * Containers are wired by IP because name resolution between containers needs a sudo host resolver
  * (`container system dns create`), so service names found in environment values are replaced by IPs.
- * `restart`, `extra_hosts` and `volumes` are not supported and are ignored. A container that exits while
+ * `restart`, `extra_hosts` and `volumes` are not supported and are ignored. Extra compose files given to
+ * `reshapr run -f` are merged by service name: only `environment`, `ports` and `depends_on` are taken into
+ * account, the other fields are ignored. A container that exits while
  * the stack starts fails the run with its last logs, and the containers started so far are removed.
  */
 
@@ -88,9 +90,19 @@ export async function waitFor(
 
 function toEnv(environment: RawService['environment']): [string, string][] {
   if (Array.isArray(environment)) {
-    return environment.map(entry => String(entry)).filter(entry => entry.includes('=')).map(entry => {
-      const index = entry.indexOf('=');
-      return [entry.slice(0, index), entry.slice(index + 1)] as [string, string];
+    return environment.flatMap(entry => {
+      const text = String(entry);
+      const index = text.indexOf('=');
+      if (index >= 0) {
+        return [[text.slice(0, index), text.slice(index + 1)] as [string, string]];
+      }
+      // A bare `NAME` takes its value from the host environment, as Compose does.
+      const value = process.env[text];
+      if (value === undefined) {
+        Logger.warn(`${text} is not set in the environment, it is not passed to the container.`);
+        return [];
+      }
+      return [[text, value] as [string, string]];
     });
   }
   return Object.entries(environment ?? {}).map(([name, value]) => [name, String(value ?? '')] as [string, string]);
@@ -109,26 +121,45 @@ function toHealthcheck(test: string | string[] | undefined): string[] | undefine
   return test[0] === 'CMD-SHELL' ? ['sh', '-c', test[1]] : undefined;
 }
 
-/** Services of the given compose files, ordered so that every service comes after its `depends_on`. */
+/**
+ * Services of the given compose files, ordered so that every service comes after its `depends_on`.
+ * Files are merged by service key like Compose does: environment variables are added or overridden by name,
+ * ports and `depends_on` are appended, and `image`, `container_name` and `healthcheck` are overridden when set.
+ */
 export function parseComposeServices(composeFiles: string[]): ComposeService[] {
-  const services: ComposeService[] = [];
+  const merged = new Map<string, Partial<ComposeService> & { file: string }>();
   for (const file of composeFiles) {
     const doc = yaml.load(fs.readFileSync(file, 'utf-8')) as { services?: Record<string, RawService> } | undefined;
     for (const [key, raw] of Object.entries(doc?.services ?? {})) {
-      if (!raw.image) {
-        throw new Error(`Service '${key}' of ${file} has no image`);
-      }
-      services.push({
-        key,
-        containerName: raw.container_name ?? `reshapr-${key}`,
-        image: raw.image,
-        env: toEnv(raw.environment),
-        ports: (raw.ports ?? []).map(String),
-        dependsOn: Array.isArray(raw.depends_on) ? raw.depends_on : Object.keys(raw.depends_on ?? {}),
-        healthcheck: toHealthcheck(raw.healthcheck?.test),
+      const service = merged.get(key) ?? { file, env: [], ports: [], dependsOn: [] };
+      const env = new Map([...(service.env ?? []), ...toEnv(raw.environment)]);
+      const dependsOn = Array.isArray(raw.depends_on) ? raw.depends_on : Object.keys(raw.depends_on ?? {});
+      merged.set(key, {
+        file: service.file,
+        image: raw.image ?? service.image,
+        containerName: raw.container_name ?? service.containerName,
+        env: [...env],
+        ports: [...new Set([...(service.ports ?? []), ...(raw.ports ?? []).map(String)])],
+        dependsOn: [...new Set([...(service.dependsOn ?? []), ...dependsOn])],
+        healthcheck: toHealthcheck(raw.healthcheck?.test) ?? service.healthcheck,
       });
     }
   }
+
+  const services: ComposeService[] = [...merged.entries()].map(([key, service]) => {
+    if (!service.image) {
+      throw new Error(`Service '${key}' of ${service.file} has no image`);
+    }
+    return {
+      key,
+      containerName: service.containerName ?? `reshapr-${key}`,
+      image: service.image,
+      env: service.env ?? [],
+      ports: service.ports ?? [],
+      dependsOn: service.dependsOn ?? [],
+      healthcheck: service.healthcheck,
+    };
+  });
 
   const ordered: ComposeService[] = [];
   const visit = (service: ComposeService, path: string[]): void => {

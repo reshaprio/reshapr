@@ -44,11 +44,6 @@ export const runCommand = new Command('run')
     const engine = resolveContainerEngine(options.engine);
     const extraFiles = resolveExtraComposeFiles(options.composeFile);
 
-    if (engine === 'apple' && extraFiles.length > 0) {
-      Logger.error('--compose-file is not supported with --engine apple.');
-      process.exit(1);
-    }
-
     // Resolve 'latest' to the actual latest GitHub release tag.
     if (release === 'latest') {
       release = await resolveLatestRelease();
@@ -56,7 +51,7 @@ export const runCommand = new Command('run')
     }
 
     if (engine === 'apple') {
-      await runOnAppleContainer(release, options.ui === true);
+      await runOnAppleContainer(release, options.ui === true, extraFiles);
       return;
     }
 
@@ -116,7 +111,7 @@ export function resolveExtraComposeFiles(files: string[]): string[] {
 }
 
 // apple/container has no Compose: the stack described by the release compose files is started with `container run`.
-async function runOnAppleContainer(release: string, ui: boolean): Promise<void> {
+async function runOnAppleContainer(release: string, ui: boolean, extraFiles: string[]): Promise<void> {
   const composeFiles = [getComposeFilePath(release)];
   if (ui) {
     composeFiles.push(getUiAddonFilePath(release));
@@ -129,6 +124,7 @@ async function runOnAppleContainer(release: string, ui: boolean): Promise<void> 
       Logger.info(`Using cached compose file ${file}.`);
     }
   }
+  composeFiles.push(...extraFiles);
 
   Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: apple)...`);
   try {
