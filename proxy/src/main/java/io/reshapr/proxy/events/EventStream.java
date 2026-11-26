@@ -31,7 +31,7 @@ import java.util.function.Function;
  * and a stream can resume from any cursor on any replica.
  * @author laurent
  */
-public final class EventStream implements AutoCloseable {
+public final class EventStream {
 
    static final int QUEUE_CAPACITY = 1000;
    private static final int BATCH = 100;
@@ -190,7 +190,6 @@ public final class EventStream implements AutoCloseable {
       sink.event(record.id(), record.message().timestamp(), record.message().payload(), cursor);
    }
 
-   @Override
    public void close() {
       if (!closed) {
          closed = true;

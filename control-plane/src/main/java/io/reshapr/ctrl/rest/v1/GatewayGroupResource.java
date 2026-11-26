@@ -26,7 +26,6 @@ import io.reshapr.ctrl.service.GatewayGroupManagerService;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.common.annotation.RunOnVirtualThread;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.DELETE;
@@ -56,14 +55,14 @@ public class GatewayGroupResource {
    private final GatewayGroupManagerService managerService;
    private final GatewayGroupRepository gatewayGroupRepository;
    private final Mappers v1Mappers;
+   private final SecurityIdentity securityIdentity;
 
-   @Inject
-   SecurityIdentity securityIdentity;
-
-   public GatewayGroupResource(GatewayGroupManagerService managerService, GatewayGroupRepository gatewayGroupRepository, Mappers v1Mappers) {
+   public GatewayGroupResource(GatewayGroupManagerService managerService, GatewayGroupRepository gatewayGroupRepository,
+                               Mappers v1Mappers, SecurityIdentity securityIdentity) {
       this.managerService = managerService;
       this.gatewayGroupRepository = gatewayGroupRepository;
       this.v1Mappers = v1Mappers;
+      this.securityIdentity = securityIdentity;
    }
 
    @GET

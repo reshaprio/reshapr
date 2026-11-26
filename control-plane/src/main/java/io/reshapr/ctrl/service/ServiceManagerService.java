@@ -42,6 +42,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -170,7 +171,7 @@ public class ServiceManagerService {
       if (service == null) {
          logger.debugf("Creating a new Service %s", discoveredService.name);
          service = discoveredService;
-         service.createdOn = OffsetDateTime.now();
+         service.createdOn = OffsetDateTime.now(ZoneId.systemDefault());
       }
 
       // Set or update operation that may have changed since previous import.

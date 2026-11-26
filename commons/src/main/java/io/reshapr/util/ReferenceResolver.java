@@ -41,10 +41,10 @@ public class ReferenceResolver {
    private final boolean disableSSLValidation;
    private boolean cleanResolvedFiles = true;
 
-   private RelativeReferenceURLBuilder urlBuilder;
+   private final RelativeReferenceURLBuilder urlBuilder;
 
-   private Map<String, File> resolvedReferences = new HashMap<>();
-   private Map<String, File> relativeResolvedReferences = new HashMap<>();
+   private final Map<String, File> resolvedReferences = new HashMap<>();
+   private final Map<String, File> relativeResolvedReferences = new HashMap<>();
 
    /**
     * Build a new reference resolver.

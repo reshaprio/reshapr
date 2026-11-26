@@ -18,7 +18,6 @@ package io.reshapr.ctrl.rest;
 import io.reshapr.ctrl.config.AuthenticationIdentityProviderConfig;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -38,8 +37,11 @@ public class AppConfigurationResource {
    @ConfigProperty(name = "reshapr.buildTimestamp")
    String buildTimestamp;
 
-   @Inject
-   AuthenticationIdentityProviderConfig authenticationConfig;
+   private final AuthenticationIdentityProviderConfig authenticationConfig;
+
+   public AppConfigurationResource(AuthenticationIdentityProviderConfig authenticationConfig) {
+      this.authenticationConfig = authenticationConfig;
+   }
 
 
    @GET

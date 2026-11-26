@@ -20,7 +20,6 @@ import io.reshapr.ctrl.model.QuotaMetric;
 import io.reshapr.ctrl.security.ReshaprTenantResolver;
 
 import io.quarkus.security.identity.SecurityIdentity;
-import jakarta.inject.Inject;
 import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.InvocationContext;
 import jakarta.ws.rs.NotAuthorizedException;
@@ -36,16 +35,12 @@ public abstract class ReleaseQuotaInterceptor {
    /** Get a JBoss logging logger. */
    private final Logger logger = Logger.getLogger(getClass());
 
-   @Inject
-   SecurityIdentity securityIdentity;
-
+   private final SecurityIdentity securityIdentity;
    private final QuotaMetric metric;
 
-   public ReleaseQuotaInterceptor() {
-      this.metric = QuotaMetric.NONE;
-   }
-   public ReleaseQuotaInterceptor(QuotaMetric metric) {
+   protected ReleaseQuotaInterceptor(QuotaMetric metric, SecurityIdentity securityIdentity) {
       this.metric = metric;
+      this.securityIdentity = securityIdentity;
    }
 
    @AroundInvoke

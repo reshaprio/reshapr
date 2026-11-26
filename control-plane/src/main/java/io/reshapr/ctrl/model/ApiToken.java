@@ -23,6 +23,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 /**
  * An API token that can be used by gateways to access Reshapr control plane gRPC APIs.
@@ -49,6 +50,6 @@ public class ApiToken extends BaseEntity {
    public User user;
 
    public boolean isValid() {
-      return validUntil != null && validUntil.isAfter(OffsetDateTime.now());
+      return validUntil != null && validUntil.isAfter(OffsetDateTime.now(ZoneId.systemDefault()));
    }
 }

@@ -53,7 +53,7 @@ public final class EventFilter {
       }
       List<Condition> conditions = new ArrayList<>();
       arguments.forEach((name, value) ->
-            conditions.add(new Condition(new String[] {String.valueOf(name)}, String.valueOf(value), false)));
+            conditions.add(new Condition(List.of(String.valueOf(name)), String.valueOf(value), false)));
       return new EventFilter(conditions);
    }
 
@@ -94,7 +94,7 @@ public final class EventFilter {
       if (op < 0 || !body.startsWith("$.")) {
          throw new IllegalArgumentException("Invalid json event filter '" + body + "', expected $.path==value");
       }
-      String[] path = body.substring(2, op).trim().split("\\.");
+      List<String> path = List.of(body.substring(2, op).trim().split("\\."));
       String value = body.substring(op + 2).trim();
       if (value.length() >= 2 && (value.startsWith("'") && value.endsWith("'")
             || value.startsWith("\"") && value.endsWith("\""))) {
@@ -119,7 +119,7 @@ public final class EventFilter {
       return true;
    }
 
-   private record Condition(String[] path, String expected, boolean negate) {
+   private record Condition(List<String> path, String expected, boolean negate) {
       boolean matches(JsonNode root) {
          JsonNode node = root;
          for (String segment : path) {
