@@ -151,10 +151,6 @@ public class McpEventsHandler {
       long heartbeatMs = params.heartbeatMs() != null
             ? Math.max(HEARTBEAT_MIN_MS, Math.min(params.heartbeatMs(), HEARTBEAT_MAX_MS)) : HEARTBEAT_DEFAULT_MS;
 
-      Map<String, Object> meta = request.id() != null
-            ? Map.of(McpSchema.META_KEY_SUBSCRIPTION_ID, request.id())
-            : Map.of();
-
       EventStream stream;
       try {
          AsyncAPIMcpEventConverter.validateArguments(type, params.arguments());
@@ -164,6 +160,8 @@ public class McpEventsHandler {
       } catch (IllegalStateException e) {
          return failed(error(request, McpEventsSchema.ErrorCodes.EVENT_RESOURCE_EXHAUSTED, e.getMessage(), null));
       }
+
+      Map<String, Object> meta = Map.of(McpSchema.META_KEY_SUBSCRIPTION_ID, request.id());
 
       StreamingOutput output = out -> {
          try {
