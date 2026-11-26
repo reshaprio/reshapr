@@ -38,9 +38,11 @@ export const runCommand = new Command('run')
   .option('-r, --release <release>', 'Release of the containers to run', 'latest')
   .option('-e, --engine <engine>', 'Container engine to use (docker, podman or apple for apple/container)')
   .option('--ui', 'Enable and deploy the web ui addon')
+  .option('-f, --compose-file <file>', 'Extra Compose file merged after the release files (repeatable)', collectOption, [])
   .action(async (options) => {
     let release: string = options.release;
     const engine = resolveContainerEngine(options.engine);
+    const extraFiles = resolveExtraComposeFiles(options.composeFile);
 
     // Resolve 'latest' to the actual latest GitHub release tag.
     if (release === 'latest') {
@@ -49,7 +51,7 @@ export const runCommand = new Command('run')
     }
 
     if (engine === 'apple') {
-      await runOnAppleContainer(release, options.ui === true);
+      await runOnAppleContainer(release, options.ui === true, extraFiles);
       return;
     }
 
@@ -74,6 +76,8 @@ export const runCommand = new Command('run')
       composeFiles.push(uiAddonFile);
     }
 
+    composeFiles.push(...extraFiles);
+
     Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: ${engine})...`);
     const exitCode = await runDockerCompose(['up', '-d'], composeFiles, engine);
 
@@ -90,8 +94,24 @@ export const runCommand = new Command('run')
     }
   });
 
+function collectOption(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+// Extra files are stored as absolute paths so `stop` and `status` can reuse them from any directory.
+export function resolveExtraComposeFiles(files: string[]): string[] {
+  return files.map((file) => {
+    const resolved = path.resolve(file);
+    if (!fs.existsSync(resolved)) {
+      Logger.error(`Compose file not found: ${file}`);
+      process.exit(1);
+    }
+    return resolved;
+  });
+}
+
 // apple/container has no Compose: the stack described by the release compose files is started with `container run`.
-async function runOnAppleContainer(release: string, ui: boolean): Promise<void> {
+async function runOnAppleContainer(release: string, ui: boolean, extraFiles: string[]): Promise<void> {
   const composeFiles = [getComposeFilePath(release)];
   if (ui) {
     composeFiles.push(getUiAddonFilePath(release));
@@ -104,6 +124,7 @@ async function runOnAppleContainer(release: string, ui: boolean): Promise<void> 
       Logger.info(`Using cached compose file ${file}.`);
     }
   }
+  composeFiles.push(...extraFiles);
 
   Logger.info(`Starting ${CLI_LABEL} containers (release: ${release}, engine: apple)...`);
   try {

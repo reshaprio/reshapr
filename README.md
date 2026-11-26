@@ -77,6 +77,11 @@ You should see a message like this:
 ✅ Reshapr containers started successfully.
 ```
 
+To add environment variables or other settings to a container, for example a secret read with `${env:MY_API_TOKEN}`, pass your own Compose file with `-f`. It is merged after the release files, and it can be repeated. With `--engine apple`, only `environment`, `ports` and `depends_on` of the file are taken into account:
+```sh
+reshapr run -f override.yaml
+```
+
 Connect to the control plane at http://localhost:5555 with default credentials (`admin/password`):
 ```sh
 reshapr login -s http://localhost:5555 -u admin -p password

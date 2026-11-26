@@ -79,6 +79,27 @@ services:
     expect(services[2].ports).toEqual(['7777:7777']);
   });
 
+  it('merges an override file by service name and reads bare variables from the host', () => {
+    process.env.MY_TEST_TOKEN = 's3cret';
+    try {
+      const base = writeCompose('services:\n  gw:\n    image: x:1\n    environment:\n      - A=1\n      - B=2\n    ports: ["7777:7777"]\n');
+      const override = writeCompose('services:\n  gw:\n    environment:\n      - B=3\n      - MY_TEST_TOKEN\n    ports: ["8080:8080"]\n');
+
+      const [gw] = parseComposeServices([base, override]);
+
+      expect(gw.image).toBe('x:1');
+      expect(gw.env).toEqual([['A', '1'], ['B', '3'], ['MY_TEST_TOKEN', 's3cret']]);
+      expect(gw.ports).toEqual(['7777:7777', '8080:8080']);
+    } finally {
+      delete process.env.MY_TEST_TOKEN;
+    }
+  });
+
+  it('rejects a service without image after merging', () => {
+    const file = writeCompose('services:\n  gw:\n    environment: [A=1]\n');
+    expect(() => parseComposeServices([file])).toThrow(/Service 'gw'.*has no image/);
+  });
+
   it('rejects a dependency on an unknown service', () => {
     const file = writeCompose('services:\n  a:\n    image: x\n    depends_on: [missing]\n');
     expect(() => parseComposeServices([file])).toThrow(/unknown service 'missing'/);
