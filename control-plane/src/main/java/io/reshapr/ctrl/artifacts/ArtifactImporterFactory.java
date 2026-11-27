@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.regex.Pattern;
 
 /**
  * Factory for building/retrieving artifact importer implementations.
@@ -39,6 +40,9 @@ public class ArtifactImporterFactory {
 
    /** A RegExp for detecting a line containing the asyncapi: 3 pragma. */
    public static final String ASYNCAPI_3_REGEXP = ".*['\\\"]?asyncapi['\\\"]?\\s*:\\s*['\\\"]?3\\..*";
+
+   private static final Pattern OPENAPI_3_PATTERN = Pattern.compile("['\\\"]?openapi['\\\"]?\\s*:\\s*['\\\"]?[3.]");
+   private static final Pattern ASYNCAPI_3_PATTERN = Pattern.compile("['\\\"]?asyncapi['\\\"]?\\s*:\\s*['\\\"]?3\\.");
 
    private ArtifactImporterFactory() {
       // Private constructor to hide the implicit one as it's a utility class.
@@ -72,7 +76,7 @@ public class ArtifactImporterFactory {
 
    private static ArtifactImporter checkOpenAPIImporters(String line, File artifactFile,
                                                          ReferenceResolver referenceResolver) throws IOException {
-      if (line.matches(OPENAPI_3_REGEXP)) {
+      if (OPENAPI_3_PATTERN.matcher(line).find()) {
          log.info("Found an openapi: 3 pragma in file so assuming it's an OpenAPI spec to import");
          return new OpenAPIImporter(artifactFile.getPath(), referenceResolver);
       }
@@ -80,7 +84,7 @@ public class ArtifactImporterFactory {
    }
 
    private static ArtifactImporter checkOtherImporters(String line, File artifactFile, ReferenceResolver referenceResolver) throws IOException {
-      if (line.matches(ASYNCAPI_3_REGEXP)) {
+      if (ASYNCAPI_3_PATTERN.matcher(line).find()) {
          log.info("Found an asyncapi: 3 pragma in file so assuming it's an AsyncAPI spec to import");
          return new AsyncAPIImporter(artifactFile.getPath(), referenceResolver);
       } else if (line.startsWith("syntax = \"proto3\";") || line.startsWith("syntax=\"proto3\";")) {

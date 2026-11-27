@@ -22,6 +22,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Type;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -51,6 +52,6 @@ public class ServiceAccount extends BaseEntity {
    public List<String> allowedOrganizations;
 
    public boolean isValid() {
-      return validUntil != null && validUntil.isAfter(OffsetDateTime.now());
+      return validUntil != null && validUntil.isAfter(OffsetDateTime.now(ZoneId.systemDefault()));
    }
 }

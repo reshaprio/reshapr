@@ -76,13 +76,17 @@ public class ProtobufImporter implements ArtifactImporter {
 
       // Move proto file to a unique subdir that matches its package name (to avoid conflicts)
       // This will allow protoc to find the relative imports we will download later on.
-      Path protoPath = Paths.get(protoFilePath);
+      Path protoPath = Paths.get(protoFilePath).toAbsolutePath().normalize();
+      Path parentDir = protoPath.getParent();
+      if (parentDir == null) {
+         throw new IOException("Protobuf schema file has no parent directory: " + protoFilePath);
+      }
       packageServices = getPackage(protoPath);
       if (packageServices.packageName != null) {
          String packagePath = packageServices.packageName.replace(".", "/");
 
          String uuid = UUID.randomUUID().toString();
-         Path newProtoPath = protoPath.getParent().resolve(uuid + "/" + packagePath + "/" + protoPath.getFileName());
+         Path newProtoPath = parentDir.resolve(uuid + "/" + packagePath + "/" + protoPath.getFileName());
 
          try {
             Files.createDirectories(newProtoPath.getParent());
@@ -93,18 +97,16 @@ public class ProtobufImporter implements ArtifactImporter {
          Files.copy(protoPath, newProtoPath, StandardCopyOption.REPLACE_EXISTING);
 
          // Prepare file, path and name for easier process.
-         File protoFile = new File(protoFilePath);
-         protoDirectory = protoPath.getParent().resolve(uuid + "/").toFile().getAbsolutePath();
-         protoFileName = packagePath + "/" + protoFile.getName();
+         protoDirectory = parentDir.resolve(uuid).toFile().getAbsolutePath();
+         protoFileName = packagePath + "/" + protoPath.getFileName();
 
          // Now switch the proto and file paths.
          protoFilePath = newProtoPath.toString();
          protoPath = newProtoPath;
       } else {
          // Prepare file, path and name for easier process.
-         File protoFile = new File(protoFilePath);
-         protoDirectory = protoFile.getParentFile().getAbsolutePath();
-         protoFileName = protoFile.getName();
+         protoDirectory = parentDir.toFile().getAbsolutePath();
+         protoFileName = protoPath.getFileName().toString();
       }
 
       // Prepare protoc arguments.

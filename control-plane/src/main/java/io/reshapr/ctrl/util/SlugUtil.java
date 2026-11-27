@@ -55,9 +55,17 @@ public final class SlugUtil {
       }
       String normalized = Normalizer.normalize(joined.toString(), Normalizer.Form.NFD)
             .replaceAll("\\p{M}+", "");
-      return normalized.toLowerCase(Locale.ROOT)
-            .replaceAll("[^a-z0-9]+", "-")
-            .replaceAll("(^-+)|(-+$)", "");
+      String collapsed = normalized.toLowerCase(Locale.ROOT)
+            .replaceAll("[^a-z0-9]+", "-");
+      int start = 0;
+      int end = collapsed.length();
+      while (start < end && collapsed.charAt(start) == '-') {
+         start++;
+      }
+      while (end > start && collapsed.charAt(end - 1) == '-') {
+         end--;
+      }
+      return collapsed.substring(start, end);
    }
 }
 

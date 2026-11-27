@@ -18,10 +18,8 @@ package io.reshapr.ctrl.security;
 import io.quarkus.hibernate.orm.PersistenceUnitExtension;
 import io.quarkus.hibernate.orm.runtime.tenant.TenantResolver;
 import io.quarkus.vertx.http.runtime.CurrentVertxRequest;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.mutiny.core.Vertx;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 /**
@@ -40,11 +38,11 @@ public class ReshaprTenantResolver implements TenantResolver {
 
    public static final String TENANT_ID_CONTEXT_KEY = "organizationId";
 
-   @Inject
-   RoutingContext context;
+   private final CurrentVertxRequest vertxRequest;
 
-   @Inject
-   CurrentVertxRequest vertxRequest;
+   public ReshaprTenantResolver(CurrentVertxRequest vertxRequest) {
+      this.vertxRequest = vertxRequest;
+   }
 
    @Override
    public String getDefaultTenantId() {

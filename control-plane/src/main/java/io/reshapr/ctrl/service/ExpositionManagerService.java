@@ -37,6 +37,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -143,7 +144,7 @@ public class ExpositionManagerService {
       exposition.gatewayGroup = gatewayGroup.get();
       exposition.service = configurationPlan.service;
       exposition.name = expositionName;
-      exposition.createdOn = OffsetDateTime.now();
+      exposition.createdOn = OffsetDateTime.now(ZoneId.systemDefault());
       expositionRepository.persistAndFlush(exposition);
 
       // Publish the exposition creation event.

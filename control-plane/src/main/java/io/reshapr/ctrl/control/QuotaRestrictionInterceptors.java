@@ -17,7 +17,9 @@ package io.reshapr.ctrl.control;
 
 import io.reshapr.ctrl.model.QuotaMetric;
 
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.Priority;
+import jakarta.inject.Inject;
 import jakarta.interceptor.Interceptor;
 
 /**
@@ -31,8 +33,9 @@ public class QuotaRestrictionInterceptors {
    @Priority(2000)
    @Interceptor
    public static class ExpositionCountQuotaRestriction extends QuotaRestrictionInterceptor {
-      public ExpositionCountQuotaRestriction() {
-         super(QuotaMetric.EXPOSITION_COUNT);
+      @Inject
+      public ExpositionCountQuotaRestriction(SecurityIdentity securityIdentity) {
+         super(QuotaMetric.EXPOSITION_COUNT, securityIdentity);
       }
    }
 
@@ -40,8 +43,9 @@ public class QuotaRestrictionInterceptors {
    @Priority(2000)
    @Interceptor
    public static class GatewayGroupCountQuotaRestriction extends QuotaRestrictionInterceptor {
-      public GatewayGroupCountQuotaRestriction() {
-         super(QuotaMetric.GATEWAY_GROUP_COUNT);
+      @Inject
+      public GatewayGroupCountQuotaRestriction(SecurityIdentity securityIdentity) {
+         super(QuotaMetric.GATEWAY_GROUP_COUNT, securityIdentity);
       }
    }
 }

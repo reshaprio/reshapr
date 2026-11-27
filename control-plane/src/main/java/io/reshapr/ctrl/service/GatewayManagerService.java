@@ -29,6 +29,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,11 +86,11 @@ public class GatewayManagerService {
          logger.infof("Gateway with ID %s not found, creating a new one", gatewayName);
          Gateway newGateway = new Gateway();
          newGateway.name = gatewayName;
-         newGateway.startedAt = OffsetDateTime.now();
+         newGateway.startedAt = OffsetDateTime.now(ZoneId.systemDefault());
          return newGateway;
       });
 
-      gateway.lastHeartbeat = OffsetDateTime.now();
+      gateway.lastHeartbeat = OffsetDateTime.now(ZoneId.systemDefault());
       gateway.fqdns = fqdns;
       gateway.labels = labels;
       gateway.version = version;
@@ -108,7 +109,7 @@ public class GatewayManagerService {
       }
 
       Gateway gateway = gatewayOpt.get();
-      gateway.lastHeartbeat = OffsetDateTime.now();
+      gateway.lastHeartbeat = OffsetDateTime.now(ZoneId.systemDefault());
       gatewayRepository.persist(gateway);
       return true;
    }

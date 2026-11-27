@@ -165,6 +165,7 @@ public class McpEventsHandler {
       }
 
       Map<String, Object> meta = Map.of(McpSchema.META_KEY_SUBSCRIPTION_ID, request.id());
+
       StreamingOutput output = out -> {
          try {
             stream.run(params.cursor(), params.maxAgeMs(), heartbeatMs, new EventStream.Sink() {
