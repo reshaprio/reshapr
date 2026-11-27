@@ -936,7 +936,8 @@ public class McpController {
                .entity(buildJSONRPCError(request, McpSchema.ErrorCodes.METHOD_NOT_FOUND,
                      "Method '" + request.method() + "' is not supported here", null)).build();
       }
-      McpEventsHandler.StreamOpening opening = eventsHandler.stream(request, exposition, userId != null ? userId : "anonymous");
+      McpEventsHandler.StreamOpening opening = eventsHandler.stream(request, exposition, userId != null ? userId : "anonymous",
+            () -> isClientGone(serverRequest));
       if (opening.error() != null) {
          return Response.ok(opening.error()).build();
       }
@@ -968,7 +969,8 @@ public class McpController {
       }
 
       long startNanos = System.nanoTime();
-      McpEventsHandler.StreamOpening opening = eventsHandler.listen(request, exposition, userId != null ? userId : "anonymous");
+      McpEventsHandler.StreamOpening opening = eventsHandler.listen(request, exposition, userId != null ? userId : "anonymous",
+            () -> isClientGone(serverRequest));
       if (opening.error() != null) {
          return Response.ok(opening.error()).build();
       }
@@ -978,6 +980,11 @@ public class McpController {
                   new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION, request.id(), Map.of(), null), null),
             startNanos, serverRequest, userId);
       return Response.ok(opening.output()).type("text/event-stream").header("Cache-Control", "no-cache").build();
+   }
+
+   /** Whether the client has closed the connection (e.g. by navigating away from the page). */
+   private static boolean isClientGone(HttpServerRequest serverRequest) {
+      return serverRequest.response().closed();
    }
 
    /** Handle the MCP tools/list request. */

@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /**
  * Handles the methods of the MCP Events extension ({@code events/list}, {@code events/poll},
@@ -102,7 +103,7 @@ public class McpEventsHandler {
          return error(request, McpEventsSchema.ErrorCodes.EVENT_UNSUPPORTED,
                "Event type '" + type.name() + "' does not support poll", null);
       }
-      int maxEvents = params.maxEvents() != null ? Math.max(1, Math.min(params.maxEvents(), POLL_CEILING))
+      int maxEvents = params.maxEvents() != null ? Math.clamp(params.maxEvents(), 1, POLL_CEILING)
             : POLL_DEFAULT_MAX;
 
       EventHub.PollResult polled;
@@ -131,8 +132,10 @@ public class McpEventsHandler {
     * @param request the JSON-RPC request
     * @param exposition the exposition entry defining this event type
     * @param userId the authenticated user (or "anonymous")
+    * @param  clientGone a supplier that returns true if the client has disconnected
     */
-   public StreamOpening stream(McpSchema.JSONRPCRequest request, ExpositionEntry exposition, String userId) {
+   public StreamOpening stream(McpSchema.JSONRPCRequest request, ExpositionEntry exposition, String userId,
+                               BooleanSupplier clientGone) {
       McpEventsSchema.Params params;
       try {
          params = getParams(request);
@@ -149,7 +152,7 @@ public class McpEventsHandler {
                "Event type '" + type.name() + "' does not support push", null));
       }
       long heartbeatMs = params.heartbeatMs() != null
-            ? Math.max(HEARTBEAT_MIN_MS, Math.min(params.heartbeatMs(), HEARTBEAT_MAX_MS)) : HEARTBEAT_DEFAULT_MS;
+            ? Math.clamp(params.heartbeatMs(), HEARTBEAT_MIN_MS, HEARTBEAT_MAX_MS) : HEARTBEAT_DEFAULT_MS;
 
       EventStream stream;
       try {
@@ -167,7 +170,7 @@ public class McpEventsHandler {
             stream.run(params.cursor(), params.maxAgeMs(), heartbeatMs, new EventStream.Sink() {
                @Override
                public void active(String cursor, boolean truncated, long hb) throws IOException {
-                  writeNotification(out, McpEventsSchema.NOTIFICATION_ACTIVE,
+                  writeNotification(out, clientGone, McpEventsSchema.NOTIFICATION_ACTIVE,
                         new McpEventsSchema.ActiveNotification(cursor, truncated, hb, meta));
                }
 
@@ -175,33 +178,33 @@ public class McpEventsHandler {
                public void event(String eventId, long timestamp, String payload, String cursor) throws IOException {
                   McpEventsSchema.EventOccurrence occurrence =
                         converter.toOccurrence(type.name(), eventId, timestamp, payload, cursor);
-                  writeNotification(out, McpEventsSchema.NOTIFICATION_EVENT, new McpEventsSchema.EventNotification(
+                  writeNotification(out, clientGone, McpEventsSchema.NOTIFICATION_EVENT, new McpEventsSchema.EventNotification(
                         occurrence.eventId(), occurrence.name(), occurrence.timestamp(), occurrence.data(),
                         cursor, meta));
                }
 
                @Override
                public void heartbeat(String cursor) throws IOException {
-                  writeNotification(out, McpEventsSchema.NOTIFICATION_HEARTBEAT,
+                  writeNotification(out, clientGone, McpEventsSchema.NOTIFICATION_HEARTBEAT,
                         new McpEventsSchema.HeartbeatNotification(cursor, meta));
                }
 
                @Override
                public void error(String message) throws IOException {
-                  writeNotification(out, McpEventsSchema.NOTIFICATION_ERROR, new McpEventsSchema.ErrorNotification(
+                  writeNotification(out, clientGone, McpEventsSchema.NOTIFICATION_ERROR, new McpEventsSchema.ErrorNotification(
                         new McpEventsSchema.ErrorDetail(McpSchema.ErrorCodes.INTERNAL_ERROR, message, null), meta));
                }
             });
             // The server ended the subscription (exposition updated or removed).
-            writeNotification(out, McpEventsSchema.NOTIFICATION_TERMINATED, new McpEventsSchema.ErrorNotification(
+            writeNotification(out, clientGone, McpEventsSchema.NOTIFICATION_TERMINATED, new McpEventsSchema.ErrorNotification(
                   new McpEventsSchema.ErrorDetail(McpEventsSchema.ErrorCodes.EVENT_NOT_FOUND,
                         "Event type no longer available",
                         Map.of("kind", "event", "reason", "Exposition updated or removed")), meta));
-            writeSse(out, mapper.writeValueAsString(new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION,
+            writeSse(out, clientGone, mapper.writeValueAsString(new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION,
                   request.id(), new McpEventsSchema.StreamResult(McpEventsSchema.RESULT_TYPE_COMPLETE, meta), null)));
-         } catch (InterruptedException e) {
+         } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-         } catch (IOException e) {
+         } catch (IOException _) {
             logger.debugf("Event stream on '%s' closed by client", type.name());
          } finally {
             stream.close();
@@ -215,7 +218,8 @@ public class McpEventsHandler {
     * {@code notifications/resources/updated} each time one of them receives events, until the client disconnects or the
     * exposition goes away. Errors detected before the stream opens are plain JSON-RPC errors.
     */
-   public StreamOpening listen(McpSchema.JSONRPCRequest request, ExpositionEntry exposition, String userId) {
+   public StreamOpening listen(McpSchema.JSONRPCRequest request, ExpositionEntry exposition, String userId,
+                               BooleanSupplier clientGone) {
       // Requested resource URIs: null means every event channel.
       Set<String> channelKeys = null;
       if (request.params() instanceof Map<?, ?> params && params.get("notifications") instanceof Map<?, ?> notifications
@@ -241,29 +245,30 @@ public class McpEventsHandler {
 
       StreamingOutput output = out -> {
          try {
-            writeNotification(out, McpSchema.METHOD_NOTIFICATION_SUBSCRIPTIONS_ACKNOWLEDGED,
-                  Map.of("_meta", meta, "notifications", Map.of("resourceSubscriptions", acknowledgedUris)));
+            writeNotification(out, clientGone, McpSchema.METHOD_NOTIFICATION_SUBSCRIPTIONS_ACKNOWLEDGED,
+                  Map.of(McpSchema.ATTR_META, meta, "notifications", Map.of("resourceSubscriptions", acknowledgedUris)));
             while (!subscription.isClosed()) {
                List<String> updated = subscription.awaitUpdates(15, TimeUnit.SECONDS);
                if (updated.isEmpty()) {
                   if (subscription.isClosed()) {
                      break;
                   }
+                  checkConnected(clientGone);
                   out.write(": keepalive\n\n".getBytes(StandardCharsets.UTF_8));
                   out.flush();
                   continue;
                }
                for (String updatedKey : updated) {
-                  writeNotification(out, McpSchema.METHOD_NOTIFICATION_RESOURCES_UPDATED,
-                        Map.of("_meta", meta, "uri", AsyncAPIChannels.uri(updatedKey)));
+                  writeNotification(out, clientGone, McpSchema.METHOD_NOTIFICATION_RESOURCES_UPDATED,
+                        Map.of(McpSchema.ATTR_META, meta, "uri", AsyncAPIChannels.uri(updatedKey)));
                }
             }
             // The server ended the subscription: signal a graceful closure.
-            writeSse(out, mapper.writeValueAsString(new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION,
-                  request.id(), Map.of("resultType", "complete", "_meta", meta), null)));
-         } catch (InterruptedException e) {
+            writeSse(out, clientGone, mapper.writeValueAsString(new McpSchema.JSONRPCResponse(McpSchema.JSONRPC_VERSION,
+                  request.id(), Map.of("resultType", "complete", McpSchema.ATTR_META, meta), null)));
+         } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-         } catch (IOException e) {
+         } catch (IOException _) {
             logger.debugf("Event subscription %s closed by client", subscription.key());
          } finally {
             eventHub.unsubscribe(subscription);
@@ -309,14 +314,25 @@ public class McpEventsHandler {
             new McpSchema.JSONRPCResponse.JSONRPCError(code, message, data));
    }
 
-   private void writeNotification(OutputStream out, String method, Object params) throws IOException {
-      writeSse(out, mapper.writeValueAsString(
+   private void writeNotification(OutputStream out, BooleanSupplier clientGone, String method, Object params) throws IOException {
+      writeSse(out, clientGone, mapper.writeValueAsString(
             new McpSchema.JSONRPCNotification(McpSchema.JSONRPC_VERSION, method,
                   mapper.convertValue(params, new TypeReference<Map<String, Object>>() {
                   }))));
    }
 
-   private static void writeSse(OutputStream output, String json) throws IOException {
+   /**
+    * Quarkus REST only reports a closed connection from {@code write()} when the write queue is full, so small
+    * heartbeats never fail: check the connection explicitly to release the stream slot of a disconnected client.
+    */
+   private static void checkConnected(BooleanSupplier clientGone) throws IOException {
+      if (clientGone.getAsBoolean()) {
+         throw new IOException("Client disconnected");
+      }
+   }
+
+   private static void writeSse(OutputStream output, BooleanSupplier clientGone, String json) throws IOException {
+      checkConnected(clientGone);
       output.write(("event: message\ndata: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
       output.flush();
    }
