@@ -41,6 +41,8 @@ import org.jboss.logging.Logger;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
@@ -66,10 +68,13 @@ public class KafkaEventBroker implements EventBroker {
 
    private static final int MAX_SCANNED_RECORDS = 2000;
    private static final Duration READ_DEADLINE = Duration.ofSeconds(3);
+   private static final int MAX_IDLE_READERS = 8;
 
    private final Function<Properties, org.apache.kafka.clients.consumer.Consumer<String, String>> consumerFactory;
    private final Function<Properties, org.apache.kafka.clients.producer.Producer<String, String>> producerFactory;
    private final UnaryOperator<String> secretResolver;
+   private final Deque<org.apache.kafka.clients.consumer.Consumer<String, String>> idleReaders = new ConcurrentLinkedDeque<>();
+   private volatile boolean closed;
    private final EventEndpoint endpoint;
    @Nullable
    private final SecretEntry secret;
@@ -108,83 +113,122 @@ public class KafkaEventBroker implements EventBroker {
 
    @Override
    public ReadResult read(ReadRequest request) {
+      org.apache.kafka.clients.consumer.Consumer<String, String> consumer = borrowReader();
+      boolean healthy = false;
+      try {
+         ReadResult result = read(consumer, request);
+         healthy = true;
+         return result;
+      } finally {
+         releaseReader(consumer, healthy);
+      }
+   }
+
+   /** Reuse an idle read consumer: creating one per read opens new broker connections every time. */
+   private org.apache.kafka.clients.consumer.Consumer<String, String> borrowReader() {
+      org.apache.kafka.clients.consumer.Consumer<String, String> consumer = idleReaders.pollFirst();
+      if (consumer != null) {
+         return consumer;
+      }
       Properties props = commonProperties();
       props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
       props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
       props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
       props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(Math.min(MAX_SCANNED_RECORDS, 500)));
+      return consumerFactory.apply(props);
+   }
 
-      try (org.apache.kafka.clients.consumer.Consumer<String, String> consumer = consumerFactory.apply(props)) {
-         List<TopicPartition> partitions = new ArrayList<>();
-         List<PartitionInfo> infos = consumer.partitionsFor(request.destination(), Duration.ofSeconds(5));
-         for (PartitionInfo info : infos == null ? List.<PartitionInfo>of() : infos) {
-            partitions.add(new TopicPartition(info.topic(), info.partition()));
+   private void releaseReader(org.apache.kafka.clients.consumer.Consumer<String, String> consumer, boolean healthy) {
+      if (healthy && !closed && idleReaders.size() < MAX_IDLE_READERS) {
+         idleReaders.addFirst(consumer);
+         if (!closed) {
+            return;
          }
-         Map<TopicPartition, Long> ends = consumer.endOffsets(partitions);
-         Map<Integer, Long> next = new TreeMap<>();
-         if (request.from() == null) {
-            ends.forEach((tp, end) -> next.put(tp.partition(), end));
-            return new ReadResult(List.of(), new KafkaPosition(next), false, false);
-         }
-         Map<Integer, Long> from = ((KafkaPosition) request.from()).offsets();
-
-         Map<TopicPartition, Long> begins = consumer.beginningOffsets(partitions);
-         Map<TopicPartition, Long> floorByTime = new HashMap<>();
-         if (request.minTimestamp() != null) {
-            Map<TopicPartition, Long> query = new HashMap<>();
-            partitions.forEach(tp -> query.put(tp, request.minTimestamp()));
-            consumer.offsetsForTimes(query).forEach((tp, found) ->
-                  floorByTime.put(tp, found == null ? ends.get(tp) : found.offset()));
-         }
-
-         boolean truncated = false;
-         Map<TopicPartition, Long> positions = new HashMap<>();
-         for (TopicPartition tp : partitions) {
-            long begin = begins.get(tp);
-            long end = ends.get(tp);
-            Long requested = from.get(tp.partition());
-            long start = requested == null ? begin : requested;
-            if (start < begin || start > end) {
-               // Retention removed the position (or the topic was recreated): restart from what exists.
-               truncated |= requested != null;
-               start = start < begin ? begin : end;
-            }
-            Long floor = floorByTime.get(tp);
-            if (floor != null && floor > start) {
-               truncated = true;
-               start = floor;
-            }
-            positions.put(tp, start);
-         }
-
-         consumer.assign(partitions);
-         positions.forEach(consumer::seek);
-         List<ConsumedRecord> records = new ArrayList<>();
-         int scanned = 0;
-         long deadline = System.nanoTime() + READ_DEADLINE.toNanos();
-         while (records.size() < request.maxRecords() && scanned < MAX_SCANNED_RECORDS
-               && System.nanoTime() < deadline && positions.entrySet().stream().anyMatch(e -> e.getValue() < ends.get(e.getKey()))) {
-            ConsumerRecords<String, String> batch = consumer.poll(Duration.ofMillis(200));
-            for (ConsumerRecord<String, String> consumerRecord : batch) {
-               TopicPartition tp = new TopicPartition(consumerRecord.topic(), consumerRecord.partition());
-               if (consumerRecord.offset() >= ends.get(tp) || consumerRecord.offset() < positions.get(tp)) {
-                  continue;
-               }
-               if (records.size() >= request.maxRecords()) {
-                  break;
-               }
-               positions.put(tp, consumerRecord.offset() + 1);
-               scanned++;
-               EventMessage message = PollLoop.toMessage(consumerRecord);
-               if (request.filter() == null || request.filter().matches(message.payload())) {
-                  records.add(consumed(consumerRecord, message));
-               }
-            }
-         }
-         boolean hasMore = positions.entrySet().stream().anyMatch(e -> e.getValue() < ends.get(e.getKey()));
-         positions.forEach((tp, position) -> next.put(tp.partition(), position));
-         return new ReadResult(records, new KafkaPosition(next), hasMore, truncated);
+         idleReaders.remove(consumer);
       }
+      consumer.close();
+   }
+
+   @Override
+   public void close() {
+      closed = true;
+      org.apache.kafka.clients.consumer.Consumer<String, String> consumer;
+      while ((consumer = idleReaders.pollFirst()) != null) {
+         consumer.close();
+      }
+   }
+
+   private ReadResult read(org.apache.kafka.clients.consumer.Consumer<String, String> consumer, ReadRequest request) {
+      List<TopicPartition> partitions = new ArrayList<>();
+      List<PartitionInfo> infos = consumer.partitionsFor(request.destination(), Duration.ofSeconds(5));
+      for (PartitionInfo info : infos == null ? List.<PartitionInfo>of() : infos) {
+         partitions.add(new TopicPartition(info.topic(), info.partition()));
+      }
+      Map<TopicPartition, Long> ends = consumer.endOffsets(partitions);
+      Map<Integer, Long> next = new TreeMap<>();
+      if (request.from() == null) {
+         ends.forEach((tp, end) -> next.put(tp.partition(), end));
+         return new ReadResult(List.of(), new KafkaPosition(next), false, false);
+      }
+      Map<Integer, Long> from = ((KafkaPosition) request.from()).offsets();
+
+      Map<TopicPartition, Long> begins = consumer.beginningOffsets(partitions);
+      Map<TopicPartition, Long> floorByTime = new HashMap<>();
+      if (request.minTimestamp() != null) {
+         Map<TopicPartition, Long> query = new HashMap<>();
+         partitions.forEach(tp -> query.put(tp, request.minTimestamp()));
+         consumer.offsetsForTimes(query).forEach((tp, found) ->
+               floorByTime.put(tp, found == null ? ends.get(tp) : found.offset()));
+      }
+
+      boolean truncated = false;
+      Map<TopicPartition, Long> positions = new HashMap<>();
+      for (TopicPartition tp : partitions) {
+         long begin = begins.get(tp);
+         long end = ends.get(tp);
+         Long requested = from.get(tp.partition());
+         long start = requested == null ? begin : requested;
+         if (start < begin || start > end) {
+            // Retention removed the position (or the topic was recreated): restart from what exists.
+            truncated |= requested != null;
+            start = start < begin ? begin : end;
+         }
+         Long floor = floorByTime.get(tp);
+         if (floor != null && floor > start) {
+            truncated = true;
+            start = floor;
+         }
+         positions.put(tp, start);
+      }
+
+      consumer.assign(partitions);
+      positions.forEach(consumer::seek);
+      List<ConsumedRecord> records = new ArrayList<>();
+      int scanned = 0;
+      long deadline = System.nanoTime() + READ_DEADLINE.toNanos();
+      while (records.size() < request.maxRecords() && scanned < MAX_SCANNED_RECORDS
+            && System.nanoTime() < deadline && positions.entrySet().stream().anyMatch(e -> e.getValue() < ends.get(e.getKey()))) {
+         ConsumerRecords<String, String> batch = consumer.poll(Duration.ofMillis(200));
+         for (ConsumerRecord<String, String> consumerRecord : batch) {
+            TopicPartition tp = new TopicPartition(consumerRecord.topic(), consumerRecord.partition());
+            if (consumerRecord.offset() >= ends.get(tp) || consumerRecord.offset() < positions.get(tp)) {
+               continue;
+            }
+            if (records.size() >= request.maxRecords()) {
+               break;
+            }
+            positions.put(tp, consumerRecord.offset() + 1);
+            scanned++;
+            EventMessage message = PollLoop.toMessage(consumerRecord);
+            if (request.filter() == null || request.filter().matches(message.payload())) {
+               records.add(consumed(consumerRecord, message));
+            }
+         }
+      }
+      boolean hasMore = positions.entrySet().stream().anyMatch(e -> e.getValue() < ends.get(e.getKey()));
+      positions.forEach((tp, position) -> next.put(tp.partition(), position));
+      return new ReadResult(records, new KafkaPosition(next), hasMore, truncated);
+
    }
 
    @Override

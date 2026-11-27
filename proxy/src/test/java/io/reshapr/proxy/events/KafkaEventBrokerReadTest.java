@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -80,5 +81,28 @@ class KafkaEventBrokerReadTest {
       assertTrue(result.truncated());
       assertEquals(2, result.records().size());
       assertEquals(TOPIC + "-0-5", result.records().get(0).eventId());
+   }
+
+   @Test
+   void readsReuseTheSameConsumer() {
+      MockConsumer<String, String> consumer = new MockConsumer<>("earliest");
+      TopicPartition tp = new TopicPartition(TOPIC, 0);
+      consumer.updatePartitions(TOPIC, List.of(new PartitionInfo(TOPIC, 0, null, null, null)));
+      consumer.updateBeginningOffsets(Map.of(tp, 0L));
+      consumer.updateEndOffsets(Map.of(tp, 0L));
+      AtomicInteger created = new AtomicInteger();
+      KafkaEventBroker broker = new KafkaEventBroker(endpoint(), null, props -> {
+         created.incrementAndGet();
+         return consumer;
+      }, props -> null, value -> value);
+
+      for (int i = 0; i < 5; i++) {
+         broker.read(new EventBroker.ReadRequest(TOPIC, null, null, 10, null));
+      }
+      assertEquals(1, created.get());
+      assertFalse(consumer.closed());
+
+      broker.close();
+      assertTrue(consumer.closed());
    }
 }
